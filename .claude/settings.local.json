@@ -18,7 +18,10 @@
       "Bash(dotnet add:*)",
       "Bash(cp:*)",
       "Bash(gh repo:*)",
-      "Bash(where:*)"
+      "Bash(where:*)",
+      "Bash(dotnet build:*)",
+      "Bash(git:*)",
+      "Bash(cd /c/work/myfolder && git:*)"
     ]
   }
 }
