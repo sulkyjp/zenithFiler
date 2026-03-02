@@ -3,6 +3,53 @@
 
 # Zenith Filer - Version History
 
+## [0.13.9] - 2026-03-03 : マルチコア JIT プロファイリング＋Debug TieredCompilation による起動高速化
+
+### Changed
+- **マルチコア JIT プロファイリングを追加**: `Main()` 冒頭で `ProfileOptimization.SetProfileRoot` / `StartProfile` を呼び出し、起動時の JIT パターンをプロファイルに記録。2回目以降の起動ではバックグラウンドスレッドで先行 JIT コンパイルを実行し、コールド起動を 20-40% 短縮
+- **Debug ビルドに TieredCompilation を有効化**: `TieredCompilation` + `TieredCompilationQuickJit` を Debug 構成にも追加し、開発時の JIT 遅延を軽減
+- **`.gitignore` に `*.jitprofile` を追加**: JIT プロファイルファイルをバージョン管理から除外
+
+## [0.13.8] - 2026-03-03 : 起動速度の改善（設定並列読み込み＋お気に入りアイコン非同期化）
+
+### Changed
+- **カスタム Main() による起動高速化**: App.xaml の BuildAction を Page に変更して自動生成 Main を抑止。カスタム `Main()` で WPF フレームワーク初期化前にスプラッシュ表示と設定並列読み込みを開始し、`Application` コンストラクタ + `InitializeComponent` と並列実行
+- **起動診断ログのバックグラウンド化**: `FileLogger.LogStartupDiagnostics()` を `Task.Run` でバックグラウンド実行に変更し、UI スレッドの I/O を排除
+- **お気に入りアイコンの非同期バッチ読み込み**: `FromDto()` 内の同期アイコン取得を除去し、`LoadFromSettings()` 完了後に `LoadIconsAsync()` で全アイコンをバックグラウンド一括取得。アイテム数に比例した UI ブロックを解消
+- **ウェルカムウィンドウ最終ページのレイアウト改善**: 「アプリを起動」ボタンをフッター右下（「次へ」と同じ位置）に移動し、操作の一貫性を向上。中央エリアには歓迎メッセージを表示
+
+## [0.13.7] - 2026-03-03 : ワーキングセット切り替えの堅牢化＋同期スワップ演出
+
+### Changed
+- **ワーキングセット切り替えをコードビハインド `BeginAnimation` + `TaskCompletionSource` 方式に刷新**: XAML DataTrigger/Storyboard 方式を全廃し、`MainWindow.xaml.cs` から `PaneContentArea.BeginAnimation` で直接 Opacity を制御。`DoubleAnimation.Completed` + `Dispatcher.InvokeAsync(Render)` で Opacity=0 の描画確定まで待ち、ViewModel 側で `await` することでフェードアウト描画完了→スワップ→フェードインの順序を**構造的に保証**
+- **`Func<Task>` デリゲート方式で View-ViewModel 間のアニメーション連携**: `MainViewModel.AnimatePaneFadeOut` / `AnimatePaneFadeIn` デリゲートを `MainWindow` コンストラクタで設定。`ProjectSetsViewModel` は `await _main.AnimatePaneFadeOut()` でフェードアウト完了を待ってからスワップを開始し、スワップ完了後に `await _main.AnimatePaneFadeIn()` でフェードインを待つ
+- **プレビュー間切り替え時のフェードなしロールバックを廃止**: `CancelPreviewInternalAsync(animate: false)` による中間ロールバックが A/B ペインを丸見えのまま差し替えていた根本原因を修正。プレビュー間切り替えでは元のロールバックポイントを保持したまま現在の表示をそのままフェードアウトし、新セットに直接差し替える方式に変更
+- **`IsWorkingSetSwitching` プロパティを廃止**: DataTrigger 不要のため `MainViewModel` から除去。`Func<Task>` デリゲートが代替
+- **ワーキングセット切り替えに多重発火ガードを追加**: `_isSwitching` フラグにより素早いダブルクリック等での重複実行を防止
+- **ワーキングセット切り替え時の全タブパスを事前バリデーション**: `ValidateAndResolvePathsAsync` で全タブの存在確認を実施し、アクセス不能なネットワークパス等をデスクトップ/ダウンロードに自動置換。置換があった場合はトースト通知で詳細を表示
+- **ワーキングセット切り替え失敗時の自動ロールバック**: 例外発生時にフェードを即解除し、元の状態への復帰を試行。復帰も失敗した場合は状態リセットのみ実行しトースト通知でエラーを報告
+- **キャンセル（戻す）操作にも同じクロスフェード演出を適用**: `CancelPreviewInternalAsync` に `animate` パラメータを追加し、独立キャンセル時はフェード付き、StartPreview 内からの連鎖キャンセル時はフェードなしで効率化
+- **不要プロパティ `WorkingSetSwitchMessage` を削除**: オーバーレイ廃止に伴い `MainViewModel` から除去
+
+### Fixed
+- **タブ復元時に先頭タブ以外のパスが検証されない問題を修正**: `ResolvePathForTabRestoreAsync` の `isFirstTab` ガードを除去し、全タブで `DirectoryExistsSafeAsync` による存在確認を実施。PC / UNC ルートは仮想パスとしてスキップ
+
+## [0.13.6] - 2026-03-03 : 7-zip Shell コンテキストメニュー圧縮・展開の実行修正
+
+### Fixed
+- **7-zip 等の Shell 拡張が生成するダイアログが画面外に表示され操作不能になる問題を修正**: STA スレッドの隠しウィンドウ（0x0 サイズ、位置 (0,0)）が Shell 拡張のダイアログ親として不適切だった。`HwndSource` を右クリック位置に 1x1 の `WS_POPUP` ウィンドウとして作成し、メインウィンドウをオーナーに設定することでダイアログがメインウィンドウ付近に正しく表示されるよう修正
+- **`CMINVOKECOMMANDINFOEX` に `CMIC_MASK_PTINVOKE` / `CMIC_MASK_NOASYNC` フラグを追加**: `ptInvoke` フィールドを Shell 拡張が活用可能にし、同期実行を要求することで STA スレッドの早期終了を防止
+- **メッセージポンプの初期静止閾値を 300ms → 2 秒に引き上げ**: 7-zip が `InvokeCommand` 後に非同期でダイアログを生成する場合、300ms では短すぎてメッセージポンプが早期終了していた
+- **空フォルダのサイズ列が空白だった問題を修正**: `GetFolderSizesFromIndexAsync` が中身 0 件のフォルダを結果辞書に含めなかったため `FolderIndexedSize` が `null` のままだった。TotalHits=0 の場合も `result[folderPath] = 0` を設定し、`totalSize > 0` ガードも除去。`DisplaySize` の条件を `HasValue` に変更し「0.0 B」と表示するよう修正
+
+## [0.13.5] - 2026-03-02 : 選択ハイライトのアクティブ/非アクティブ切替・フォーカス枠統一
+
+### Fixed
+- **ホバーアニメーションが共有 SelectionBrush を破壊する致命的バグを修正**: ホバー終了時の `ColorAnimation` が `(Border.Background).(SolidColorBrush.Color)` を経由して現在の Background ブラシの Color を Transparent に書き換えていた。選択中は Background が共有リソース `SelectionBrush`（非 Frozen）に差し替わるため、共有リソースの Color が破壊されアプリ全体の選択ハイライトが消失していた。インライン SolidColorBrush に `x:Name` を付与し、アニメーションが名前指定でインラインブラシのみを対象とするよう変更
+- **非アクティブペインの選択色を区別**: ListView（詳細ビュー）・ListBox（アイコンビュー）の選択ハイライトを、アクティブペインでは青（#D0E6F8）、非アクティブペインではグレー（#E5E5E5）に切替え。プロパティトリガー（`IsSelected`）をフォールバックとして保持し、非アクティブ時のみ MultiDataTrigger でグレーに上書き
+- **ListView の FocusVisualStyle を統一**: 詳細ビューにシステムデフォルトの点線矩形が表示されていた問題を修正。角丸なしの `DetailsFocusVisualStyle` を新設し、アイコンビューの `SubtleFocusVisualStyle` と統一
+- **仮想化スクロール時の描画ズレ防止**: ListView に `VirtualizingPanel.ScrollUnit="Pixel"` を追加し、大量ファイルのスクロール中に選択ハイライトがズレる問題を防止
+
 ## [0.13.4] - 2026-03-02 : Shell コンテキストメニュー「新規作成」「圧縮・展開」修正
 
 ### Fixed

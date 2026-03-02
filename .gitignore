@@ -40,5 +40,8 @@ Logs/
 *.swp
 *~
 
+# --- JIT Profile ---
+*.jitprofile
+
 # --- SpecStory ---
 .specstory/

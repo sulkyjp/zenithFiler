@@ -68,6 +68,12 @@ namespace ZenithFiler
                 App.Notification.Notify(value ? "常に最前面をオンにしました" : "常に最前面をオフにしました", $"常に最前面: {(value ? "オン" : "オフ")}");
         }
 
+        // ─── ワーキングセット切り替え（View 側 BeginAnimation による厳密制御） ──
+        /// <summary>ペインコンテナをフェードアウトする。View が設定する。</summary>
+        public Func<Task>? AnimatePaneFadeOut { get; set; }
+        /// <summary>ペインコンテナをフェードインする。View が設定する。</summary>
+        public Func<Task>? AnimatePaneFadeIn { get; set; }
+
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(IsGeneralBusy))]
         private bool _isBusy;

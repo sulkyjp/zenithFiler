@@ -2804,6 +2804,7 @@
                   Visibility="{Binding FileViewMode, Converter={StaticResource EnumEqualityToVis}, ConverterParameter={x:Static local:FileViewMode.Details}}"
                   VirtualizingStackPanel.IsVirtualizing="True"
                   VirtualizingStackPanel.VirtualizationMode="Recycling"
+                  VirtualizingStackPanel.ScrollUnit="Pixel"
                   VirtualizingStackPanel.CacheLengthUnit="Item"
                   VirtualizingStackPanel.CacheLength="10,10"
                   ScrollViewer.CanContentScroll="True"
@@ -2837,6 +2838,7 @@
             <ListView.ItemContainerStyle>
                 <Style TargetType="ListViewItem">
                     <Setter Property="Tag" Value="{Binding RelativeSource={RelativeSource AncestorType=ListView}}"/>
+                    <Setter Property="FocusVisualStyle" Value="{StaticResource DetailsFocusVisualStyle}"/>
                     <!-- デフォルトの行の文字色（非アクティブペイン時）はグレー -->
                     <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
                     <!-- EventSetter: 右クリック時に選択を更新し、シェルメニュー用の位置・パスを保存 -->
@@ -2851,12 +2853,15 @@
                             <ControlTemplate TargetType="ListViewItem">
                                 <Border x:Name="Bd" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" SnapsToDevicePixels="true">
                                     <Border.Background>
-                                        <SolidColorBrush Color="Transparent"/>
+                                        <SolidColorBrush x:Name="BdHoverBrush" Color="Transparent"/>
                                     </Border.Background>
                                     <GridViewRowPresenter VerticalAlignment="Stretch" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
                                 </Border>
                                 <ControlTemplate.Triggers>
                                     <!-- ホバーエフェクト: ドラッグ中以外のみ有効（60ms in / 80ms out） -->
+                                    <!-- ※TargetName を名前付きインラインブラシに直接指定し、選択トリガーが -->
+                                    <!--   Background を共有リソース（SelectionBrush）に差し替えた際に -->
+                                    <!--   アニメーションが共有ブラシの Color を破壊しないようにする -->
                                     <MultiDataTrigger>
                                         <MultiDataTrigger.Conditions>
                                             <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True"/>
@@ -2865,8 +2870,8 @@
                                         <MultiDataTrigger.EnterActions>
                                             <BeginStoryboard>
                                                 <Storyboard>
-                                                    <ColorAnimation Storyboard.TargetName="Bd"
-                                                        Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+                                                    <ColorAnimation Storyboard.TargetName="BdHoverBrush"
+                                                        Storyboard.TargetProperty="Color"
                                                         To="{StaticResource ListHoverColor}" Duration="0:0:0.06"/>
                                                 </Storyboard>
                                             </BeginStoryboard>
@@ -2874,17 +2879,26 @@
                                         <MultiDataTrigger.ExitActions>
                                             <BeginStoryboard>
                                                 <Storyboard>
-                                                    <ColorAnimation Storyboard.TargetName="Bd"
-                                                        Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+                                                    <ColorAnimation Storyboard.TargetName="BdHoverBrush"
+                                                        Storyboard.TargetProperty="Color"
                                                         To="Transparent" Duration="0:0:0.08"/>
                                                 </Storyboard>
                                             </BeginStoryboard>
                                         </MultiDataTrigger.ExitActions>
                                     </MultiDataTrigger>
 
-                                    <Trigger Property="IsSelected" Value="true">
+                                    <!-- 選択状態: 常に青ハイライト（プロパティトリガーで即座に反応、フォールバック兼用） -->
+                                    <Trigger Property="IsSelected" Value="True">
                                         <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SelectionBrush}"/>
                                     </Trigger>
+                                    <!-- 非アクティブペインでは選択色をグレーに上書き -->
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource Self}}" Value="True"/>
+                                            <Condition Binding="{Binding DataContext.ParentPane.IsActive, RelativeSource={RelativeSource AncestorType=local:TabContentControl}}" Value="False"/>
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter TargetName="Bd" Property="Background" Value="{DynamicResource InactiveSelectionBrush}"/>
+                                    </MultiDataTrigger>
                                 </ControlTemplate.Triggers>
                             </ControlTemplate>
                         </Setter.Value>
@@ -3147,7 +3161,7 @@
                                     <Border x:Name="SelectionBorder" HorizontalAlignment="Left" VerticalAlignment="Top"
                                             BorderThickness="0" CornerRadius="4">
                                         <Border.Background>
-                                            <SolidColorBrush Color="Transparent"/>
+                                            <SolidColorBrush x:Name="IconHoverBrush" Color="Transparent"/>
                                         </Border.Background>
                                         <ContentPresenter Content="{TemplateBinding Content}"
                                                           ContentTemplateSelector="{Binding ItemTemplateSelector, RelativeSource={RelativeSource AncestorType=ListBox}}"
@@ -3155,6 +3169,7 @@
                                     </Border>
                                 </Grid>
                                 <ControlTemplate.Triggers>
+                                    <!-- ホバーエフェクト: 名前付きインラインブラシを直接ターゲット -->
                                     <MultiDataTrigger>
                                         <MultiDataTrigger.Conditions>
                                             <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True"/>
@@ -3163,8 +3178,8 @@
                                         <MultiDataTrigger.EnterActions>
                                             <BeginStoryboard>
                                                 <Storyboard>
-                                                    <ColorAnimation Storyboard.TargetName="SelectionBorder"
-                                                        Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+                                                    <ColorAnimation Storyboard.TargetName="IconHoverBrush"
+                                                        Storyboard.TargetProperty="Color"
                                                         To="{StaticResource ListHoverColor}" Duration="0:0:0.06"/>
                                                 </Storyboard>
                                             </BeginStoryboard>
@@ -3172,16 +3187,25 @@
                                         <MultiDataTrigger.ExitActions>
                                             <BeginStoryboard>
                                                 <Storyboard>
-                                                    <ColorAnimation Storyboard.TargetName="SelectionBorder"
-                                                        Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+                                                    <ColorAnimation Storyboard.TargetName="IconHoverBrush"
+                                                        Storyboard.TargetProperty="Color"
                                                         To="Transparent" Duration="0:0:0.08"/>
                                                 </Storyboard>
                                             </BeginStoryboard>
                                         </MultiDataTrigger.ExitActions>
                                     </MultiDataTrigger>
+                                    <!-- 選択状態: 常に青ハイライト（プロパティトリガーで即座に反応、フォールバック兼用） -->
                                     <Trigger Property="IsSelected" Value="True">
                                         <Setter TargetName="SelectionBorder" Property="Background" Value="{DynamicResource SelectionBrush}"/>
                                     </Trigger>
+                                    <!-- 非アクティブペインでは選択色をグレーに上書き -->
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource Self}}" Value="True"/>
+                                            <Condition Binding="{Binding DataContext.ParentPane.IsActive, RelativeSource={RelativeSource AncestorType=local:TabContentControl}}" Value="False"/>
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter TargetName="SelectionBorder" Property="Background" Value="{DynamicResource InactiveSelectionBrush}"/>
+                                    </MultiDataTrigger>
                                 </ControlTemplate.Triggers>
                             </ControlTemplate>
                         </Setter.Value>

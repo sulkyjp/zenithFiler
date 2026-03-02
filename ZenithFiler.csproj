@@ -9,8 +9,14 @@
     <ApplicationIcon>assets\app_icon2_1.ico</ApplicationIcon>
     <ApplicationTitle>ZenithFiler</ApplicationTitle>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>0.13.4</Version>
+    <Version>0.13.9</Version>
     <PublishDir>bin\$(Configuration)\$(TargetFramework)\$(RuntimeIdentifier)\ZenithFiler_v$(Version)\</PublishDir>
+  </PropertyGroup>
+
+  <!-- Debug ビルドでも段階的 JIT を有効化し、起動時の JIT 遅延を軽減 -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <TieredCompilation>true</TieredCompilation>
+    <TieredCompilationQuickJit>true</TieredCompilationQuickJit>
   </PropertyGroup>
 
   <!-- Release ビルドのみ self-contained / 単一ファイルで発行する -->
@@ -23,6 +29,12 @@
     <TieredCompilation>true</TieredCompilation>
     <TieredCompilationQuickJit>true</TieredCompilationQuickJit>
   </PropertyGroup>
+
+  <!-- App.xaml の自動 Main 生成を抑止し、カスタム Main で起動を高速化 -->
+  <ItemGroup>
+    <ApplicationDefinition Remove="App.xaml" />
+    <Page Include="App.xaml" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="ClosedXML" Version="0.104.2" />

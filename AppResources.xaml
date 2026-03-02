@@ -238,6 +238,18 @@
         <Setter Property="FontSize" Value="13"/>
     </Style>
 
+    <!-- フォーカス枠: 詳細ビュー用（行ベース、角丸なし） -->
+    <Style x:Key="DetailsFocusVisualStyle" TargetType="Control">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Control">
+                    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Margin="0"
+                            SnapsToDevicePixels="True"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- フォーカス枠: デザインに調和するグレー枠（アイコンビュー等で使用） -->
     <Style x:Key="SubtleFocusVisualStyle" TargetType="Control">
         <Setter Property="Template">

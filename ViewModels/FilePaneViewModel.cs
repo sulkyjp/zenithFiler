@@ -396,13 +396,21 @@ namespace ZenithFiler
         private async Task<string> ResolvePathForTabRestoreAsync(string? path, bool isFirstTab)
         {
             bool useDownloads = isFirstTab && string.Equals(PaneLabel, "B", StringComparison.OrdinalIgnoreCase);
-            if (string.IsNullOrWhiteSpace(path))
-                return useDownloads ? PathHelper.GetDownloadsPath() : PathHelper.GetInitialPath(Environment.SpecialFolder.Desktop);
+            string fallback = useDownloads
+                ? PathHelper.GetDownloadsPath()
+                : PathHelper.GetInitialPath(Environment.SpecialFolder.Desktop);
+
+            if (string.IsNullOrWhiteSpace(path)) return fallback;
             string resolved = PathHelper.GetPhysicalPath(path);
-            if (string.IsNullOrWhiteSpace(resolved)) return useDownloads ? PathHelper.GetDownloadsPath() : PathHelper.GetInitialPath(Environment.SpecialFolder.Desktop);
-            // 先頭タブのみ：ドライブルートのみ・存在しない場合はデスクトップ/ダウンロードへ（C:\に化けないようにする）
-            if (isFirstTab && (PathHelper.IsDriveRootOnly(resolved) || !await PathHelper.DirectoryExistsSafeAsync(resolved)))
-                return useDownloads ? PathHelper.GetDownloadsPath() : PathHelper.GetInitialPath(Environment.SpecialFolder.Desktop);
+            if (string.IsNullOrWhiteSpace(resolved)) return fallback;
+
+            // PC / UNC ルートは仮想パスなので存在チェック不要
+            if (PathHelper.IsPCPath(resolved) || PathHelper.IsUncRoot(resolved))
+                return resolved;
+
+            if (PathHelper.IsDriveRootOnly(resolved) || !await PathHelper.DirectoryExistsSafeAsync(resolved))
+                return fallback;
+
             return resolved;
         }
     }

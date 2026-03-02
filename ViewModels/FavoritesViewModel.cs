@@ -14,6 +14,7 @@ using System.ComponentModel;
 using ClosedXML.Excel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System.Windows.Media;
 using Vanara.Windows.Shell;
 using ZenithFiler.Views;
 
@@ -974,6 +975,8 @@ namespace ZenithFiler
                 {
                     Items.Add(FromDto(dto, 0));
                 }
+                // アイコンを非同期バッチ取得（UIスレッドをブロックしない）
+                _ = LoadIconsAsync(Items);
                 return;
             }
 
@@ -1041,26 +1044,61 @@ namespace ZenithFiler
                 Level = level,
                 SourceType = !string.IsNullOrEmpty(dto.Path) ? PathHelper.DetermineSourceType(dto.Path) : dto.LocationType
             };
-
-            if (!string.IsNullOrEmpty(dto.Path))
-            {
-                var info = Directory.Exists(dto.Path)
-                    ? ShellIconHelper.GetFolderIcon(dto.Path)
-                    : ShellIconHelper.GetInfo(dto.Path, false);
-                item.Icon = info.Icon;
-            }
-            else
-            {
-                // 仮想フォルダ用アイコン
-                var info = ShellIconHelper.GetGenericInfo("dummy_folder", true);
-                item.Icon = info.Icon;
-            }
+            // アイコンは後で非同期バッチ読み込み（FromDto を高速化）
 
             foreach (var childDto in dto.Children)
             {
                 item.Children.Add(FromDto(childDto, level + 1));
             }
             return item;
+        }
+
+        /// <summary>全項目のアイコンをバックグラウンドスレッドで取得し、UI スレッドに反映する。</summary>
+        private static async Task LoadIconsAsync(IEnumerable<FavoriteItem> items)
+        {
+            var flatList = FlattenItems(items).ToList();
+            if (flatList.Count == 0) return;
+
+            // バックグラウンドで全アイコンを一括取得
+            var icons = await Task.Run(() =>
+            {
+                var result = new List<(FavoriteItem item, ImageSource? icon)>(flatList.Count);
+                foreach (var item in flatList)
+                {
+                    ImageSource? icon = null;
+                    if (!string.IsNullOrEmpty(item.Path))
+                    {
+                        var info = Directory.Exists(item.Path)
+                            ? ShellIconHelper.GetFolderIcon(item.Path)
+                            : ShellIconHelper.GetInfo(item.Path, false);
+                        icon = info.Icon;
+                    }
+                    else
+                    {
+                        var info = ShellIconHelper.GetGenericInfo("dummy_folder", true);
+                        icon = info.Icon;
+                    }
+                    result.Add((item, icon));
+                }
+                return result;
+            });
+
+            // UI スレッドで反映（Icon は [ObservableProperty] なので PropertyChanged が自動発火）
+            foreach (var (item, icon) in icons)
+            {
+                item.Icon = icon;
+            }
+        }
+
+        /// <summary>お気に入りツリーを再帰的にフラット化する。</summary>
+        private static IEnumerable<FavoriteItem> FlattenItems(IEnumerable<FavoriteItem> items)
+        {
+            foreach (var item in items)
+            {
+                yield return item;
+                foreach (var child in FlattenItems(item.Children))
+                    yield return child;
+            }
         }
 
         // ─── お気に入りExcelバックアップ ────────────────────────────────────────────

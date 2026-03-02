@@ -132,6 +132,8 @@ namespace ZenithFiler
                 vm.RequestScrollToIndexSearchTarget = Vm_RequestScrollToIndexSearchTarget;
                 vm.PropertyChanged += Vm_PropertyChanged_GlowBar;
                 vm.CancelRetractionRequested += Vm_CancelRetractionRequested;
+                vm.AnimatePaneFadeOut = AnimatePaneFadeOutAsync;
+                vm.AnimatePaneFadeIn = AnimatePaneFadeInAsync;
                 vm.MarkInitializationComplete();
             }
 
@@ -164,6 +166,45 @@ namespace ZenithFiler
                 RootContentTranslate.Y = 0;
             };
             RootContentTranslate.BeginAnimation(TranslateTransform.YProperty, slideUp);
+        }
+
+        // ── ワーキングセット切り替え：ペインコンテナのフェードアウト/フェードイン ──
+
+        /// <summary>PaneContentArea を 150ms で Opacity 0 にフェードアウトし、描画確定まで待つ。</summary>
+        private async Task AnimatePaneFadeOutAsync()
+        {
+            var tcs = new TaskCompletionSource();
+            PaneContentArea.IsHitTestVisible = false;
+            var anim = new DoubleAnimation(0, TimeSpan.FromMilliseconds(150))
+            {
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            };
+            anim.Completed += (_, _) => tcs.SetResult();
+            PaneContentArea.BeginAnimation(UIElement.OpacityProperty, anim);
+            await tcs.Task;
+            // Completed はタイムラインクロック完了で発火する。
+            // 最終フレーム（Opacity=0）が実際にレンダリングされるまで待つ。
+            await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
+        }
+
+        /// <summary>PaneContentArea を 180ms で Opacity 1 にフェードインし、完了を待つ。</summary>
+        private Task AnimatePaneFadeInAsync()
+        {
+            var tcs = new TaskCompletionSource();
+            var anim = new DoubleAnimation(1, TimeSpan.FromMilliseconds(180))
+            {
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            };
+            anim.Completed += (_, _) =>
+            {
+                // アニメーション保持を解除し、ベース値に復帰
+                PaneContentArea.BeginAnimation(UIElement.OpacityProperty, null);
+                PaneContentArea.Opacity = 1;
+                PaneContentArea.IsHitTestVisible = true;
+                tcs.SetResult();
+            };
+            PaneContentArea.BeginAnimation(UIElement.OpacityProperty, anim);
+            return tcs.Task;
         }
 
         /// <summary>

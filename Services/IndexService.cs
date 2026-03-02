@@ -587,7 +587,11 @@ namespace ZenithFiler.Services
                         boolQuery.Add(NumericRangeQuery.NewInt32Range("is_dir", 0, 0, true, true), Occur.MUST);
 
                         var probe = searcher.Search(boolQuery, 1);
-                        if (probe.TotalHits == 0) continue;
+                        if (probe.TotalHits == 0)
+                        {
+                            result[folderPath] = 0;
+                            continue;
+                        }
 
                         var hits = searcher.Search(boolQuery, probe.TotalHits);
                         long totalSize = 0;
@@ -599,8 +603,7 @@ namespace ZenithFiler.Services
                                 totalSize += s;
                         }
 
-                        if (totalSize > 0)
-                            result[folderPath] = totalSize;
+                        result[folderPath] = totalSize;
                     }
                 }, token);
             }

@@ -68,12 +68,12 @@ namespace ZenithFiler
         }
 
         public string DisplaySize => IsDirectory
-            ? (FolderIndexedSize is > 0 ? FormatSize(FolderIndexedSize.Value) : "")
+            ? (FolderIndexedSize.HasValue ? FormatSize(FolderIndexedSize.Value) : "")
             : FormatSize(Size);
 
         /// <summary>アイコンビュー用のサブテキスト（フォルダ: 「フォルダ」or「フォルダ • サイズ」、ファイル: 「拡張子 • サイズ」）。</summary>
         public string IconViewSubText => IsDirectory
-            ? (FolderIndexedSize is > 0 ? $"フォルダ • {FormatSize(FolderIndexedSize.Value)}" : "フォルダ")
+            ? (FolderIndexedSize.HasValue ? $"フォルダ • {FormatSize(FolderIndexedSize.Value)}" : "フォルダ")
             : $"{System.IO.Path.GetExtension(Name)?.TrimStart('.')?.ToUpperInvariant() ?? "—"} • {DisplaySize}";
 
         public static string FormatSize(long bytes)

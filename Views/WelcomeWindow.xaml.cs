@@ -38,8 +38,12 @@ public partial class WelcomeWindow : Window
         // Back button: hidden on page 0
         BackButton.Visibility = _currentPage > 0 ? Visibility.Visible : Visibility.Collapsed;
 
-        // Next button: visible on pages 0–7, hidden on page 8
-        NextButton.Visibility = _currentPage < TotalPages - 1 ? Visibility.Visible : Visibility.Collapsed;
+        // Next / Launch button: 最終ページでは「アプリを起動」を次へと同じ位置に表示
+        bool isLastPage = _currentPage == TotalPages - 1;
+        NextButton.Visibility = isLastPage ? Visibility.Collapsed : Visibility.Visible;
+        LaunchButton.Visibility = isLastPage ? Visibility.Visible : Visibility.Collapsed;
+        NextButton.IsDefault = !isLastPage;
+        LaunchButton.IsDefault = isLastPage;
 
         // Update page 8 selected theme text
         if (_currentPage == TotalPages - 1)

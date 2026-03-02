@@ -54,8 +54,54 @@ namespace ZenithFiler
         private const int GcDelaySeconds = 60;
         private const int LohCompactionDelaySeconds = 300;
 
+        // --- Main() からの引き継ぎ（WPF 初期化前に開始した処理の結果） ---
+        private SplashScreen? _firstLaunchSplash;
+        private bool _isFirstLaunch;
+        private string _settingsPath = string.Empty;
+        private Task<WindowSettings>? _settingsTask;
+
         /// <summary>バックグラウンドで実行中の起動時初期化タスク。Window_Loaded から await して完了を待機できる。</summary>
         internal static Task? StartupInitTask { get; private set; }
+
+        /// <summary>
+        /// カスタムエントリーポイント。WPF フレームワーク初期化前にスプラッシュ表示と設定読み込みを開始する。
+        /// App.xaml の BuildAction を Page に変更し、自動生成 Main を抑止して使用。
+        /// </summary>
+        [STAThread]
+        public static void Main()
+        {
+            // マルチコア JIT: 起動プロファイルを記録し、2回目以降はバックグラウンドで先行 JIT
+            System.Runtime.ProfileOptimization.SetProfileRoot(AppDomain.CurrentDomain.BaseDirectory);
+            System.Runtime.ProfileOptimization.StartProfile("startup.jitprofile");
+
+            // 最速でスプラッシュ表示（WPF フレームワーク初期化前、ネイティブ Win32 で描画）
+            var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            var settingsPath = Path.Combine(baseDir, "settings.json");
+            bool isFirstLaunch = !File.Exists(settingsPath);
+
+            SplashScreen? splash = null;
+            if (isFirstLaunch)
+            {
+                splash = new SplashScreen("assets/splash.png");
+                splash.Show(false);
+            }
+
+            // 設定の並列読み込みも WPF 初期化前に開始（App コンストラクタ + InitializeComponent と並列実行）
+            var settingsTask = Task.Run(() =>
+            {
+                try { return WindowSettings.Load(); }
+                catch { return WindowSettings.CreateDefault(); }
+            });
+
+            // WPF Application の初期化（App コンストラクタ → InitializeComponent → Run → OnStartup）
+            var app = new App();
+            app._firstLaunchSplash = splash;
+            app._isFirstLaunch = isFirstLaunch;
+            app._settingsPath = settingsPath;
+            app._settingsTask = settingsTask;
+            app.InitializeComponent();
+            app.Run();
+        }
 
         protected override void OnStartup(StartupEventArgs e)
         {
@@ -64,60 +110,47 @@ namespace ZenithFiler
             if (!createdNew)
             {
                 _mutexOwned = false;
+                _firstLaunchSplash?.Close(TimeSpan.Zero);
                 ActivateExistingInstance();
                 Shutdown();
                 return;
             }
             _mutexOwned = true;
 
-            // 1. 初回起動判定 (settings.json の存在確認)
-            // ポータブル性を維持するため、AppDomain.CurrentDomain.BaseDirectory を使用
-            var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            var settingsPath = Path.Combine(baseDir, "settings.json");
-            bool isFirstLaunch = !File.Exists(settingsPath);
+            // スプラッシュと設定読み込みは Main() で開始済み（WPF 初期化と並列実行完了）
 
-            // 2. スプラッシュ表示 (初回起動時のみ)
-            SplashScreen? splash = null;
-            if (isFirstLaunch)
-            {
-                splash = new SplashScreen("assets/splash.png");
-                // フェードインなし(false)で即座に表示し、準備中であることを伝える
-                splash.Show(false);
-            }
-
-            // 3. 基盤フォルダの準備はバックグラウンドへ（UI スレッドの I/O を排除）
+            // 基盤フォルダの準備はバックグラウンドへ（UI スレッドの I/O を排除）
             _ = Task.Run(EnsureAppFolders);
             _ = Services.SettingsBackupService.CleanupOldBackupsAsync(30);
             // リソース辞書は UI スレッドで読み込む必要がある（XAML パース）
             LoadHeavyResources();
             // テーマカラーを外部 JSON から適用（ファイルがなければデフォルトのまま）
-            var savedTheme = ReadThemeNameFromSettings(settingsPath);
+            var savedTheme = ReadThemeNameFromSettings(_settingsPath);
             ThemeService.LoadAndApply(Current.Resources, savedTheme);
 
             // マニュアルビューア用ログフック（共有プロジェクトから呼ばれる）
             DocViewerLogHelper.LogAsync = msg => _ = FileLogger.LogAsync(msg);
 
-            // 4. グローバル例外ハンドラの登録
+            // グローバル例外ハンドラの登録
             DispatcherUnhandledException += App_DispatcherUnhandledException;
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
             TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
 
-            // 起動診断情報をログに記録
-            FileLogger.LogStartupDiagnostics();
+            // 起動診断情報をバックグラウンドでログに記録
+            _ = Task.Run(() => FileLogger.LogStartupDiagnostics());
 
-            // 5. アプリのアクティブ状態を監視し、非アクティブ時にメモリ解放を試みる
+            // アプリのアクティブ状態を監視し、非アクティブ時にメモリ解放を試みる
             AppActivationService.Instance.ActivationChanged += OnAppActivationChanged;
 
             Exit += App_Exit;
 
-            if (splash != null)
+            if (_firstLaunchSplash != null)
             {
-                // 初回起動時は 0.5秒 かけてフェードアウト
-                splash.Close(TimeSpan.FromSeconds(0.5));
+                _firstLaunchSplash.Close(TimeSpan.FromSeconds(0.5));
             }
 
-            // 6a. 初回起動時: ウェルカムウィンドウで テーマ選択 → settings.json 作成
-            if (isFirstLaunch)
+            // 初回起動時: ウェルカムウィンドウで テーマ選択 → settings.json 作成
+            if (_isFirstLaunch)
             {
                 // WelcomeWindow が唯一のウィンドウなので、Close 時にアプリが終了しないよう一時変更
                 ShutdownMode = ShutdownMode.OnExplicitShutdown;
@@ -125,16 +158,8 @@ namespace ZenithFiler
                 ShutdownMode = ShutdownMode.OnLastWindowClose;
             }
 
-            // 6b. 設定を読み込み、メインウィンドウを生成（まだ見せない: XAML で Visibility="Hidden"）
-            WindowSettings preloadedSettings;
-            try
-            {
-                preloadedSettings = WindowSettings.Load();
-            }
-            catch
-            {
-                preloadedSettings = WindowSettings.CreateDefault();
-            }
+            // 設定を取得（Main() で開始済み — 完了待機）
+            WindowSettings preloadedSettings = _settingsTask!.GetAwaiter().GetResult();
             var mainWindow = new MainWindow(preloadedSettings);
 
             // レンダリング準備が整った段階で Visible に切り替え、完成済みの画面を一発表示

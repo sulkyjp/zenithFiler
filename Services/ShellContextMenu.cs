@@ -62,18 +62,7 @@ namespace ZenithFiler
             {
                 try
                 {
-                    // メッセージ受信用のダミーウィンドウを作成
-                    var parameters = new HwndSourceParameters("ZenithFilerShellContext")
-                    {
-                        Width = 0,
-                        Height = 0,
-                        WindowStyle = 0
-                    };
-
-                    using var source = new HwndSource(parameters);
-                    if (source.Handle == IntPtr.Zero) return;
-
-                    ShowContextMenuInternal(source, mainHwnd, filePaths, screenPoint, isBackground, workArea);
+                    ShowContextMenuInternal(mainHwnd, filePaths, screenPoint, isBackground, workArea);
                 }
                 catch (Exception ex)
                 {
@@ -94,8 +83,25 @@ namespace ZenithFiler
         private const double DefaultMenuWidth = 280;
         private const double DefaultMenuHeight = 450;
 
-        private void ShowContextMenuInternal(HwndSource source, IntPtr mainHwnd, string[] filePaths, System.Windows.Point screenPoint, bool isBackground, System.Windows.Rect? workArea)
+        private void ShowContextMenuInternal(IntPtr mainHwnd, string[] filePaths, System.Windows.Point screenPoint, bool isBackground, System.Windows.Rect? workArea)
         {
+            // STA スレッド上にメッセージ受信用ウィンドウを作成。
+            // 7-zip 等の Shell 拡張は InvokeCommand の hwnd を親として DialogBoxParam でモーダルダイアログを生成するため、
+            // 右クリック位置に 1x1 の WS_POPUP ウィンドウを配置し、メインウィンドウをオーナーにすることで
+            // ダイアログがメインウィンドウ付近に正しく表示されるようにする。
+            var parameters = new HwndSourceParameters("ZenithFilerShellContext")
+            {
+                Width = 1,
+                Height = 1,
+                PositionX = (int)screenPoint.X,
+                PositionY = (int)screenPoint.Y,
+                WindowStyle = unchecked((int)0x80000000u),  // WS_POPUP
+                ParentWindow = mainHwnd
+            };
+
+            using var source = new HwndSource(parameters);
+            if (source.Handle == IntPtr.Zero) return;
+
             HwndSourceHook? hook = null;
             HMENU hMenu = HMENU.NULL;
             IContextMenu? contextMenu = null;
@@ -263,7 +269,7 @@ namespace ZenithFiler
                     var ici = new CMINVOKECOMMANDINFOEX
                     {
                         cbSize = (uint)Marshal.SizeOf<CMINVOKECOMMANDINFOEX>(),
-                        fMask = CMIC.CMIC_MASK_UNICODE,
+                        fMask = CMIC.CMIC_MASK_UNICODE | CMIC.CMIC_MASK_PTINVOKE | CMIC.CMIC_MASK_NOASYNC,
                         hwnd = hwnd,
                         lpVerb = new SafeResourceId(offset),
                         lpVerbW = new SafeResourceId(offset),
@@ -374,9 +380,9 @@ namespace ZenithFiler
             var startTime = DateTime.UtcNow;
             int quietCount = 0;
             bool everSawChildWindow = false;
-            // Phase 1: ダイアログが出ない操作（新規フォルダ等）は 300ms で早期終了
+            // Phase 1: ダイアログが出ない操作（新規フォルダ等）は 2 秒で早期終了
             // Phase 2: ダイアログが出た場合（圧縮等）は閉じてから 1.5 秒待機
-            const int initialQuietThreshold = 3;   // 3 * 100ms = 300ms
+            const int initialQuietThreshold = 20;   // 20 * 100ms = 2秒（ダイアログ出現前の早期終了を防止）
             const int postDialogQuietThreshold = 15; // 15 * 100ms = 1.5 秒
             const int maxMinutes = 10;
 

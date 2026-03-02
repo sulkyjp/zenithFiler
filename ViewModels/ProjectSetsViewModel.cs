@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
@@ -23,6 +24,7 @@ namespace ZenithFiler
         private PaneStateDto? _rollbackLeft;
         private PaneStateDto? _rollbackRight;
         private int           _rollbackPaneCount;
+        private bool          _isSwitching;
 
         public ProjectSetsViewModel(MainViewModel main) => _main = main;
 
@@ -56,20 +58,81 @@ namespace ZenithFiler
         [RelayCommand]
         private async Task StartPreviewAsync(WorkingSetDto set)
         {
-            if (IsPreviewActive) await CancelPreviewInternalAsync();
+            // 多重発火ガード
+            if (_isSwitching) return;
+            _isSwitching = true;
 
-            _rollbackLeft      = CapturePaneState(_main.LeftPane);
-            _rollbackRight     = CapturePaneState(_main.RightPane);
-            _rollbackPaneCount = _main.PaneCount;
-            IsPreviewActive    = true;
-            PreviewingSet      = set;
+            try
+            {
+                // 初回プレビュー時のみロールバック状態をキャプチャ
+                // （プレビュー間切り替え時は元のロールバックポイントを保持）
+                if (!IsPreviewActive)
+                {
+                    _rollbackLeft      = CapturePaneState(_main.LeftPane);
+                    _rollbackRight     = CapturePaneState(_main.RightPane);
+                    _rollbackPaneCount = _main.PaneCount;
+                }
+                IsPreviewActive = true;
+                PreviewingSet   = set;
 
-            _main.PaneCount = set.PaneCount;
-            await RestorePaneAsync(_main.LeftPane,  set.LeftPane);
-            await RestorePaneAsync(_main.RightPane, set.RightPane);
+                // ── Phase 0: 事前バリデーション（フェード前に I/O 完了） ──
+                var (leftPaths, leftMsgs)   = await ValidateAndResolvePathsAsync(set.LeftPane,  isRightPane: false);
+                var (rightPaths, rightMsgs) = await ValidateAndResolvePathsAsync(set.RightPane, isRightPane: true);
 
-            App.Notification.Notify($"「{set.Name}」をプレビュー中",
-                                    $"[WorkingSet] Preview: '{set.Name}'");
+                try
+                {
+                    // ── Phase 1: フェードアウト（150ms、完了を await） ──
+                    if (_main.AnimatePaneFadeOut != null)
+                        await _main.AnimatePaneFadeOut();
+
+                    // ── Phase 2: 両ペインを一括スワップ（Opacity=0 で完全不可視） ──
+                    _main.PaneCount = set.PaneCount;
+                    await RestorePaneWithResolvedPathsAsync(_main.LeftPane,  set.LeftPane,  leftPaths);
+                    await RestorePaneWithResolvedPathsAsync(_main.RightPane, set.RightPane, rightPaths);
+
+                    // ── Phase 3: フェードイン（180ms、完了を await） ──
+                    if (_main.AnimatePaneFadeIn != null)
+                        await _main.AnimatePaneFadeIn();
+
+                    // フォールバック通知
+                    var allMessages = leftMsgs.Concat(rightMsgs).ToList();
+                    if (allMessages.Count > 0)
+                    {
+                        App.Notification.Notify($"「{set.Name}」をプレビュー中（一部パスを置換）",
+                                                $"[WorkingSet] Preview: '{set.Name}' — {string.Join("; ", allMessages)}");
+                    }
+                    else
+                    {
+                        App.Notification.Notify($"「{set.Name}」をプレビュー中",
+                                                $"[WorkingSet] Preview: '{set.Name}'");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // フェードアウト中に失敗した場合は即座に復帰
+                    if (_main.AnimatePaneFadeIn != null)
+                        try { await _main.AnimatePaneFadeIn(); } catch { }
+
+                    try
+                    {
+                        _main.PaneCount = _rollbackPaneCount;
+                        if (_rollbackLeft  != null) await RestorePaneAsync(_main.LeftPane,  _rollbackLeft);
+                        if (_rollbackRight != null) await RestorePaneAsync(_main.RightPane, _rollbackRight);
+                    }
+                    catch { /* ロールバックも失敗 → 状態リセットのみ */ }
+
+                    IsPreviewActive = false;
+                    PreviewingSet   = null;
+                    _rollbackLeft = _rollbackRight = null;
+
+                    App.Notification.Notify($"ワーキングセットの切り替えに失敗しました: {ex.Message}",
+                                            $"[WorkingSet] Error: {ex.Message}");
+                }
+            }
+            finally
+            {
+                _isSwitching = false;
+            }
         }
 
         [RelayCommand]
@@ -85,18 +148,48 @@ namespace ZenithFiler
         }
 
         [RelayCommand]
-        private async Task CancelPreviewAsync() => await CancelPreviewInternalAsync();
+        private async Task CancelPreviewAsync() => await CancelPreviewInternalAsync(animate: true);
 
-        internal async Task CancelPreviewInternalAsync()
+        internal async Task CancelPreviewInternalAsync(bool animate = true)
         {
             if (!IsPreviewActive) return;
-            IsPreviewActive = false;
-            PreviewingSet   = null;
-            _main.PaneCount = _rollbackPaneCount;
-            if (_rollbackLeft  != null) await RestorePaneAsync(_main.LeftPane,  _rollbackLeft);
-            if (_rollbackRight != null) await RestorePaneAsync(_main.RightPane, _rollbackRight);
-            _rollbackLeft = _rollbackRight = null;
-            App.Notification.Notify("元の状態に戻しました", "[WorkingSet] Rollback executed");
+
+            if (animate)
+            {
+                if (_isSwitching) return;
+                _isSwitching = true;
+            }
+
+            try
+            {
+                IsPreviewActive = false;
+                PreviewingSet   = null;
+
+                try
+                {
+                    // ── Phase 1: フェードアウト（完了を await） ──
+                    if (animate && _main.AnimatePaneFadeOut != null)
+                        await _main.AnimatePaneFadeOut();
+
+                    // ── Phase 2: 一括ロールバック（Opacity=0 で不可視） ──
+                    _main.PaneCount = _rollbackPaneCount;
+                    if (_rollbackLeft  != null) await RestorePaneAsync(_main.LeftPane,  _rollbackLeft);
+                    if (_rollbackRight != null) await RestorePaneAsync(_main.RightPane, _rollbackRight);
+                }
+                catch { /* ロールバック失敗時も状態クリーンアップ */ }
+
+                _rollbackLeft = _rollbackRight = null;
+
+                // ── Phase 3: フェードイン（完了を await） ──
+                if (animate && _main.AnimatePaneFadeIn != null)
+                    await _main.AnimatePaneFadeIn();
+
+                App.Notification.Notify("元の状態に戻しました", "[WorkingSet] Rollback executed");
+            }
+            finally
+            {
+                if (animate) _isSwitching = false;
+            }
         }
 
         [RelayCommand]
@@ -124,6 +217,78 @@ namespace ZenithFiler
         }
 
         // ── ヘルパー ────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// 全タブパスを事前バリデーションし、アクセス不能パスをフォールバックに置換する。
+        /// </summary>
+        private static async Task<(List<string> resolvedPaths, List<string> fallbackMessages)> ValidateAndResolvePathsAsync(
+            PaneStateDto state, bool isRightPane)
+        {
+            var resolved = new List<string>(state.Tabs.Count);
+            var messages = new List<string>();
+
+            for (int i = 0; i < state.Tabs.Count; i++)
+            {
+                bool useDownloads = (i == 0) && isRightPane;
+                string fallback = useDownloads
+                    ? PathHelper.GetDownloadsPath()
+                    : PathHelper.GetInitialPath(Environment.SpecialFolder.Desktop);
+
+                string raw = state.Tabs[i].Path;
+                if (string.IsNullOrWhiteSpace(raw))
+                {
+                    resolved.Add(fallback);
+                    continue;
+                }
+
+                string path = PathHelper.GetPhysicalPath(raw);
+                if (string.IsNullOrWhiteSpace(path))
+                {
+                    resolved.Add(fallback);
+                    messages.Add($"タブ{i + 1}: パスの解決に失敗 → フォールバック");
+                    continue;
+                }
+
+                // 仮想パス（PC / UNC ルート）は存在チェック不要
+                if (PathHelper.IsPCPath(path) || PathHelper.IsUncRoot(path))
+                {
+                    resolved.Add(path);
+                    continue;
+                }
+
+                if (PathHelper.IsDriveRootOnly(path) || !await PathHelper.DirectoryExistsSafeAsync(path))
+                {
+                    resolved.Add(fallback);
+                    messages.Add($"タブ{i + 1}: 「{raw}」にアクセスできません → フォールバック");
+                    continue;
+                }
+
+                resolved.Add(path);
+            }
+
+            return (resolved, messages);
+        }
+
+        /// <summary>
+        /// 事前検証済みパスで RestoreTabsAsync を呼ぶ。
+        /// </summary>
+        private static async Task RestorePaneWithResolvedPathsAsync(
+            FilePaneViewModel pane, PaneStateDto state, List<string> resolvedPaths)
+        {
+            var ps = new PaneSettings
+            {
+                TabPaths            = resolvedPaths,
+                TabLockStates       = state.Tabs.Select(t => t.IsLocked).ToList(),
+                SelectedTabIndex    = Math.Clamp(state.SelectedTabIndex, 0,
+                                          Math.Max(0, state.Tabs.Count - 1)),
+                FileViewMode        = state.FileViewMode,
+                SortProperty        = state.SortProperty,
+                SortDirection       = state.SortDirection,
+                IsGroupFoldersFirst = state.IsGroupFoldersFirst
+            };
+            await pane.RestoreTabsAsync(ps);
+        }
+
         private static PaneStateDto CapturePaneState(FilePaneViewModel pane)
         {
             int idx = pane.SelectedTab != null ? pane.Tabs.IndexOf(pane.SelectedTab) : 0;
