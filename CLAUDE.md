@@ -96,3 +96,4 @@ try {
     - **Patch（0.0.X）自動更新:** バグ修正、微調整、パフォーマンス改善、ドキュメントのみの更新など軽微な変更の場合は、ユーザーに確認せず自動で Patch バージョンを上げ、`.csproj` と `CHANGELOG.md` を同期する。
     - **Minor（0.X.0）以上は提案:** 新機能追加・既存機能の大幅変更など、Patch を超える変更の場合はユーザーにバージョン（Minor/Major）を上げるか提案し、承認後に実行する。
 4.  [cite_start]**【実行】一括同期:** `.csproj` のバージョン、`CHANGELOG.md`、`MANUAL.md`（該当時）を同期して更新する [cite: 6]。
+5.  **【自動】Git コミット & プッシュ:** バージョン更新が完了したら、ユーザーに確認せず自動で `git add` → `git commit` → `git push` を実行する。コミットメッセージは変更内容を簡潔に記述し、末尾に `Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>` を付与する。
