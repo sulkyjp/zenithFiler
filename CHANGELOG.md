@@ -15,7 +15,10 @@
 - **Shell 新規作成アイテムへの自動フォーカス**: 新規フォルダだけでなく、新規テキストファイル等すべての新規作成アイテムにフォーカスが当たるよう拡張。フォルダの場合は従来通り自動リネームモードも起動
 - **forceRefresh フラグの読み取り順序バグを修正**: `IsExpectingShellChange` が Created ハンドラで `false` にリセットされた後に `forceRefresh` を読んでいたため、常に `false` になり即時リフレッシュが機能していなかった。フラグ取得をリセット前に移動
 - **MVVMTK0034 警告を解消**: `SearchFilterViewModel._dateFilter` backing field の直接参照 3 箇所を生成プロパティ `DateFilter` に変更。`_isLoading` ガードで再帰呼出し・中間通知を抑制
-- **7-zip 等サードパーティ Shell 拡張のコンテキストメニューが実行できない問題を修正**: `GetCommandString`（Unicode 版）が `try/finally` のみで `catch` がなく、7-zip 等の `E_NOTIMPL` を返す Shell 拡張で `COMException` がスローされ `InvokeCommand` に到達しなかった。例外を捕捉し空 verb として続行するよう修正。メニューテキストから圧縮・展開操作を判定しメッセージポンプ対象とする `IsLongRunningByMenuText` を追加
+- **7-zip 等サードパーティ Shell 拡張のコンテキストメニューが実行できない問題を修正（3点）**:
+  - `GetCommandString`（Unicode 版）に `catch` がなく、`E_NOTIMPL` を返す Shell 拡張で `COMException` がスローされ `InvokeCommand` に到達しなかった。例外を捕捉し空 verb として続行するよう修正
+  - `GetViewObject`/`GetChildrenUIObjects`/`InvokeCommand` に渡す `hwnd` を UI スレッドの `mainHwnd` から STA スレッドの `hwnd` に変更。7-zip 等の Shell 拡張は `InvokeCommand` の呼出しスレッド上でモーダルダイアログを生成するため、cross-thread の `hwnd` ではダイアログ生成に失敗していた
+  - `GetMenuItemText` をサブメニュー再帰検索に対応。7-zip 等はサブメニュー内に項目を配置するため、ルートメニューのみの検索では `menuText` が取得できなかった。verb が空の場合は Shell 拡張と判断し常にメッセージポンプを実行するよう変更
 
 ## [0.13.3] - 2026-03-02 : インデックス走査の高速化
 

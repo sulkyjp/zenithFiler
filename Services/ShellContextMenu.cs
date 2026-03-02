@@ -103,14 +103,14 @@ namespace ZenithFiler
 
             try
             {
-                // shell ダイアログのオーナーとしてメインウィンドウを優先使用（z-order 改善）
-                HWND ownerHwnd = mainHwnd != IntPtr.Zero ? (HWND)mainHwnd : hwnd;
-
+                // IContextMenu の取得には STA スレッドの hwnd を使用する。
+                // mainHwnd（UI スレッド）を渡すと 7-zip 等の Shell 拡張が cross-thread で
+                // ダイアログ生成に失敗するため、同一 STA スレッド上の hwnd を使う。
                 if (isBackground)
                 {
                     string physicalPath = PathHelper.GetPhysicalPath(filePaths[0]);
                     using var folder = new ShellFolder(physicalPath);
-                    contextMenu = folder.GetViewObject<IContextMenu>(ownerHwnd);
+                    contextMenu = folder.GetViewObject<IContextMenu>(hwnd);
                 }
                 else
                 {
@@ -122,7 +122,7 @@ namespace ZenithFiler
                         var items = physicalPaths.Select(p => new ShellItem(p)).ToArray();
                         try
                         {
-                            contextMenu = parentFolder.GetChildrenUIObjects<IContextMenu>(ownerHwnd, items);
+                            contextMenu = parentFolder.GetChildrenUIObjects<IContextMenu>(hwnd, items);
                         }
                         finally
                         {
@@ -257,14 +257,14 @@ namespace ZenithFiler
                         ? PathHelper.GetPhysicalPath(filePaths[0])
                         : Path.GetDirectoryName(PathHelper.GetPhysicalPath(filePaths[0]));
 
-                    // 通常のコマンド実行
-                    HWND invokeHwnd = mainHwnd != IntPtr.Zero ? (HWND)mainHwnd : hwnd;
-
+                    // InvokeCommand には STA スレッドの hwnd を使用する。
+                    // Shell 拡張（7-zip 等）は InvokeCommand の hwnd を親としてダイアログを生成するため、
+                    // 同一 STA スレッド上の hwnd でないとモーダルダイアログが正常に動作しない。
                     var ici = new CMINVOKECOMMANDINFOEX
                     {
                         cbSize = (uint)Marshal.SizeOf<CMINVOKECOMMANDINFOEX>(),
                         fMask = CMIC.CMIC_MASK_UNICODE,
-                        hwnd = invokeHwnd,
+                        hwnd = hwnd,
                         lpVerb = new SafeResourceId(offset),
                         lpVerbW = new SafeResourceId(offset),
                         lpDirectory = workingDir,
@@ -273,9 +273,22 @@ namespace ZenithFiler
                         ptInvoke = new POINT((int)screenPoint.X, (int)screenPoint.Y)
                     };
 
-                    contextMenu.InvokeCommand(ici);
+                    _ = App.FileLogger.LogAsync($"[ShellContextMenu] InvokeCommand: verb='{verb}', menuText='{menuText}', offset={offset}, isBackground={isBackground}");
+                    try
+                    {
+                        contextMenu.InvokeCommand(ici);
+                    }
+                    catch (Exception invokeEx)
+                    {
+                        _ = App.FileLogger.LogAsync($"[ShellContextMenu] InvokeCommand failed: {invokeEx.GetType().Name}: {invokeEx.Message} (HResult=0x{invokeEx.HResult:X8})");
+                        return;
+                    }
 
-                    bool needsRefresh = isBackground || IsLongRunningVerb(verb ?? "") || IsLongRunningByMenuText(menuText);
+                    // verb が空 = サードパーティ Shell 拡張（GetCommandString 未実装）の可能性が高い。
+                    // 操作内容を判定できないため、安全のためメッセージポンプを実行する。
+                    bool isShellExtension = string.IsNullOrEmpty(verb);
+                    bool needsRefresh = isBackground || isShellExtension
+                        || IsLongRunningVerb(verb ?? "") || IsLongRunningByMenuText(menuText);
 
                     // プロパティなどの場合、スレッドが即終了するとウィンドウが消えることがあるため、少し待つ
                     if (verb == "properties")
@@ -284,7 +297,7 @@ namespace ZenithFiler
                     }
                     else if (needsRefresh)
                     {
-                        // 背景メニュー操作や圧縮/展開等の長時間 verb の場合、
+                        // 背景メニュー操作や Shell 拡張の場合、
                         // STA スレッドを維持して進捗ダイアログ等が正常に動作するようにする
                         RunPostInvokeMessagePump((IntPtr)hwnd);
 
@@ -434,8 +447,40 @@ namespace ZenithFiler
                 || t.Contains("winrar") || t.Contains("bandizip");
         }
 
-        /// <summary>指定したメニュー項目の表示文字列を取得する。GetCommandString が空を返す組み込み「削除」の判定に使用。</summary>
+        /// <summary>
+        /// 指定したメニュー項目の表示文字列を取得する。サブメニューも再帰的に検索する。
+        /// 7-zip 等の Shell 拡張はサブメニュー内に項目を配置するため、ルートメニューだけでは見つからない。
+        /// </summary>
         private static string? GetMenuItemText(HMENU hMenu, uint itemId)
+        {
+            // まずルートメニューから ID 指定で検索
+            string? text = GetMenuItemTextDirect((IntPtr)hMenu, itemId);
+            if (text != null) return text;
+
+            // 見つからない場合はサブメニューを再帰検索
+            int count = NativeMethods.GetMenuItemCount((IntPtr)hMenu);
+            for (int i = 0; i < count; i++)
+            {
+                IntPtr subMenu = NativeMethods.GetSubMenu((IntPtr)hMenu, i);
+                if (subMenu == IntPtr.Zero) continue;
+
+                text = GetMenuItemTextDirect(subMenu, itemId);
+                if (text != null) return text;
+
+                // さらに深いサブメニューも検索（7-zip のネスト対応）
+                int subCount = NativeMethods.GetMenuItemCount(subMenu);
+                for (int j = 0; j < subCount; j++)
+                {
+                    IntPtr subSubMenu = NativeMethods.GetSubMenu(subMenu, j);
+                    if (subSubMenu == IntPtr.Zero) continue;
+                    text = GetMenuItemTextDirect(subSubMenu, itemId);
+                    if (text != null) return text;
+                }
+            }
+            return null;
+        }
+
+        private static string? GetMenuItemTextDirect(IntPtr hMenu, uint itemId)
         {
             const uint MIIM_STRING = 0x80;
             const int cchMax = 256;
@@ -449,7 +494,7 @@ namespace ZenithFiler
                     dwTypeData = buf,
                     cch = (uint)cchMax
                 };
-                if (!NativeMethods.GetMenuItemInfoW((IntPtr)hMenu, itemId, false, ref mii))
+                if (!NativeMethods.GetMenuItemInfoW(hMenu, itemId, false, ref mii))
                     return null;
                 return Marshal.PtrToStringUni(mii.dwTypeData, (int)mii.cch);
             }
