@@ -1,0 +1,65 @@
+{
+  "Description": "深煎りコーヒーとラテの配色。書斎で落ち着いて作業するためのテーマ",
+  "Author": "赤阪和彦",
+  "Base": {
+    "BackgroundColor": "#FFF8E7",
+    "SidebarColor": "#E8DCCA",
+    "HeaderColor": "#FFF8E7",
+    "TitleBarColor": "#2C1B0E",
+    "BorderColor": "#D2B48C",
+    "PrimaryTextColor": "#2C1B0E",
+    "SecondaryTextColor": "#8B5A2B",
+    "InputBackgroundColor": "#FFFFFF",
+    "FocusedPaneBackgroundColor": "#F2E8D5",
+    "FocusedPaneTextColor": "#1A0F08",
+    "FocusedPaneHeaderBackgroundColor": "#DBCFB6",
+    "OnePointDarkColor": "#4E3629",
+    "TabSeparatorColor": "#D2B48C",
+    "TabHoverColor": "#E8DCCA",
+    "ToolbarSeparatorColor": "#8B5A2B",
+    "TreeLineColor": "#A68966"
+  },
+  "List": {
+    "ListHoverColor": "#E8DCCA",
+    "SelectionColor": "#D2B48C",
+    "ButtonHoverColor": "#C4A484",
+    "InactiveSelectionColor": "#F2E8D5",
+    "OptionSelectedColor": "#8B5A2B",
+    "OptionSelectedHoverColor": "#A0522D",
+    "CheckboxHoverColor": "#F2E8D5",
+    "CheckedHoverAccentColor": "#4E3629"
+  },
+  "Search": {
+    "IndexSearchBackgroundColor": "#FAF3E0",
+    "IndexSearchIconColor": "#8B4513",
+    "IndexSearchFocusBorderColor": "#2C1B0E"
+  },
+  "Accent": {
+    "AccentColor": "#8B4513",
+    "ErrorTextColor": "#A52A2A",
+    "DestructiveHoverBackgroundColor": "#3D0000",
+    "DestructiveIconColor": "#CD5C5C"
+  },
+  "ContextMenu": {
+    "ContextMenuSeparatorColor": "#D2B48C",
+    "ContextMenuBackgroundColor": "#FFF8E7",
+    "ContextMenuBorderColor": "#4E3629",
+    "ContextMenuTextColor": "#2C1B0E",
+    "ContextMenuIconColor": "#4E3629",
+    "ContextMenuShortcutColor": "#8B5A2B",
+    "ContextMenuDisabledColor": "#BC8F8F",
+    "ContextMenuDisabledIconColor": "#D2B48C",
+    "ContextMenuHighlightShortcutColor": "#000000",
+    "ContextMenuOuterBackgroundColor": "#FFFFFF"
+  },
+  "Misc": {
+    "GlowBarGlowColor": "#8B4513",
+    "ScanBarColor": "#A0522D",
+    "LoadingOverlayColor": "#664E3629",
+    "ShadowColor": "#2C1B0E",
+    "TelemetryBackgroundColor": "#E62C1B0E",
+    "TelemetryBorderColor": "#40D2B48C",
+    "TelemetryTitleColor": "#F5DEB3",
+    "TelemetryValueColor": "#FFF8E7"
+  }
+}

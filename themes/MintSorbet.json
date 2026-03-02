@@ -1,0 +1,65 @@
+{
+  "Description": "ミントグリーンとピュアホワイト。清潔感あふれる、軽やかでアクティブなスタイル（女性向け）",
+  "Author": "赤阪和彦",
+  "Base": {
+    "BackgroundColor": "#F0F9F7",
+    "SidebarColor": "#E4F2EE",
+    "HeaderColor": "#F0F9F7",
+    "TitleBarColor": "#718A84",
+    "BorderColor": "#CFDED9",
+    "PrimaryTextColor": "#44524F",
+    "SecondaryTextColor": "#849692",
+    "InputBackgroundColor": "#FFFFFF",
+    "FocusedPaneBackgroundColor": "#E6F4F0",
+    "FocusedPaneTextColor": "#44524F",
+    "FocusedPaneHeaderBackgroundColor": "#D8E8E3",
+    "OnePointDarkColor": "#718A84",
+    "TabSeparatorColor": "#CFDED9",
+    "TabHoverColor": "#E6F4F0",
+    "ToolbarSeparatorColor": "#849692",
+    "TreeLineColor": "#ADC2BC"
+  },
+  "List": {
+    "ListHoverColor": "#D8E8E3",
+    "SelectionColor": "#D9F0EA",
+    "ButtonHoverColor": "#CFDED9",
+    "InactiveSelectionColor": "#E6F4F0",
+    "OptionSelectedColor": "#ADC2BC",
+    "OptionSelectedHoverColor": "#9AB5B0",
+    "CheckboxHoverColor": "#E6F4F0",
+    "CheckedHoverAccentColor": "#718A84"
+  },
+  "Search": {
+    "IndexSearchBackgroundColor": "#F5FAF9",
+    "IndexSearchIconColor": "#ADC2BC",
+    "IndexSearchFocusBorderColor": "#718A84"
+  },
+  "Accent": {
+    "AccentColor": "#8AB0A7",
+    "ErrorTextColor": "#D17A7A",
+    "DestructiveHoverBackgroundColor": "#1C4A44",
+    "DestructiveIconColor": "#E08E8E"
+  },
+  "ContextMenu": {
+    "ContextMenuSeparatorColor": "#CFDED9",
+    "ContextMenuBackgroundColor": "#F0F9F7",
+    "ContextMenuBorderColor": "#ADC2BC",
+    "ContextMenuTextColor": "#44524F",
+    "ContextMenuIconColor": "#718A84",
+    "ContextMenuShortcutColor": "#849692",
+    "ContextMenuDisabledColor": "#CFDED9",
+    "ContextMenuDisabledIconColor": "#CFDED9",
+    "ContextMenuHighlightShortcutColor": "#44524F",
+    "ContextMenuOuterBackgroundColor": "#FFFFFF"
+  },
+  "Misc": {
+    "GlowBarGlowColor": "#CFDED9",
+    "ScanBarColor": "#ADC2BC",
+    "LoadingOverlayColor": "#66718A84",
+    "ShadowColor": "#000000",
+    "TelemetryBackgroundColor": "#E644524F",
+    "TelemetryBorderColor": "#40ADC2BC",
+    "TelemetryTitleColor": "#ADC2BC",
+    "TelemetryValueColor": "#F0F9F7"
+  }
+}

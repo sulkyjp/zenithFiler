@@ -1,0 +1,144 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <ApplicationIcon>assets\app_icon2_1.ico</ApplicationIcon>
+    <ApplicationTitle>ZenithFiler</ApplicationTitle>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Version>0.13.4</Version>
+    <PublishDir>bin\$(Configuration)\$(TargetFramework)\$(RuntimeIdentifier)\ZenithFiler_v$(Version)\</PublishDir>
+  </PropertyGroup>
+
+  <!-- Release ビルドのみ self-contained / 単一ファイルで発行する -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <RuntimeFrameworkVersion>8.0.23</RuntimeFrameworkVersion>
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <TieredCompilation>true</TieredCompilation>
+    <TieredCompilationQuickJit>true</TieredCompilationQuickJit>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.104.2" />
+    <PackageReference Include="ExcelDataReader" Version="3.7.0" />
+    <PackageReference Include="ExcelDataReader.DataSet" Version="3.7.0" />
+    <PackageReference Include="Mono.Cecil" Version="0.11.6" />
+    <PackageReference Include="PDFsharp" Version="6.1.1" />
+    <PackageReference Include="PDFtoImage" Version="5.2.0" />
+    <PackageReference Include="Polly" Version="8.6.5" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
+    <PackageReference Include="Lucene.Net.Analysis.Kuromoji" Version="4.8.0-beta00017" />
+    <PackageReference Include="Lucene.Net.QueryParser" Version="4.8.0-beta00017" />
+    <PackageReference Include="Markdig.Wpf" Version="0.5.0.1" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
+    <PackageReference Include="MahApps.Metro.IconPacks.Lucide" Version="5.0.0" />
+    <PackageReference Include="Markdig" Version="0.44.0" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3650.58" />
+    <PackageReference Include="sqlite-net-pcl" Version="1.9.172" />
+    <PackageReference Include="SQLitePCLRaw.bundle_green" Version="2.1.11" />
+    <PackageReference Include="Vanara.Windows.Shell" Version="4.0.0" />
+    <PackageReference Include="Vanara.PInvoke.DwmApi" Version="4.0.0" />
+    <PackageReference Include="Vanara.PInvoke.Shell32" Version="4.0.0" />
+    <PackageReference Include="VirtualizingWrapPanel" Version="2.3.2" />
+    <PackageReference Include="WPF-UI" Version="4.2.0" />
+    <PackageReference Include="WindowsAPICodePackShell" Version="8.0.14" />
+    <PackageReference Include="Serilog" Version="4.3.1" />
+    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+    <PackageReference Include="Serilog.Sinks.Async" Version="2.1.0" />
+    <PackageReference Include="Serilog.Sinks.Debug" Version="3.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="assets\app_icon2_1.ico" />
+    <Resource Include="assets\splash.png" />
+    <Resource Include="assets\welcome\favorites.png" Condition="Exists('assets\welcome\favorites.png')" />
+    <Resource Include="assets\welcome\tree.png" Condition="Exists('assets\welcome\tree.png')" />
+    <Resource Include="assets\welcome\history.png" Condition="Exists('assets\welcome\history.png')" />
+    <Resource Include="assets\welcome\index.png" Condition="Exists('assets\welcome\index.png')" />
+    <Resource Include="assets\welcome\workingset.png" Condition="Exists('assets\welcome\workingset.png')" />
+    <Resource Include="assets\welcome\settings.png" Condition="Exists('assets\welcome\settings.png')" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 共有プロジェクトは Import で取り込む。SDK のデフォルトによる二重包含を防止 -->
+    <Compile Remove="ZenithFiler.Shared.Docs\**\*.cs" />
+    <Page Remove="ZenithFiler.Shared.Docs\**\*.xaml" />
+    <!-- 別プロジェクトの obj 等を除外（BuildDocViewer で参照するため同階層に存在） -->
+    <Compile Remove="ZenithDocViewer\**\*" />
+    <Page Remove="ZenithDocViewer\**\*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="CHANGELOG.md">
+      <Link>apps\CHANGELOG.md</Link>
+      <TargetPath>apps\CHANGELOG.md</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="MANUAL.md">
+      <Link>apps\MANUAL.md</Link>
+      <TargetPath>apps\MANUAL.md</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <!-- 標準テーマ JSON を出力フォルダの themes/ にコピー -->
+  <ItemGroup>
+    <Content Include="themes\*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <!-- ビルド後に ZenithDocViewer を出力フォルダへコピー -->
+  <!-- Debug: Build で多ファイル出力をコピー / Release: Publish で単一 EXE をコピー -->
+  <Target Name="BuildDocViewer" AfterTargets="Build">
+    <PropertyGroup>
+      <_DocViewerProj>$(MSBuildProjectDirectory)\ZenithDocViewer\ZenithDocViewer.csproj</_DocViewerProj>
+      <_DocViewerBuildOut>$(MSBuildProjectDirectory)\ZenithDocViewer\bin\$(Configuration)\net8.0-windows\</_DocViewerBuildOut>
+      <_DocViewerPublishOut>$(MSBuildProjectDirectory)\ZenithDocViewer\bin\$(Configuration)\net8.0-windows\win-x64\publish\</_DocViewerPublishOut>
+    </PropertyGroup>
+    <!-- Release 時は Publish（単一ファイル）、Debug 時は Build -->
+    <MSBuild Projects="$(_DocViewerProj)" Targets="Publish" Properties="Configuration=$(Configuration);RuntimeIdentifier=win-x64;PublishDir=$(_DocViewerPublishOut)" Condition="'$(Configuration)' == 'Release'" />
+    <MSBuild Projects="$(_DocViewerProj)" Targets="Build" Properties="Configuration=$(Configuration)" Condition="'$(Configuration)' != 'Release'" />
+    <ItemGroup Condition="'$(Configuration)' == 'Release'">
+      <_DocViewerOutput Include="$(_DocViewerPublishOut)ZenithDocViewer.exe" />
+    </ItemGroup>
+    <ItemGroup Condition="'$(Configuration)' != 'Release'">
+      <_DocViewerOutput Include="$(_DocViewerBuildOut)ZenithDocViewer.exe" />
+      <_DocViewerOutput Include="$(_DocViewerBuildOut)ZenithDocViewer.dll" />
+      <_DocViewerOutput Include="$(_DocViewerBuildOut)ZenithDocViewer.deps.json" />
+      <_DocViewerOutput Include="$(_DocViewerBuildOut)ZenithDocViewer.runtimeconfig.json" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_DocViewerOutput)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" />
+  </Target>
+
+  <!-- Publish 後、ZenithDocViewer を単一 EXE で発行して PublishDir へコピー -->
+  <Target Name="CopyDocViewerToPublish" AfterTargets="Publish">
+    <PropertyGroup>
+      <_DocViewerProj>$(MSBuildProjectDirectory)\ZenithDocViewer\ZenithDocViewer.csproj</_DocViewerProj>
+      <_DocViewerPublishDir>$(MSBuildProjectDirectory)\ZenithDocViewer\bin\$(Configuration)\net8.0-windows\$(RuntimeIdentifier)\publish\</_DocViewerPublishDir>
+    </PropertyGroup>
+    <MSBuild Projects="$(_DocViewerProj)" Targets="Publish" Properties="Configuration=$(Configuration);RuntimeIdentifier=$(RuntimeIdentifier);PublishDir=$(_DocViewerPublishDir);SelfContained=true;PublishSingleFile=true" />
+    <Copy SourceFiles="$(_DocViewerPublishDir)ZenithDocViewer.exe" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" Condition="Exists('$(_DocViewerPublishDir)ZenithDocViewer.exe')" />
+  </Target>
+
+  <!-- Publish 後、EXE と同階層でなくてよいドキュメント類を apps に集約 -->
+  <Target Name="MoveDocFilesToApps" AfterTargets="Publish">
+    <PropertyGroup>
+      <_AppsDir>$(PublishDir)apps\</_AppsDir>
+    </PropertyGroup>
+    <MakeDir Directories="$(_AppsDir)" />
+    <ItemGroup>
+      <_PublishRootXml Include="$(PublishDir)*.xml" />
+    </ItemGroup>
+    <Move SourceFiles="@(_PublishRootXml)" DestinationFolder="$(_AppsDir)" Condition="'@(_PublishRootXml)' != ''" />
+  </Target>
+
+  <Import Project="ZenithFiler.Shared.Docs\ZenithFiler.Shared.Docs.projitems" Label="Shared" />
+
+</Project>

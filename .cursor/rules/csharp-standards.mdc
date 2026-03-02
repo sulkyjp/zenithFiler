@@ -1,0 +1,28 @@
+---
+description: C# コーディング規約（Zenith Filer）
+globs: **/*.cs
+alwaysApply: false
+---
+
+# C# 規約
+
+## MVVM
+
+- ViewModel は `CommunityToolkit.Mvvm.ComponentModel.ObservableObject` を継承し、`[ObservableProperty]` でプロパティを宣言する。
+- コマンドは `CommunityToolkit.Mvvm.Input.RelayCommand` / `RelayCommand<T>` を使用する。引数付きは `IRelayCommand<string>` などで公開する。
+- UI スレッド外からのコレクション・プロパティ更新は `Application.Current.Dispatcher.Invoke` で UI スレッドに戻す。
+
+## 非同期・ファイル操作
+
+- 時間のかかるファイル操作（コピー・移動など）は `async Task` で実装し、`await Task.Run` で UI をブロックしない。
+- パス解決は `PathHelper.GetPhysicalPath` を使い、フルパスへ正規化する。
+
+## エラー処理
+
+- ユーザーに伝えるエラーは `MessageBox` で表示する。例外は握りつぶさず、必要ならログまたは再スローする。
+- P/Invoke や COM 呼び出しでは `try/finally` でリソース（ハンドル、メモリ、COM）を確実に解放する。
+
+## スタイル
+
+- 名前空間は `ZenithFiler`。
+- Nullable を有効にしているため、`?.` や `??` で null を明示的に扱う。`values[0]?.ToString() ?? string.Empty` のようにする。

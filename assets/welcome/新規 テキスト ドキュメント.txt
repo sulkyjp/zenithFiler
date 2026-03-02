@@ -1,0 +1,8 @@
+favorites.png
+tree.png
+history.png
+index.png
+workingset.png
+settings.png
+
+横 540px × 縦 300px（高DPI 用に 2倍で撮影しても OK） 

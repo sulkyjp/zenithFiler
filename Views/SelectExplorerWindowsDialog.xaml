@@ -1,0 +1,24 @@
+<Window x:Class="ZenithFiler.SelectExplorerWindowsDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="エクスプローラーのフォルダを取り込む" Height="320" Width="480" ResizeMode="CanResizeWithGrip"
+        WindowStartupLocation="CenterOwner" MinHeight="240" MinWidth="360"
+        Background="{DynamicResource BackgroundBrush}" Foreground="{DynamicResource TextBrush}"
+        UseLayoutRounding="True" SnapsToDevicePixels="True"
+        FocusManager.FocusedElement="{Binding ElementName=ExplorerListBox}">
+    <Grid Margin="15">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <TextBlock Grid.Row="0" Text="取り込むエクスプローラーを選択してください（複数選択可）:" Margin="0,0,0,8"/>
+        <ListBox x:Name="ExplorerListBox" Grid.Row="1" SelectionMode="Extended" Margin="0,0,0,12"
+                 DisplayMemberPath="Path" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                 MouseDoubleClick="ExplorerListBox_MouseDoubleClick"/>
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="OK" IsDefault="True" Click="OkButton_Click" Width="80" Margin="0,0,10,0"/>
+            <Button Content="キャンセル" IsCancel="True" Width="80"/>
+        </StackPanel>
+    </Grid>
+</Window>

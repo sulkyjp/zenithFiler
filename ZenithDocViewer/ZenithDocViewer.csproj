@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <ApplicationIcon>..\assets\app_icon2_1.ico</ApplicationIcon>
+    <AssemblyName>ZenithDocViewer</AssemblyName>
+    <Version>0.6.1</Version>
+  </PropertyGroup>
+
+  <!-- Release 時は本体と同様に単一ファイル・self-contained で発行（依存 DLL 欠落を防止） -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
+    <PackageReference Include="Markdig.Wpf" Version="0.5.0.1" />
+    <PackageReference Include="Markdig" Version="0.44.0" />
+    <PackageReference Include="MahApps.Metro.IconPacks.Lucide" Version="5.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="..\CHANGELOG.md">
+      <Link>apps\CHANGELOG.md</Link>
+      <TargetPath>apps\CHANGELOG.md</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="..\MANUAL.md">
+      <Link>apps\MANUAL.md</Link>
+      <TargetPath>apps\MANUAL.md</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <Import Project="..\ZenithFiler.Shared.Docs\ZenithFiler.Shared.Docs.projitems" Label="Shared" />
+
+</Project>

@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python:*)",
+      "Bash(grep:*)",
+      "Bash(tail:*)",
+      "Bash(cd /c/work/myfolder && dotnet build 2>&1)",
+      "Bash(head:*)",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(cd /c/work/myfolder && dotnet publish -c Release 2>&1)",
+      "Bash(dotnet tool:*)",
+      "Bash(cd:*)",
+      "Bash(dotnet script:*)",
+      "Bash(find lucide_pkg:*)",
+      "Bash(powershell.exe:*)",
+      "Bash(cd C:/work/myfolder && dotnet build 2>&1)",
+      "Bash(dotnet add:*)",
+      "Bash(cp:*)",
+      "Bash(gh repo:*)",
+      "Bash(where:*)"
+    ]
+  }
+}

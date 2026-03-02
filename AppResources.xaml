@@ -1,0 +1,648 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                    xmlns:icon="http://metro.mahapps.com/winfx/xaml/iconpacks">
+    <ResourceDictionary.MergedDictionaries>
+        <ui:ThemesDictionary Theme="Light" />
+        <ui:ControlsDictionary />
+    </ResourceDictionary.MergedDictionaries>
+
+    <!-- コンテキストメニュー内の区切り線: 細く薄い線、コンパクトなマージン -->
+    <Style x:Key="ContextMenuSeparatorStyle" TargetType="Separator">
+        <Setter Property="Margin" Value="32,2,12,2"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Separator">
+                    <Border Background="{DynamicResource ContextMenuSeparatorBrush}" Height="1" HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- コンテキストメニュー用 MenuItem: エクスプローラー同等のコンパクト行間、アイコン＋テキスト＋ショートカット -->
+    <!-- ※Popup内でStaticResourceが解決できないため、色は直接指定 -->
+    <Style x:Key="ContextMenuItemStyle" TargetType="MenuItem">
+        <Setter Property="MinHeight" Value="24"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Foreground" Value="{DynamicResource ContextMenuTextBrush}"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="MenuItem">
+                    <Grid>
+                        <Border x:Name="Border" Background="Transparent" CornerRadius="3" Margin="2,0" SnapsToDevicePixels="True"
+                                MinHeight="24" Padding="0,1">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="30" MinWidth="30"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Grid.Column="0" Background="Transparent" VerticalAlignment="Center" HorizontalAlignment="Center" TextElement.Foreground="{DynamicResource ContextMenuIconBrush}">
+                                    <ContentPresenter x:Name="IconHost" Content="{TemplateBinding Icon}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                </Border>
+                                <!-- ローカル値 Foreground でグローバル TextBlock スタイルを確実に上書き -->
+                                <TextBlock x:Name="HeaderText" Grid.Column="1" Text="{TemplateBinding Header}"
+                                           Foreground="{TemplateBinding Foreground}"
+                                           Margin="4,0,0,0" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                                <TextBlock x:Name="InputGestureText" Grid.Column="2" Text="{TemplateBinding InputGestureText}"
+                                           Foreground="{DynamicResource ContextMenuShortcutBrush}" FontSize="11" VerticalAlignment="Center"
+                                           Margin="16,0,8,0" Opacity="1.0"/>
+                                <!-- サブメニュー矢印 -->
+                                <Path x:Name="SubMenuArrow" Grid.Column="3"
+                                      Data="M 0,0 L 4,3.5 L 0,7 Z" Fill="{DynamicResource ContextMenuShortcutBrush}"
+                                      VerticalAlignment="Center" HorizontalAlignment="Center"
+                                      Margin="4,0,8,0" Visibility="Collapsed"/>
+                            </Grid>
+                        </Border>
+                        <!-- サブメニュー用 Popup: SubmenuHeader ロール時に子項目を表示 -->
+                        <Popup x:Name="PART_Popup"
+                               AllowsTransparency="True" Focusable="False"
+                               IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}"
+                               Placement="Right" HorizontalOffset="-2" VerticalOffset="-4"
+                               PopupAnimation="None">
+                            <Border BorderBrush="{DynamicResource ContextMenuBorderBrush}" BorderThickness="1" Background="{DynamicResource ContextMenuOuterBackgroundBrush}"
+                                    CornerRadius="5" Padding="1" MinWidth="140" SnapsToDevicePixels="True"
+                                    Margin="0,0,28,28">
+                                <Border.Effect>
+                                    <!-- ※Popup内のためStaticResource不可 — ShadowColor に対応 -->
+                                    <DropShadowEffect BlurRadius="24" ShadowDepth="6" Opacity="0.22" Direction="315" Color="#000000"/>
+                                </Border.Effect>
+                                <Border Background="{DynamicResource ContextMenuBackgroundBrush}" CornerRadius="4" ClipToBounds="True">
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                                  HorizontalScrollBarVisibility="Disabled"
+                                                  Focusable="False" MaxHeight="500">
+                                        <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle" Margin="0,3,0,3"/>
+                                    </ScrollViewer>
+                                </Border>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsHighlighted" Value="True">
+                            <Setter TargetName="Border" Property="Background" Value="{DynamicResource OnePointDarkBackground}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource OnePointDarkText}"/>
+                            <Setter TargetName="SubMenuArrow" Property="Fill" Value="{DynamicResource OnePointDarkText}"/>
+                            <Setter TargetName="IconHost" Property="TextElement.Foreground" Value="{DynamicResource OnePointDarkText}"/>
+                            <Setter TargetName="InputGestureText" Property="Foreground" Value="{DynamicResource ContextMenuHighlightShortcutBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="{DynamicResource ContextMenuDisabledBrush}"/>
+                            <Setter TargetName="IconHost" Property="TextElement.Foreground" Value="{DynamicResource ContextMenuDisabledIconBrush}"/>
+                            <Setter TargetName="InputGestureText" Property="Foreground" Value="{DynamicResource ContextMenuDisabledIconBrush}"/>
+                        </Trigger>
+                        <Trigger Property="Role" Value="SubmenuHeader">
+                            <Setter TargetName="SubMenuArrow" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 破壊的アクション用（削除など）: ホバー時のみ文字色をかすかに赤く -->
+    <Style x:Key="ContextMenuDestructiveItemStyle" TargetType="MenuItem" BasedOn="{StaticResource ContextMenuItemStyle}">
+        <Style.Triggers>
+            <Trigger Property="IsHighlighted" Value="True">
+                <Setter Property="Foreground" Value="{DynamicResource DestructiveIconBrush}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Cursorセピアテーマの再現配色 -->
+    <Color x:Key="BackgroundColor">#F5F1E3</Color>
+    <Color x:Key="SidebarColor">#E6E1D3</Color>
+    <Color x:Key="HeaderColor">#F5F1E3</Color>
+    <!-- タイトルバーもワンポイント用ダーク帯と同じチャコールブラックで統一 -->
+    <Color x:Key="TitleBarColor">#545B64</Color>
+    <Color x:Key="BorderColor">#D3D0C3</Color>
+    <Color x:Key="AccentColor">#268BD2</Color> <!-- Solarized Blue -->
+    <!-- メインテキスト: ほぼ黒に近い濃いグレー -->
+    <Color x:Key="PrimaryTextColor">#1A1A1A</Color>
+    <!-- サブテキスト: 背景になじむ中間グレー -->
+    <Color x:Key="SecondaryTextColor">#777777</Color>
+    <!-- ツールバーセパレーター用: 背景と十分なコントラストを持つ中間グレー -->
+    <Color x:Key="ToolbarSeparatorColor">#777777</Color>
+    <Color x:Key="InputBackgroundColor">#FFFFFF</Color>
+    <Color x:Key="IndexSearchBackgroundColor">#FFF9E6</Color> <!-- インデックス検索モード用の穏やかな黄色 -->
+    <Color x:Key="IndexSearchIconColor">#E6B800</Color> <!-- インデックス検索の雷アイコン用ゴールド -->
+    <Color x:Key="IndexSearchFocusBorderColor">#F9A825</Color> <!-- インデックス検索＋フォーカス時のボーダー（アンバー） -->
+    <Color x:Key="FocusedPaneBackgroundColor">#EBE6D5</Color> <!-- フォーカス中ペインの背景（標準よりわずかに濃い） -->
+    <Color x:Key="FocusedPaneTextColor">#000000</Color> <!-- フォーカス中ペインの文字色（黒） -->
+    <Color x:Key="FocusedPaneHeaderBackgroundColor">#DFDAC8</Color> <!-- フォーカス中ペインの上部メニュー（一覧より濃い） -->
+    <!-- ワンポイント用のダーク帯（お気に入り第1階層／アクティブタブ共通） -->
+    <Color x:Key="OnePointDarkColor">#545B64</Color>
+    <!-- タブ区切り・ホバー用 -->
+    <Color x:Key="TabSeparatorColor">#D3D0C3</Color>
+    <Color x:Key="TabHoverColor">#D8D3C5</Color>
+    <!-- ホバー・選択・インタラクション -->
+    <Color x:Key="ListHoverColor">#DFDAC8</Color>
+    <Color x:Key="SelectionColor">#D0E6F8</Color>
+    <Color x:Key="ButtonHoverColor">#C9C4B3</Color>
+    <Color x:Key="InactiveSelectionColor">#E5E5E5</Color>
+    <Color x:Key="OptionSelectedColor">#E8F0F6</Color>
+    <Color x:Key="OptionSelectedHoverColor">#D8E6EE</Color>
+    <Color x:Key="CheckboxHoverColor">#F0ECE0</Color>
+    <!-- チェック時ボーダー・背景（アクセントの暗色バリアント） -->
+    <Color x:Key="CheckedHoverAccentColor">#1E7AB8</Color>
+    <!-- 警告・エラー・破壊的アクション -->
+    <Color x:Key="ErrorTextColor">#E05555</Color>
+    <Color x:Key="DestructiveHoverBackgroundColor">#3D0000</Color>
+    <Color x:Key="DestructiveIconColor">#FF6B6B</Color>
+    <!-- コンテキストメニュー（Popup制約で直接指定が必要な箇所あり） -->
+    <Color x:Key="ContextMenuSeparatorColor">#D5D5D0</Color>
+    <Color x:Key="ContextMenuBackgroundColor">#F5F5F0</Color>
+    <Color x:Key="ContextMenuBorderColor">#B0B0B0</Color>
+    <Color x:Key="ContextMenuTextColor">#222222</Color>
+    <Color x:Key="ContextMenuIconColor">#444444</Color>
+    <Color x:Key="ContextMenuShortcutColor">#888888</Color>
+    <Color x:Key="ContextMenuDisabledColor">#AAAAAA</Color>
+    <Color x:Key="ContextMenuDisabledIconColor">#BBBBBB</Color>
+    <Color x:Key="ContextMenuHighlightShortcutColor">#CCCCCC</Color>
+    <Color x:Key="ContextMenuOuterBackgroundColor">#FEFEFE</Color>
+    <!-- GlowBar・ローディング -->
+    <Color x:Key="GlowBarGlowColor">Cyan</Color>
+    <Color x:Key="ScanBarColor">#90CAF9</Color>
+    <Color x:Key="LoadingOverlayColor">#66545B64</Color>
+    <!-- ダイアログシャドウ -->
+    <Color x:Key="ShadowColor">#000000</Color>
+    <!-- テレメトリー・開発者パネル -->
+    <Color x:Key="TelemetryBackgroundColor">#E6181818</Color>
+    <Color x:Key="TelemetryBorderColor">#40FFFFFF</Color>
+    <Color x:Key="TelemetryTitleColor">#80C0FF</Color>
+    <Color x:Key="TelemetryValueColor">#E0E0E0</Color>
+
+    <SolidColorBrush x:Key="BackgroundBrush" Color="{StaticResource BackgroundColor}"/>
+    <SolidColorBrush x:Key="FocusedPaneHeaderBackgroundBrush" Color="{StaticResource FocusedPaneHeaderBackgroundColor}"/>
+    <SolidColorBrush x:Key="FocusedPaneBackgroundBrush" Color="{StaticResource FocusedPaneBackgroundColor}"/>
+    <SolidColorBrush x:Key="FocusedPaneTextBrush" Color="{StaticResource FocusedPaneTextColor}"/>
+    <SolidColorBrush x:Key="SidebarBrush" Color="{StaticResource SidebarColor}"/>
+    <SolidColorBrush x:Key="HeaderBrush" Color="{StaticResource HeaderColor}"/>
+    <SolidColorBrush x:Key="TitleBarBrush" Color="{StaticResource TitleBarColor}"/>
+    <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}"/>
+    <SolidColorBrush x:Key="TextBrush" Color="{StaticResource PrimaryTextColor}"/>
+    <SolidColorBrush x:Key="SubTextBrush" Color="{StaticResource SecondaryTextColor}"/>
+    <SolidColorBrush x:Key="ToolbarSeparatorBrush" Color="{StaticResource ToolbarSeparatorColor}"/>
+    <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource BorderColor}"/>
+    <Color x:Key="TreeLineColor">#C4BFB0</Color>
+    <SolidColorBrush x:Key="TreeLineBrush" Color="{StaticResource TreeLineColor}"/>
+    <SolidColorBrush x:Key="InputBackgroundBrush" Color="{StaticResource InputBackgroundColor}"/>
+    <SolidColorBrush x:Key="IndexSearchBackgroundBrush" Color="{StaticResource IndexSearchBackgroundColor}"/>
+    <SolidColorBrush x:Key="IndexSearchIconBrush" Color="{StaticResource IndexSearchIconColor}"/>
+    <SolidColorBrush x:Key="IndexSearchFocusBorderBrush" Color="{StaticResource IndexSearchFocusBorderColor}"/>
+    <SolidColorBrush x:Key="OnePointDarkBackground" Color="{StaticResource OnePointDarkColor}"/>
+    <SolidColorBrush x:Key="OnePointDarkText" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="TabSeparatorBrush" Color="{StaticResource TabSeparatorColor}"/>
+    <SolidColorBrush x:Key="TabHoverBrush" Color="{StaticResource TabHoverColor}"/>
+    <!-- ホバー・選択・インタラクション -->
+    <SolidColorBrush x:Key="ListHoverBrush" Color="{StaticResource ListHoverColor}"/>
+    <SolidColorBrush x:Key="SelectionBrush" Color="{StaticResource SelectionColor}"/>
+    <SolidColorBrush x:Key="ButtonHoverBrush" Color="{StaticResource ButtonHoverColor}"/>
+    <SolidColorBrush x:Key="InactiveSelectionBrush" Color="{StaticResource InactiveSelectionColor}"/>
+    <SolidColorBrush x:Key="OptionSelectedBrush" Color="{StaticResource OptionSelectedColor}"/>
+    <SolidColorBrush x:Key="OptionSelectedHoverBrush" Color="{StaticResource OptionSelectedHoverColor}"/>
+    <SolidColorBrush x:Key="CheckboxHoverBrush" Color="{StaticResource CheckboxHoverColor}"/>
+    <SolidColorBrush x:Key="CheckedHoverAccentBrush" Color="{StaticResource CheckedHoverAccentColor}"/>
+    <!-- 警告・エラー・破壊的アクション -->
+    <SolidColorBrush x:Key="ErrorTextBrush" Color="{StaticResource ErrorTextColor}"/>
+    <SolidColorBrush x:Key="DestructiveHoverBackgroundBrush" Color="{StaticResource DestructiveHoverBackgroundColor}"/>
+    <SolidColorBrush x:Key="DestructiveIconBrush" Color="{StaticResource DestructiveIconColor}"/>
+    <!-- コンテキストメニュー -->
+    <SolidColorBrush x:Key="ContextMenuSeparatorBrush" Color="{StaticResource ContextMenuSeparatorColor}"/>
+    <SolidColorBrush x:Key="ContextMenuBackgroundBrush" Color="{StaticResource ContextMenuBackgroundColor}"/>
+    <SolidColorBrush x:Key="ContextMenuBorderBrush" Color="{StaticResource ContextMenuBorderColor}"/>
+    <SolidColorBrush x:Key="ContextMenuTextBrush" Color="{StaticResource ContextMenuTextColor}"/>
+    <SolidColorBrush x:Key="ContextMenuIconBrush" Color="{StaticResource ContextMenuIconColor}"/>
+    <SolidColorBrush x:Key="ContextMenuShortcutBrush" Color="{StaticResource ContextMenuShortcutColor}"/>
+    <SolidColorBrush x:Key="ContextMenuDisabledBrush" Color="{StaticResource ContextMenuDisabledColor}"/>
+    <SolidColorBrush x:Key="ContextMenuDisabledIconBrush" Color="{StaticResource ContextMenuDisabledIconColor}"/>
+    <SolidColorBrush x:Key="ContextMenuHighlightShortcutBrush" Color="{StaticResource ContextMenuHighlightShortcutColor}"/>
+    <SolidColorBrush x:Key="ContextMenuOuterBackgroundBrush" Color="{StaticResource ContextMenuOuterBackgroundColor}"/>
+    <!-- GlowBar・ローディング -->
+    <SolidColorBrush x:Key="ScanBarBrush" Color="{StaticResource ScanBarColor}"/>
+    <SolidColorBrush x:Key="LoadingOverlayBrush" Color="{StaticResource LoadingOverlayColor}"/>
+    <!-- テレメトリー・開発者パネル -->
+    <SolidColorBrush x:Key="TelemetryBackgroundBrush" Color="{StaticResource TelemetryBackgroundColor}"/>
+    <SolidColorBrush x:Key="TelemetryBorderBrush" Color="{StaticResource TelemetryBorderColor}"/>
+    <SolidColorBrush x:Key="TelemetryTitleBrush" Color="{StaticResource TelemetryTitleColor}"/>
+    <SolidColorBrush x:Key="TelemetryValueBrush" Color="{StaticResource TelemetryValueColor}"/>
+
+    <!-- ダイアログ共通スタイル: リソース辞書の読み込みを待たずに背景色が即座に描画されるようハードコード -->
+    <Style x:Key="BaseDialogStyle" TargetType="Window">
+        <Setter Property="Background" Value="{DynamicResource BackgroundBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+        <Setter Property="UseLayoutRounding" Value="True"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="FontSize" Value="13"/>
+    </Style>
+
+    <!-- フォーカス枠: デザインに調和するグレー枠（アイコンビュー等で使用） -->
+    <Style x:Key="SubtleFocusVisualStyle" TargetType="Control">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Control">
+                    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Margin="1"
+                            SnapsToDevicePixels="True"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- フォントとレンダリング設定 -->
+    <Style TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+        <Setter Property="FontFamily" Value="Segoe UI Variable Text, Segoe UI, Meiryo UI"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
+        <Setter Property="TextOptions.TextRenderingMode" Value="ClearType"/>
+    </Style>
+
+    <!-- リストボックス項目のスタイル -->
+    <Style TargetType="ListBoxItem">
+        <Setter Property="Padding" Value="12,6"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListBoxItem">
+                    <Border x:Name="Border" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" CornerRadius="2" Margin="4,1">
+                        <ContentPresenter VerticalAlignment="Center" />
+                    </Border>
+                <ControlTemplate.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter TargetName="Border" Property="Background" Value="{DynamicResource ListHoverBrush}"/>
+                    </Trigger>
+                    <Trigger Property="IsSelected" Value="True">
+                        <Setter TargetName="Border" Property="Background" Value="{DynamicResource SelectionBrush}"/>
+                        <!-- 選択時もメインテキストは黒系で維持する -->
+                        <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                    </Trigger>
+                </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="IconButton" TargetType="Button">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="4"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="BtnBorder" Background="{TemplateBinding Background}" CornerRadius="3" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="BtnBorder" Property="Background" Value="{DynamicResource ButtonHoverBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="IconToggleButton" TargetType="ToggleButton">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="4"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Border x:Name="BtnBorder" Background="{TemplateBinding Background}" CornerRadius="3" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="BtnBorder" Property="Background" Value="{DynamicResource ButtonHoverBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="BtnBorder" Property="Background" Value="{DynamicResource SelectionBrush}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="IconRadioButton" TargetType="RadioButton">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="4"/>
+        <Setter Property="Foreground" Value="{DynamicResource SubTextBrush}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Border x:Name="BtnBorder" Background="{TemplateBinding Background}" CornerRadius="3" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="BtnBorder" Property="Background" Value="{DynamicResource ListHoverBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="BtnBorder" Property="Background" Value="{DynamicResource SelectionBrush}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- オプション設定ビュー用 RadioButton: 選択済み＋ホバー時も枠線を維持、非選択時も枠で選択可能箇所を明示 -->
+    <Style x:Key="OptionRadioButton" TargetType="RadioButton">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="8,6"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Border x:Name="Border"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="4"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Border" Property="Background" Value="{DynamicResource ListHoverBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource TextBrush}"/>
+                            <Setter TargetName="Border" Property="Background" Value="{DynamicResource OptionSelectedBrush}"/>
+                        </Trigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsChecked" Value="True"/>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource TextBrush}"/>
+                            <Setter TargetName="Border" Property="Background" Value="{DynamicResource OptionSelectedHoverBrush}"/>
+                        </MultiTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- チェックボックスのグローバルスタイル: ホバー時の視認性とテーマへの適合を改善 -->
+    <Style TargetType="CheckBox">
+        <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Padding" Value="8,0,0,0"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CheckBox">
+                    <Grid x:Name="RootGrid" Background="Transparent">
+                        <StackPanel Orientation="Horizontal">
+                            <!-- ボックス部分 -->
+                            <Border x:Name="CheckBoxBorder"
+                                    Width="18" Height="18"
+                                    Background="{DynamicResource InputBackgroundBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="4"
+                                    VerticalAlignment="Center">
+                                <Grid>
+                                    <!-- チェックマーク: プロジェクト標準の PackIconLucide を使用 -->
+                                    <icon:PackIconLucide x:Name="CheckMark" 
+                                                       Kind="Check" 
+                                                       Width="12" Height="12"
+                                                       Foreground="White"
+                                                       Visibility="Collapsed"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+                            <!-- テキスト部分 -->
+                            <ContentPresenter x:Name="ContentPresenter"
+                                              Margin="{TemplateBinding Padding}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
+                        </StackPanel>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <!-- チェック時: アクセントカラーを適用 -->
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="CheckBoxBorder" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                            <Setter TargetName="CheckBoxBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                            <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+                        <!-- ホバー時（未チェック時のみ背景変更）: 枠線を既存の TextBrush で強調し、背景をわずかに濃くする -->
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                                <Condition Property="IsChecked" Value="False"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="CheckBoxBorder" Property="BorderBrush" Value="{DynamicResource TextBrush}"/>
+                            <Setter TargetName="CheckBoxBorder" Property="Background" Value="{DynamicResource CheckboxHoverBrush}"/>
+                        </MultiTrigger>
+                        <!-- チェック状態かつホバー時: 背景を濃くし、影を追加してホバーを明確に示す -->
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsChecked" Value="True"/>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="CheckBoxBorder" Property="Background" Value="{DynamicResource CheckedHoverAccentBrush}"/>
+                            <Setter TargetName="CheckBoxBorder" Property="BorderBrush" Value="{DynamicResource CheckedHoverAccentBrush}"/>
+                            <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
+                            <Setter TargetName="CheckBoxBorder" Property="Effect">
+                                <Setter.Value>
+                                    <DropShadowEffect BlurRadius="4" ShadowDepth="1" Opacity="0.3" Color="#000000"/>
+                                </Setter.Value>
+                            </Setter>
+                        </MultiTrigger>
+                        <!-- 無効時 -->
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.5"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ListViewのスタイル（罫線追加と余白削除） -->
+    <Style TargetType="ListViewItem">
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+        <Setter Property="BorderThickness" Value="0,0,0,1"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Padding" Value="0"/> <!-- 余白を0にする -->
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListViewItem">
+                    <Border x:Name="Bd" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" SnapsToDevicePixels="true">
+                        <GridViewRowPresenter VerticalAlignment="Stretch" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="true">
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ListHoverBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="true">
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SelectionBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- モダン・Fluentデザイン スクロールバー -->
+    <Style TargetType="{x:Type ScrollBar}">
+        <Setter Property="Stylus.IsPressAndHoldEnabled" Value="false"/>
+        <Setter Property="Stylus.IsFlicksEnabled" Value="false"/>
+        <Setter Property="Width" Value="12"/>
+        <Setter Property="MinWidth" Value="12"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ScrollBar}">
+                    <Grid x:Name="Bg" SnapsToDevicePixels="true" Background="{TemplateBinding Background}">
+                        <!-- 標準の上下ボタンを排除し、Trackのみにする -->
+                        <Track x:Name="PART_Track"
+                               IsEnabled="{TemplateBinding IsEnabled}"
+                               IsDirectionReversed="true">
+                            <Track.Thumb>
+                                <Thumb>
+                                    <Thumb.Template>
+                                        <ControlTemplate TargetType="{x:Type Thumb}">
+                                            <!-- つまみのデザイン: 通常時は細い線 -->
+                                            <Border x:Name="rectangle"
+                                                    SnapsToDevicePixels="True"
+                                                    Background="{DynamicResource SubTextBrush}"
+                                                    Opacity="0.4"
+                                                    CornerRadius="4"
+                                                    Margin="4,2" />
+                                            <ControlTemplate.Triggers>
+                                                <!-- ScrollBar全体にマウスが乗った時に太くする (Fluent Design風) -->
+                                                <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType={x:Type ScrollBar}}}" Value="True">
+                                                    <Setter TargetName="rectangle" Property="Margin" Value="2,2" />
+                                                    <Setter TargetName="rectangle" Property="Opacity" Value="0.8" />
+                                                </DataTrigger>
+                                                <!-- ドラッグ中はアクセントカラーに -->
+                                                <Trigger Property="IsDragging" Value="true">
+                                                    <Setter TargetName="rectangle" Property="Background" Value="{DynamicResource AccentBrush}" />
+                                                    <Setter TargetName="rectangle" Property="Opacity" Value="1.0" />
+                                                    <Setter TargetName="rectangle" Property="Margin" Value="2,2" />
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Thumb.Template>
+                                </Thumb>
+                            </Track.Thumb>
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton Command="{x:Static ScrollBar.PageDownCommand}" Opacity="0" Focusable="false" />
+                            </Track.IncreaseRepeatButton>
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton Command="{x:Static ScrollBar.PageUpCommand}" Opacity="0" Focusable="false" />
+                            </Track.DecreaseRepeatButton>
+                        </Track>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <!-- 横方向スクロールバーの設定 -->
+            <Trigger Property="Orientation" Value="Horizontal">
+                <Setter Property="Width" Value="Auto"/>
+                <Setter Property="MinWidth" Value="0"/>
+                <Setter Property="Height" Value="12"/>
+                <Setter Property="MinHeight" Value="12"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type ScrollBar}">
+                            <Grid x:Name="Bg" SnapsToDevicePixels="true" Background="{TemplateBinding Background}">
+                                <Track x:Name="PART_Track"
+                                       IsEnabled="{TemplateBinding IsEnabled}">
+                                    <Track.Thumb>
+                                        <Thumb>
+                                            <Thumb.Template>
+                                                <ControlTemplate TargetType="{x:Type Thumb}">
+                                                    <Border x:Name="rectangle"
+                                                            SnapsToDevicePixels="True"
+                                                            Background="{DynamicResource SubTextBrush}"
+                                                            Opacity="0.4"
+                                                            CornerRadius="4"
+                                                            Margin="2,4" />
+                                                    <ControlTemplate.Triggers>
+                                                        <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType={x:Type ScrollBar}}}" Value="True">
+                                                            <Setter TargetName="rectangle" Property="Margin" Value="2,2" />
+                                                            <Setter TargetName="rectangle" Property="Opacity" Value="0.8" />
+                                                        </DataTrigger>
+                                                        <Trigger Property="IsDragging" Value="true">
+                                                            <Setter TargetName="rectangle" Property="Background" Value="{DynamicResource AccentBrush}" />
+                                                            <Setter TargetName="rectangle" Property="Opacity" Value="1.0" />
+                                                            <Setter TargetName="rectangle" Property="Margin" Value="2,2" />
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Thumb.Template>
+                                        </Thumb>
+                                    </Track.Thumb>
+                                    <Track.IncreaseRepeatButton>
+                                        <RepeatButton Command="{x:Static ScrollBar.PageRightCommand}" Opacity="0" Focusable="false" />
+                                    </Track.IncreaseRepeatButton>
+                                    <Track.DecreaseRepeatButton>
+                                        <RepeatButton Command="{x:Static ScrollBar.PageLeftCommand}" Opacity="0" Focusable="false" />
+                                    </Track.DecreaseRepeatButton>
+                                </Track>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- 登録成功時のハイライト演出（お気に入り・インデックス検索登録後） -->
+    <Storyboard x:Key="SuccessHighlightStoryboard">
+        <!-- 背景色: アクセントカラーから透明へ2秒かけて減衰（Ease-Out） -->
+        <ColorAnimationUsingKeyFrames Storyboard.TargetProperty="(Control.Background).(SolidColorBrush.Color)">
+            <EasingColorKeyFrame KeyTime="0:0:0" Value="{StaticResource OnePointDarkColor}"/>
+            <EasingColorKeyFrame KeyTime="0:0:0.3" Value="{StaticResource OnePointDarkColor}"/>
+            <EasingColorKeyFrame KeyTime="0:0:2.0" Value="#00FFFFFF">
+                <EasingColorKeyFrame.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </EasingColorKeyFrame.EasingFunction>
+            </EasingColorKeyFrame>
+        </ColorAnimationUsingKeyFrames>
+        <!-- パルス効果: 1.05倍に拡大して戻す -->
+        <DoubleAnimationUsingKeyFrames Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)">
+            <EasingDoubleKeyFrame KeyTime="0:0:0" Value="1.0"/>
+            <EasingDoubleKeyFrame KeyTime="0:0:0.15" Value="1.05">
+                <EasingDoubleKeyFrame.EasingFunction>
+                    <CircleEase EasingMode="EaseOut"/>
+                </EasingDoubleKeyFrame.EasingFunction>
+            </EasingDoubleKeyFrame>
+            <EasingDoubleKeyFrame KeyTime="0:0:0.4" Value="1.0">
+                <EasingDoubleKeyFrame.EasingFunction>
+                    <CircleEase EasingMode="EaseOut"/>
+                </EasingDoubleKeyFrame.EasingFunction>
+            </EasingDoubleKeyFrame>
+        </DoubleAnimationUsingKeyFrames>
+        <DoubleAnimationUsingKeyFrames Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)">
+            <EasingDoubleKeyFrame KeyTime="0:0:0" Value="1.0"/>
+            <EasingDoubleKeyFrame KeyTime="0:0:0.15" Value="1.05">
+                <EasingDoubleKeyFrame.EasingFunction>
+                    <CircleEase EasingMode="EaseOut"/>
+                </EasingDoubleKeyFrame.EasingFunction>
+            </EasingDoubleKeyFrame>
+            <EasingDoubleKeyFrame KeyTime="0:0:0.4" Value="1.0">
+                <EasingDoubleKeyFrame.EasingFunction>
+                    <CircleEase EasingMode="EaseOut"/>
+                </EasingDoubleKeyFrame.EasingFunction>
+            </EasingDoubleKeyFrame>
+        </DoubleAnimationUsingKeyFrames>
+    </Storyboard>
+</ResourceDictionary>

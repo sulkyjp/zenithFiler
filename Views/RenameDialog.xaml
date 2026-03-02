@@ -1,0 +1,234 @@
+<Window x:Class="ZenithFiler.RenameDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:icon="http://metro.mahapps.com/winfx/xaml/iconpacks"
+        Title="名前の変更"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen"
+        SizeToContent="WidthAndHeight"
+        MinWidth="420"
+        MaxWidth="600"
+        Background="Transparent"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        FontSize="13"
+        MouseLeftButtonDown="Window_MouseLeftButtonDown">
+
+    <Window.Resources>
+        <!-- 共通ボタンテンプレート（日付・コンテキスト・カスタム） -->
+        <ControlTemplate x:Key="SuggestionButtonTemplate" TargetType="Button">
+            <Border x:Name="Bd" CornerRadius="4" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
+                    Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <ControlTemplate.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter TargetName="Bd" Property="Background" Value="#E2DED2"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter TargetName="Bd" Property="Background" Value="#D6D2C6"/>
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
+
+        <!-- テキストトリミング付きボタンテンプレート（長い文字列用） -->
+        <ControlTemplate x:Key="TrimmedButtonTemplate" TargetType="Button">
+            <Border x:Name="Bd" CornerRadius="4" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
+                    Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                <TextBlock Text="{TemplateBinding Content}" TextTrimming="CharacterEllipsis"
+                           ToolTip="{TemplateBinding ToolTip}"/>
+            </Border>
+            <ControlTemplate.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter TargetName="Bd" Property="Background" Value="#E2DED2"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter TargetName="Bd" Property="Background" Value="#D6D2C6"/>
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
+
+        <!-- 共通ボタンスタイル -->
+        <Style x:Key="SuggestionButtonStyle" TargetType="Button">
+            <Setter Property="MinHeight" Value="26"/>
+            <Setter Property="Padding" Value="10,3"/>
+            <Setter Property="Margin" Value="0,0,6,4"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="#1A1A1A"/>
+            <Setter Property="Background" Value="#EEEAE0"/>
+            <Setter Property="Template" Value="{StaticResource SuggestionButtonTemplate}"/>
+        </Style>
+    </Window.Resources>
+
+    <Border Margin="20"
+            CornerRadius="8"
+            Background="{DynamicResource BackgroundBrush}">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.25" Direction="315" Color="Black"/>
+        </Border.Effect>
+
+        <StackPanel Margin="24,20,24,20">
+
+            <!-- タイトル -->
+            <TextBlock x:Name="PromptText"
+                       Text="新しい名前を入力してください:"
+                       FontSize="14"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextBrush}"
+                       Margin="0,0,0,12"/>
+
+            <!-- ボタン群（日付・コンテキスト・カスタム）を WrapPanel で折り返し表示 -->
+            <WrapPanel x:Name="ButtonPanel" Margin="0,0,0,10">
+                <!-- 日付ボタン -->
+                <Button x:Name="DateBtn1" Click="DateButton_Click" Tag="yyyyMMdd"
+                        Style="{StaticResource SuggestionButtonStyle}"/>
+                <Button x:Name="DateBtn2" Click="DateButton_Click" Tag="yyyyMMdd_"
+                        Style="{StaticResource SuggestionButtonStyle}"/>
+                <Button x:Name="DateBtn3" Click="DateButton_Click" Tag="_yyyyMMdd"
+                        Style="{StaticResource SuggestionButtonStyle}"/>
+
+                <!-- コンテキストボタン（親フォルダ名・議事ログ） -->
+                <Button x:Name="ParentFolderBtn" Click="ContextButton_Click"
+                        Style="{StaticResource SuggestionButtonStyle}"
+                        Template="{StaticResource TrimmedButtonTemplate}"
+                        MaxWidth="260" Visibility="Collapsed"/>
+                <Button x:Name="DateParentBtn" Click="ContextButton_Click"
+                        Style="{StaticResource SuggestionButtonStyle}"
+                        Template="{StaticResource TrimmedButtonTemplate}"
+                        MaxWidth="360" Visibility="Collapsed"/>
+
+                <!-- カスタムボタン（動的に追加される） -->
+                <ItemsControl x:Name="CustomButtonsHost">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+
+                <!-- ＋ボタン（カスタム定型追加） -->
+                <Button x:Name="AddCustomBtn" Click="AddCustomButton_Click"
+                        ToolTip="現在の入力をカスタムボタンとして追加"
+                        MinHeight="26" MinWidth="26" Padding="4,3" Margin="0,0,6,4" FontSize="12"
+                        Foreground="#999999" Background="#EEEAE0"
+                        Template="{StaticResource SuggestionButtonTemplate}">
+                    <icon:PackIconLucide Kind="Plus" Width="12" Height="12"/>
+                </Button>
+            </WrapPanel>
+
+            <!-- 入力フィールド + 履歴ボタン -->
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBox x:Name="InputTextBox"
+                         Grid.Column="0"
+                         Padding="6,6,24,6"
+                         VerticalContentAlignment="Center"
+                         PreviewKeyDown="InputTextBox_PreviewKeyDown"/>
+
+                <!-- 履歴アイコン（TextBox 右端に重ねて配置） -->
+                <Button x:Name="HistoryToggleBtn" Click="HistoryToggleBtn_Click"
+                        Grid.Column="0" HorizontalAlignment="Right" VerticalAlignment="Center"
+                        Margin="0,0,2,0" Padding="4" Cursor="Hand"
+                        ToolTip="履歴を表示"
+                        IsTabStop="False">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Bd" Background="Transparent" Padding="{TemplateBinding Padding}"
+                                    CornerRadius="3">
+                                <icon:PackIconLucide Kind="ChevronDown" Width="12" Height="12"
+                                                     Foreground="#999999" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="#E2DED2"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+
+                <TextBlock x:Name="ExtensionLabel"
+                           Grid.Column="1"
+                           VerticalAlignment="Center"
+                           Margin="4,0,0,0"
+                           Foreground="{DynamicResource TextBrush}"
+                           IsHitTestVisible="False"
+                           Visibility="Collapsed"/>
+            </Grid>
+
+            <Popup x:Name="HistoryPopup"
+                   PlacementTarget="{Binding ElementName=InputTextBox}"
+                   Placement="Bottom"
+                   StaysOpen="False"
+                   AllowsTransparency="True"
+                   PopupAnimation="Fade">
+                <!-- ※Popup内のためStaticResource不可: ContextMenuBorderColor/ContextMenuOuterBackgroundColor に対応 -->
+                <Border BorderBrush="#B0B0B0" BorderThickness="1" Background="#FEFEFE" CornerRadius="5"
+                        MaxHeight="200"
+                        Width="{Binding ActualWidth, ElementName=InputTextBox}">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="24" ShadowDepth="6" Opacity="0.22" Color="Black"/>
+                    </Border.Effect>
+                    <ListBox x:Name="HistoryList"
+                             Background="#F5F5F0"
+                             BorderThickness="0"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             PreviewMouseLeftButtonUp="HistoryList_PreviewMouseLeftButtonUp"
+                             PreviewKeyDown="HistoryList_PreviewKeyDown">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="Padding" Value="8,5"/>
+                                <Setter Property="FontSize" Value="12.5"/>
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListBoxItem">
+                                            <Border x:Name="Bd" Padding="{TemplateBinding Padding}"
+                                                    Background="Transparent">
+                                                <ContentPresenter/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ListHoverBrush}"/>
+                                                </Trigger>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SelectionBrush}"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                    </ListBox>
+                </Border>
+            </Popup>
+
+            <!-- アクションボタン -->
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Center"
+                        Margin="0,16,0,0">
+                <Button Content="OK"
+                        IsDefault="True"
+                        Click="OkButton_Click"
+                        MinWidth="96"
+                        MinHeight="30"
+                        Padding="14,4"
+                        Margin="0,0,12,0"/>
+                <Button Content="キャンセル"
+                        Click="CancelButton_Click"
+                        MinWidth="96"
+                        MinHeight="30"
+                        Padding="14,4"/>
+            </StackPanel>
+
+        </StackPanel>
+    </Border>
+</Window>

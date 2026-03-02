@@ -1,0 +1,44 @@
+﻿# .cursorignore
+# This file tells Cursor's AI which files and directories to ignore.
+
+# --- Build Artifacts ---
+bin/
+obj/
+dist/
+dist-electron/
+out/
+publish/
+
+# --- Dependencies ---
+node_modules/
+
+# --- IDE and Local Settings ---
+.vs/
+.vscode/
+.idea/
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+
+# --- Binary and Build Files ---
+*.exe
+*.dll
+*.pdb
+*.pfx
+*.snk
+*.lib
+*.obj
+*.zip
+*.tar.gz
+
+# --- Logs and Temporary Files ---
+*.log
+Logs/
+*.tmp
+*.cache
+*.swp
+*~
+
+# --- SpecStory ---
+.specstory/

@@ -1,0 +1,616 @@
+using System;
+using System.ComponentModel;
+using System.IO;
+using System.Linq;
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
+
+namespace ZenithFiler
+{
+    /// <summary>お気に入りアイテムのシリアライズ用 DTO。settings.json に保存される。</summary>
+    public class FavoriteItemDto
+    {
+        public string Name { get; set; } = string.Empty;
+        public string? Path { get; set; }
+        /// <summary>概要説明。既存データにない場合は null として安全に処理する。</summary>
+        public string? Description { get; set; }
+        public bool IsExpanded { get; set; }
+        /// <summary>場所の種類（Local / Server / Box / SPO）。仮想フォルダなどパスが null の場合に使用。</summary>
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public SourceType LocationType { get; set; } = SourceType.Local;
+        public List<FavoriteItemDto> Children { get; set; } = new();
+    }
+
+    /// <summary>検索プリセットのシリアライズ用 DTO。settings.json に保存される。</summary>
+    public class SearchPresetDto
+    {
+        public string Id { get; set; } = Guid.NewGuid().ToString();
+        public string Name { get; set; } = string.Empty;
+        public string CreatedAt { get; set; } = string.Empty;
+        public bool IsIndexSearchMode { get; set; }
+        public string SearchText { get; set; } = string.Empty;
+        public string MinSizeText { get; set; } = string.Empty;
+        public string MaxSizeText { get; set; } = string.Empty;
+        public string StartDateText { get; set; } = string.Empty;
+        public string EndDateText { get; set; } = string.Empty;
+        public string SearchSortProperty { get; set; } = "LastModified";
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public ListSortDirection SearchSortDirection { get; set; } = ListSortDirection.Descending;
+        public List<bool>? FileTypeFilterEnabled { get; set; }
+        public List<string>? ScopePaths { get; set; }
+
+        // ── プレビュー表示用 (JsonIgnore) ──
+
+        private static readonly string[] _fileTypeLabels =
+            { "フォルダ", "Excel", "Word", "PPT", "PDF", "TXT", "EXE", "BAT", "JSON", "画像", "その他" };
+
+        [JsonIgnore]
+        public bool HasKeyword => !string.IsNullOrWhiteSpace(SearchText);
+
+        [JsonIgnore]
+        public bool HasSize => !string.IsNullOrWhiteSpace(MinSizeText) || !string.IsNullOrWhiteSpace(MaxSizeText);
+
+        [JsonIgnore]
+        public bool HasDate => !string.IsNullOrWhiteSpace(StartDateText) || !string.IsNullOrWhiteSpace(EndDateText);
+
+        [JsonIgnore]
+        public bool HasFilters
+        {
+            get
+            {
+                if (FileTypeFilterEnabled == null || FileTypeFilterEnabled.Count != _fileTypeLabels.Length) return false;
+                return FileTypeFilterEnabled.Any(f => !f);
+            }
+        }
+
+        [JsonIgnore]
+        public bool HasScope => IsIndexSearchMode && ScopePaths != null && ScopePaths.Count > 0;
+
+        [JsonIgnore]
+        public string DisplaySize
+        {
+            get
+            {
+                bool hasMin = !string.IsNullOrWhiteSpace(MinSizeText);
+                bool hasMax = !string.IsNullOrWhiteSpace(MaxSizeText);
+                if (!hasMin && !hasMax) return string.Empty;
+                string min = FormatSizeText(MinSizeText);
+                string max = FormatSizeText(MaxSizeText);
+                if (hasMin && hasMax) return $"{min} ~ {max}";
+                if (hasMin) return $"{min} 以上";
+                return $"{max} 以下";
+            }
+        }
+
+        [JsonIgnore]
+        public string DisplayDate
+        {
+            get
+            {
+                bool hasStart = !string.IsNullOrWhiteSpace(StartDateText);
+                bool hasEnd = !string.IsNullOrWhiteSpace(EndDateText);
+                if (!hasStart && !hasEnd) return string.Empty;
+                string start = FormatDateText(StartDateText);
+                string end = FormatDateText(EndDateText);
+                if (hasStart && hasEnd) return $"{start} ~ {end}";
+                if (hasStart) return $"{start} 以降";
+                return $"{end} 以前";
+            }
+        }
+
+        [JsonIgnore]
+        public string DisplayFilters
+        {
+            get
+            {
+                if (FileTypeFilterEnabled == null || FileTypeFilterEnabled.Count != _fileTypeLabels.Length) return string.Empty;
+                var enabled = new System.Collections.Generic.List<string>();
+                for (int i = 0; i < _fileTypeLabels.Length; i++)
+                    if (FileTypeFilterEnabled[i]) enabled.Add(_fileTypeLabels[i]);
+                if (enabled.Count == _fileTypeLabels.Length) return string.Empty;
+                return string.Join(", ", enabled);
+            }
+        }
+
+        [JsonIgnore]
+        public string DisplayScope
+        {
+            get
+            {
+                if (ScopePaths == null || ScopePaths.Count == 0) return string.Empty;
+                return string.Join(", ", ScopePaths.Select(p =>
+                    Path.GetFileName(p.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))));
+            }
+        }
+
+        [JsonIgnore]
+        public string DisplaySort
+        {
+            get
+            {
+                var propName = SearchSortProperty switch
+                {
+                    "Name" => "名前",
+                    "LastModified" => "更新日",
+                    "Size" => "サイズ",
+                    "Extension" => "拡張子",
+                    _ => SearchSortProperty
+                };
+                var dir = SearchSortDirection == ListSortDirection.Ascending ? "↑" : "↓";
+                return $"{propName} {dir}";
+            }
+        }
+
+        internal static string FormatSizeText(string? text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return "";
+            if (ViewModels.SearchFilterViewModel.TryParseSizeInput(text, out long bytes) && bytes > 0)
+            {
+                if (bytes < 1024) return $"{bytes} B";
+                if (bytes < 1024L * 1024) return $"{bytes / 1024.0:0.#} KB";
+                if (bytes < 1024L * 1024 * 1024) return $"{bytes / (1024.0 * 1024):0.#} MB";
+                return $"{bytes / (1024.0 * 1024 * 1024):0.##} GB";
+            }
+            return text;
+        }
+
+        internal static string FormatDateText(string? text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return "";
+            if (ViewModels.SearchFilterViewModel.TryParseDateInput(text, out var dt) && dt != default)
+                return dt.ToString("yyyy/MM/dd");
+            return text;
+        }
+    }
+
+    /// <summary>インデックスの更新タイミング。負荷を抑えるためデフォルトは Interval。</summary>
+    public enum IndexUpdateMode
+    {
+        /// <summary>変更を検知して差分更新。負荷はやや高め。</summary>
+        Auto,
+        /// <summary>一定間隔でまとめて更新。推奨。</summary>
+        Interval,
+        /// <summary>手動の「今すぐ更新」のみ。</summary>
+        Manual
+    }
+
+    /// <summary>インデックス関連の設定。settings.json の Index セクション。</summary>
+    public class IndexSettings
+    {
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public IndexUpdateMode UpdateMode { get; set; } = IndexUpdateMode.Interval;
+        public int UpdateIntervalHours { get; set; } = 2;
+        public bool EcoMode { get; set; } = true;
+        public int MaxParallelism { get; set; } = 2;
+        public bool NetworkLowPriority { get; set; } = true;
+        public bool FreshnessAggressive { get; set; } = false;
+        public bool FreshnessWarnStale { get; set; } = true;
+        public int FullRebuildCooldownHours { get; set; } = 24;
+
+        /// <summary>ベストプラクティス（負荷控えめ）のデフォルトを返す。</summary>
+        public static IndexSettings CreateDefaults() => new();
+    }
+
+    public class PaneSettings
+    {
+        public bool IsGroupFoldersFirst { get; set; } = true;
+        public bool IsAdaptiveColumnsEnabled { get; set; } = true;
+        public string SortProperty { get; set; } = "Name";
+        public ListSortDirection SortDirection { get; set; } = ListSortDirection.Ascending;
+        public string CurrentPath { get; set; } = string.Empty;
+        public List<string> TabPaths { get; set; } = new();
+        public int SelectedTabIndex { get; set; } = 0;
+        public bool IsPathEditMode { get; set; } = false;
+        public List<bool> TabLockStates { get; set; } = new();
+        /// <summary>ホームボタンで移動するフォルダパス。空の場合はデスクトップ(A)／ダウンロード(B)にフォールバック。</summary>
+        public string HomePath { get; set; } = string.Empty;
+        /// <summary>ファイル一覧の表示モード（詳細／大・中・小アイコン）。次回起動時に復元。</summary>
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public FileViewMode FileViewMode { get; set; } = FileViewMode.Details;
+    }
+
+    public class WindowSettings
+    {
+        public double Width { get; set; } = 1400;
+        public double Height { get; set; } = 850;
+        public double Left { get; set; } = double.NaN;
+        public double Top { get; set; } = double.NaN;
+        public WindowState State { get; set; } = WindowState.Normal;
+        public double SidebarWidth { get; set; } = 260;
+        public bool IsSidebarVisible { get; set; } = true;
+        public SidebarViewMode SidebarMode { get; set; } = SidebarViewMode.Favorites;
+        public int PaneCount { get; set; } = 1;
+        public bool IsAlwaysOnTop { get; set; } = false;
+        public bool IsFavoritesLocked { get; set; } = false;
+
+        /// <summary>ツリービュー内でのフォルダ移動・リネーム・削除を禁止するロック。次回起動時に復元。</summary>
+        public bool IsTreeViewLocked { get; set; } = false;
+
+        /// <summary>ナビペインの幅を任意変更不可にするロック。お気に入りビュー時のみ有効。ツリー/履歴の自動拡張はロック時も行う。</summary>
+        public bool IsNavWidthLocked { get; set; } = false;
+
+        /// <summary>削除時の確認メッセージを表示するか（お気に入り削除時）。settings.json に保存される。</summary>
+        public bool ConfirmDeleteFavorites { get; set; } = true;
+
+        /// <summary>お気に入り検索のヒット条件（名前・概要 または フルパス・概要）。次回起動時に復元。</summary>
+        public FavoritesSearchMode FavoritesSearchMode { get; set; } = FavoritesSearchMode.NameAndDescription;
+
+        /// <summary>お気に入り一覧。settings.json に保存され、アプリ移行時にバックアップで引き継げる。</summary>
+        public List<FavoriteItemDto> Favorites { get; set; } = new();
+
+        /// <summary>ワーキングセット一覧。settings.json に保存される。</summary>
+        public List<WorkingSetDto> WorkingSets { get; set; } = new();
+
+        /// <summary>インデックス検索の対象フォルダパス一覧。settings.json に保存される。</summary>
+        public List<string> IndexSearchTargetPaths { get; set; } = new();
+
+        /// <summary>インデックス更新ロック済みフォルダパス一覧。settings.json に保存される。</summary>
+        public List<string> IndexSearchLockedPaths { get; set; } = new();
+
+        /// <summary>インデックス検索スコープ（検索対象に含めるフォルダ）。null は全選択。</summary>
+        public List<string>? IndexSearchScopePaths { get; set; }
+
+        /// <summary>検索実行時の表示先・挙動（同一ペイン新規タブ／同一ペイン現在タブ即時／反対ペイン新規タブ）。</summary>
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public SearchBehavior SearchBehavior { get; set; } = SearchBehavior.SamePaneNewTab;
+
+        /// <summary>検索結果一覧でパス列をクリックした際の表示先（同一タブ／同一ペイン新規タブ／反対ペイン新規タブ）。</summary>
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public SearchResultPathBehavior SearchResultPathBehavior { get; set; } = SearchResultPathBehavior.SamePaneNewTab;
+
+        /// <summary>ファイル一覧の右クリック時に表示するコンテキストメニューの種類（アプリ独自／エクスプローラ互換）。</summary>
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public ContextMenuMode ContextMenuMode { get; set; } = ContextMenuMode.Zenith;
+
+        /// <summary>検索結果フィルターバーの有効状態（フォルダ, Excel, Word, PPT, PDF, TXT, EXE, BAT, JSON, 画像, その他 の順）。null の場合は全項目有効。</summary>
+        public List<bool>? SearchResultFileTypeFilterEnabled { get; set; }
+
+        /// <summary>検索プリセット一覧。settings.json に保存される。</summary>
+        public List<SearchPresetDto> SearchPresets { get; set; } = new();
+
+        /// <summary>検索サイズフィルタモード（SizeFilterMode enum の int 値）。</summary>
+        public int? SearchSizeFilter { get; set; }
+        public long? SearchCustomMinSize { get; set; }
+        public long? SearchCustomMaxSize { get; set; }
+        public string? SearchMinSizeText { get; set; }
+        public string? SearchMaxSizeText { get; set; }
+
+        /// <summary>検索日付フィルタモード（DateFilterMode enum の int 値）。</summary>
+        public int? SearchDateFilter { get; set; }
+        public string? SearchCustomStartDate { get; set; }
+        public string? SearchCustomEndDate { get; set; }
+        public string? SearchStartDateText { get; set; }
+        public string? SearchEndDateText { get; set; }
+
+        /// <summary>検索実行時に自動的に1画面モードに切り替えるか。</summary>
+        public bool AutoSwitchToSinglePaneOnSearch { get; set; } = false;
+
+        /// <summary>マイクロアニメーション（ホバーフェード・タブ切替トランジション等）の有効/無効。</summary>
+        public bool EnableMicroAnimations { get; set; } = true;
+
+        /// <summary>適用中のテーマ名（themes/ フォルダ内の拡張子なしファイル名）。</summary>
+        public string ThemeName { get; set; } = "standard";
+
+        /// <summary>マイクロアニメーションの有効状態を static に参照するアクセサ。Behavior や code-behind から使用。</summary>
+        private static bool _microAnimationsEnabled = true;
+        public static bool MicroAnimationsEnabled => _microAnimationsEnabled;
+
+        /// <summary>インスタンスプロパティの値を static フラグへ反映する。Load() 完了後に呼び出す。</summary>
+        internal void ApplyStaticFlags()
+        {
+            _microAnimationsEnabled = EnableMicroAnimations;
+        }
+
+        /// <summary>設定スキーマのバージョン。マイグレーション判定に使用。</summary>
+        public int SettingsVersion { get; set; } = 1;
+
+        /// <summary>インデックス関連の設定。null の場合は CreateDefaults() で補完。</summary>
+        [JsonPropertyName("Index")]
+        public IndexSettings? IndexSettings { get; set; }
+
+        public PaneSettings LeftPane { get; set; } = new();
+        public PaneSettings RightPane { get; set; } = new();
+
+        private static readonly string FilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.json");
+        private static readonly string TmpFilePath = FilePath + ".tmp";
+        private static readonly string BakFilePath = FilePath + ".bak";
+
+        private static JsonSerializerOptions CreateJsonOptions()
+        {
+            return new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping, // 日本語などを \uXXXX にエスケープせずそのまま保存
+                Converters = { new JsonStringEnumConverter() }
+            };
+        }
+
+        /// <summary>ファイルを読まずにデフォルト設定のインスタンスを返す。起動時UIブロック回避用。</summary>
+        public static WindowSettings CreateDefault()
+        {
+            var s = new WindowSettings();
+            s.EnsureIndexSettingsDefaults();
+            return s;
+        }
+
+        public static WindowSettings Load()
+        {
+            // 1. settings.json を試行
+            var result = TryLoadFrom(FilePath);
+            if (result != null) return result;
+
+            // 2. settings.json が破損/不在 → .bak からフォールバック
+            result = TryLoadFrom(BakFilePath);
+            if (result != null)
+            {
+                _ = App.FileLogger.LogAsync("[Settings] settings.json が破損していたため settings.json.bak から復旧しました");
+                return result;
+            }
+
+            // 3. 両方ダメ → デフォルト
+            var s = new WindowSettings();
+            s.EnsureIndexSettingsDefaults();
+            s.ApplyStaticFlags();
+            return s;
+        }
+
+        /// <summary>指定パスから設定を読み込む。ファイル不在・0バイト・JSON 不正の場合は null を返す。</summary>
+        private static WindowSettings? TryLoadFrom(string path)
+        {
+            try
+            {
+                if (!File.Exists(path)) return null;
+                var info = new FileInfo(path);
+                if (info.Length == 0) return null;
+
+                var json = File.ReadAllText(path);
+                var s = JsonSerializer.Deserialize<WindowSettings>(json, CreateJsonOptions());
+                if (s == null) return null;
+                s.EnsureIndexSettingsDefaults();
+                s.ApplyStaticFlags();
+                return s;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /// <summary>IndexSettings が null の場合にデフォルトを補完する。</summary>
+        private void EnsureIndexSettingsDefaults()
+        {
+            if (IndexSettings == null)
+                IndexSettings = IndexSettings.CreateDefaults();
+        }
+
+        /// <summary>
+        /// アトミック・スワップ方式で settings.json に書き出す。
+        /// .tmp に書き込み → .bak を作成 → .tmp を本体に置換。
+        /// </summary>
+        public void Save()
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(this, CreateJsonOptions());
+
+                // 1. .tmp に書き出し
+                File.WriteAllText(TmpFilePath, json);
+
+                // 2. アトミック・スワップ (.bak を一世代保持)
+                if (File.Exists(FilePath))
+                {
+                    // File.Replace: tmp → 本体, 旧本体 → bak (1操作)
+                    File.Replace(TmpFilePath, FilePath, BakFilePath);
+                }
+                else
+                {
+                    // 初回保存 (本体がまだない)
+                    File.Move(TmpFilePath, FilePath);
+                }
+            }
+            catch (Exception ex)
+            {
+                // File.Replace 失敗時のフォールバック（.tmp が残っていれば Move で救済）
+                try
+                {
+                    if (File.Exists(TmpFilePath))
+                    {
+                        if (File.Exists(FilePath))
+                        {
+                            // .bak 作成を試みてから上書き
+                            try { File.Copy(FilePath, BakFilePath, overwrite: true); } catch { }
+                            File.Delete(FilePath);
+                        }
+                        File.Move(TmpFilePath, FilePath);
+                    }
+                }
+                catch { /* best effort */ }
+
+                _ = App.FileLogger.LogAsync(
+                    $"[Settings] settings.json の書き込みに失敗しました: {FileLoggerService.FormatException(ex)}");
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        //  デバウンス・バックグラウンド保存 (DebouncedSettingsSaver)
+        // ═══════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// 設定変更をデバウンスし、バックグラウンドスレッドでアトミック保存する。
+        /// 変更検知後 800ms 待機し、その間に新たな変更があればタイマーをリセット。
+        /// </summary>
+        private static class DebouncedSettingsSaver
+        {
+            private static readonly object _lock = new();
+            private static CancellationTokenSource? _debounceCts;
+            private static Action<WindowSettings>? _pendingMutation;
+
+            /// <summary>
+            /// 設定を部分更新してデバウンス保存をスケジュールする。
+            /// mutation は Load 済みの settings に対して呼ばれ、変更を適用する。
+            /// 800ms 以内に次の呼び出しがあれば前のタイマーはキャンセルされ、
+            /// 最新の mutation だけが最終的に書き出される。
+            /// </summary>
+            public static void ScheduleSave(Action<WindowSettings> mutation)
+            {
+                lock (_lock)
+                {
+                    // 前回のデバウンスタイマーをキャンセル
+                    _debounceCts?.Cancel();
+                    _debounceCts = new CancellationTokenSource();
+                    var token = _debounceCts.Token;
+
+                    // mutation を蓄積（前の未実行 mutation は最新で上書き）
+                    var prevMutation = _pendingMutation;
+                    _pendingMutation = prevMutation != null
+                        ? s => { prevMutation(s); mutation(s); }
+                        : mutation;
+
+                    var pendingRef = _pendingMutation;
+
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await Task.Delay(800, token);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            return; // 新しい変更が来たのでこのタイマーは破棄
+                        }
+
+                        // デバウンス完了 → 保存実行
+                        Action<WindowSettings>? mutationToApply;
+                        lock (_lock)
+                        {
+                            mutationToApply = _pendingMutation;
+                            _pendingMutation = null;
+                        }
+
+                        if (mutationToApply == null) return;
+
+                        try
+                        {
+                            var settings = Load();
+                            mutationToApply(settings);
+                            settings.Save();
+                        }
+                        catch (Exception ex)
+                        {
+                            _ = App.FileLogger.LogAsync(
+                                $"[Settings] デバウンス保存に失敗しました: {FileLoggerService.FormatException(ex)}");
+                        }
+                    });
+                }
+            }
+
+            /// <summary>
+            /// シャットダウン時にデバウンス待機中の変更を即座にフラッシュする（同期）。
+            /// MainWindow_Closing から呼び出す。
+            /// </summary>
+            public static void Flush()
+            {
+                Action<WindowSettings>? mutationToApply;
+                lock (_lock)
+                {
+                    _debounceCts?.Cancel();
+                    _debounceCts = null;
+                    mutationToApply = _pendingMutation;
+                    _pendingMutation = null;
+                }
+
+                if (mutationToApply == null) return;
+
+                try
+                {
+                    var settings = Load();
+                    mutationToApply(settings);
+                    settings.Save();
+                }
+                catch (Exception ex)
+                {
+                    _ = App.FileLogger.LogAsync(
+                        $"[Settings] フラッシュ保存に失敗しました: {FileLoggerService.FormatException(ex)}");
+                }
+            }
+        }
+
+        /// <summary>シャットダウン時にデバウンス待機中の変更を即座にフラッシュする。</summary>
+        public static void FlushPendingSaves() => DebouncedSettingsSaver.Flush();
+
+        /// <summary>検索結果フィルターバーのみを更新して settings.json に保存する。フィルター変更のたびに呼ばれる。</summary>
+        public static void SaveSearchResultFiltersOnly(List<bool> enabled)
+        {
+            if (enabled == null || enabled.Count != 11) return;
+            DebouncedSettingsSaver.ScheduleSave(s =>
+                s.SearchResultFileTypeFilterEnabled = new List<bool>(enabled));
+        }
+
+        /// <summary>検索フィルタ（サイズ・日付）のみを更新して settings.json に保存する。</summary>
+        public static void SaveSearchFilterOnly(ViewModels.SearchFilterViewModel filter)
+        {
+            DebouncedSettingsSaver.ScheduleSave(s =>
+            {
+                s.SearchSizeFilter = (int)filter.SizeFilter;
+                s.SearchCustomMinSize = filter.CustomMinSizeBytes;
+                s.SearchCustomMaxSize = filter.CustomMaxSizeBytes;
+                s.SearchMinSizeText = filter.MinSizeText;
+                s.SearchMaxSizeText = filter.MaxSizeText;
+                s.SearchDateFilter = (int)filter.DateFilter;
+                s.SearchStartDateText = filter.StartDateText;
+                s.SearchEndDateText = filter.EndDateText;
+                s.SearchCustomStartDate = filter.ParsedStartDate?.ToString("o");
+                s.SearchCustomEndDate = filter.ParsedEndDate?.ToString("o");
+            });
+        }
+
+        /// <summary>インデックス検索スコープのみを更新して settings.json に保存する。選択変更のたびに呼ばれる。</summary>
+        public static void SaveIndexSearchScopeOnly(List<string>? scopePaths)
+        {
+            DebouncedSettingsSaver.ScheduleSave(s =>
+                s.IndexSearchScopePaths = scopePaths);
+        }
+
+        /// <summary>お気に入りのみを更新して settings.json を保存する。追加・削除・並べ替えのたびに呼ばれる。</summary>
+        public static void SaveFavoritesOnly(List<FavoriteItemDto> favorites)
+        {
+            DebouncedSettingsSaver.ScheduleSave(s =>
+                s.Favorites = favorites);
+        }
+
+        /// <summary>ワーキングセットのみを更新して settings.json を保存する。</summary>
+        public static void SaveWorkingSetsOnly(List<WorkingSetDto> sets)
+        {
+            DebouncedSettingsSaver.ScheduleSave(s =>
+                s.WorkingSets = sets);
+        }
+
+        /// <summary>検索プリセットのみを更新して settings.json に保存する。</summary>
+        public static void SaveSearchPresetsOnly(List<SearchPresetDto> presets)
+        {
+            DebouncedSettingsSaver.ScheduleSave(s =>
+            {
+                s.SearchPresets = presets;
+                _ = App.FileLogger.LogAsync($"[SearchPresets] {presets.Count} 件のプリセットを保存しました");
+            });
+        }
+
+        /// <summary>テーマ名のみを更新して settings.json に保存する。テーマ切替時に呼ばれる。</summary>
+        public static void SaveThemeOnly(string themeName)
+        {
+            DebouncedSettingsSaver.ScheduleSave(s => s.ThemeName = themeName);
+        }
+
+        /// <summary>お気に入りを保存する。失敗した場合は例外を投げる（ロールバック判定用）。即時保存。</summary>
+        public static void SaveFavoritesOnlyOrThrow(List<FavoriteItemDto> favorites)
+        {
+            var settings = Load();
+            settings.Favorites = favorites;
+            settings.Save();
+        }
+    }
+}

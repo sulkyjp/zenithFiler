@@ -1,0 +1,26 @@
+---
+description: XAML / WPF 規約（Zenith Filer）
+globs: **/*.xaml
+alwaysApply: false
+---
+
+# XAML 規約
+
+## リソース・スタイル
+
+- 色やブラシは `App.xaml` の `StaticResource`（例: `BackgroundBrush`, `BorderBrush`, `TextBrush`）を優先して使う。インラインの色は `#D3D0C3` などプロジェクトで統一した値に揃える。
+- アイコンは MahApps.Metro.IconPacks.Lucide の `icon:PackIconLucide` を使用する。`Kind` は Lucide の正式名（例: `ArrowLeft`, `Columns2`, `Scissors`, `Pencil`）を指定する。
+
+## バインディング
+
+- コンバーターは `UserControl.Resources` または `Window.Resources` でキーを付け、`StaticResource` で参照する。`ConverterParameter` は `MultiBinding` 側に書く（IconPacks 名前空間には存在しないため）。
+- `GridViewColumn` のソート表示などで列名を渡す場合は `Header` をバインドし、`Tag` は使わない（名前空間の制約があるため）。
+
+## レイアウト・アクセシビリティ
+
+- リストやヘッダのずれを防ぐため、必要に応じて `UseLayoutRounding="True"` を付ける。
+- TAB でペイン間を移動するため、ツールバーやパス入力などは `IsTabStop="False"` にし、フォーカスはリストに集約する。
+
+## イベント
+
+- シェルコンテキストメニューは `PreviewMouseRightButtonUp` でアイテム選択を確定してから表示する。空きスペース右クリックは `ListView` の `MouseRightButtonUp` で処理する。

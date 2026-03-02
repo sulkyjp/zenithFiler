@@ -1,0 +1,22 @@
+---
+description: Zenith Filer プロジェクトの共通方針と用語定義
+alwaysApply: true
+---
+
+# Zenith Filer プロジェクトルール
+
+## 1. ライブラリ活用方針
+- [cite_start]**既存ライブラリの優先**: 自作を避け、信頼できる NuGet パッケージを積極的に採用する。
+- [cite_start]**ラッパーの活用**: P/Invoke や COM は直接叩かず、Vanara・WindowsAPICodePack 等のラッパーを検討する。
+- [cite_start]**機能ごとのライブラリ選定**: サムネイル取得は WindowsAPICodePack-Shell、アイコン・Shell API は Vanara、MVVM は CommunityToolkit.Mvvm など、実績のあるライブラリを積極的に活用する。
+
+## 2. 技術スタック
+- [cite_start]**環境**: .NET 8 / WPF 
+- [cite_start]**MVVM**: CommunityToolkit.Mvvm (`ObservableProperty` 等) を使用 。
+- [cite_start]**Icon**: `PackIconLucide` に統一 。
+
+## 3. 用語・命名規則（重要）
+[cite_start]AIはコード生成やドキュメント更新時、必ず以下の呼称を使用すること 。
+- **ナビペイン**: 左側のツリー/お気に入り領域。
+- **Aペイン**: 中央（左側）のファイルリスト。
+- **Bペイン**: 右側のファイルリスト。

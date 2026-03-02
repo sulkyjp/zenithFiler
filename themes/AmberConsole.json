@@ -1,0 +1,65 @@
+{
+  "Description": "80年代の端末を彷彿とさせる、漆黒に琥珀色が浮かぶレトロコンソール",
+  "Author": "赤阪和彦",
+  "Base": {
+    "BackgroundColor": "#0A0A0A",
+    "SidebarColor": "#121212",
+    "HeaderColor": "#0A0A0A",
+    "TitleBarColor": "#000000",
+    "BorderColor": "#4D3500",
+    "PrimaryTextColor": "#FFB000",
+    "SecondaryTextColor": "#996A00",
+    "InputBackgroundColor": "#121212",
+    "FocusedPaneBackgroundColor": "#1A1400",
+    "FocusedPaneTextColor": "#FFD000",
+    "FocusedPaneHeaderBackgroundColor": "#261D00",
+    "OnePointDarkColor": "#FFB000",
+    "TabSeparatorColor": "#4D3500",
+    "TabHoverColor": "#261D00",
+    "ToolbarSeparatorColor": "#996A00",
+    "TreeLineColor": "#664700"
+  },
+  "List": {
+    "ListHoverColor": "#261D00",
+    "SelectionColor": "#4D3500",
+    "ButtonHoverColor": "#332300",
+    "InactiveSelectionColor": "#1A1400",
+    "OptionSelectedColor": "#FFB000",
+    "OptionSelectedHoverColor": "#FFC84D",
+    "CheckboxHoverColor": "#261D00",
+    "CheckedHoverAccentColor": "#FFB000"
+  },
+  "Search": {
+    "IndexSearchBackgroundColor": "#1A1400",
+    "IndexSearchIconColor": "#FFB000",
+    "IndexSearchFocusBorderColor": "#FFB000"
+  },
+  "Accent": {
+    "AccentColor": "#FFB000",
+    "ErrorTextColor": "#FF4444",
+    "DestructiveHoverBackgroundColor": "#440000",
+    "DestructiveIconColor": "#FF6B6B"
+  },
+  "ContextMenu": {
+    "ContextMenuSeparatorColor": "#4D3500",
+    "ContextMenuBackgroundColor": "#121212",
+    "ContextMenuBorderColor": "#FFB000",
+    "ContextMenuTextColor": "#FFB000",
+    "ContextMenuIconColor": "#FFB000",
+    "ContextMenuShortcutColor": "#996A00",
+    "ContextMenuDisabledColor": "#332300",
+    "ContextMenuDisabledIconColor": "#222222",
+    "ContextMenuHighlightShortcutColor": "#FFD000",
+    "ContextMenuOuterBackgroundColor": "#000000"
+  },
+  "Misc": {
+    "GlowBarGlowColor": "#FFB000",
+    "ScanBarColor": "#FFB000",
+    "LoadingOverlayColor": "#99000000",
+    "ShadowColor": "#000000",
+    "TelemetryBackgroundColor": "#E60A0A0A",
+    "TelemetryBorderColor": "#40FFB000",
+    "TelemetryTitleColor": "#FFB000",
+    "TelemetryValueColor": "#FFB000"
+  }
+}

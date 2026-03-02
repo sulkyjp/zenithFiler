@@ -1,0 +1,84 @@
+{
+  // ============================================================
+  //  Zenith Filer Theme Configuration
+  //  カラーコード: #RRGGBB / #AARRGGBB / 色名 (例: Cyan)
+  //  テーマ選択時に即座に反映されます（再起動不要）
+  // ============================================================
+
+  // テーマのメタデータ
+  "Description": "漆黒の闇に黄金が煌めく、圧倒的な重厚感と気品を兼ね備えた至高のテーマ",
+  "Author": "赤阪和彦",
+
+  // ── 基本 UI 要素 ──
+  "Base": {
+    "BackgroundColor": "#121212",                      // メイン背景色（漆黒）
+    "SidebarColor": "#1A1A1A",                         // サイドバー背景色（深みのあるチャコール）
+    "HeaderColor": "#121212",                          // ヘッダー背景色
+    "TitleBarColor": "#000000",                        // タイトルバー背景色（純黒）
+    "BorderColor": "#332B1A",                          // 枠線・区切り線の色（暗いブロンズ）
+    "PrimaryTextColor": "#E0E0E0",                     // メインテキスト色（オフホワイト）
+    "SecondaryTextColor": "#888888",                   // サブテキスト・補足情報の色
+    "InputBackgroundColor": "#1E1E1E",                 // テキスト入力欄の背景色
+    "FocusedPaneBackgroundColor": "#1A1A1A",           // フォーカス中ペインの背景色
+    "FocusedPaneTextColor": "#FFFFFF",                 // フォーカス中ペインのテキスト色
+    "FocusedPaneHeaderBackgroundColor": "#262218",     // フォーカス中ペインのヘッダー背景色（黄金の気配）
+    "OnePointDarkColor": "#C5A028",                    // ワンポイント用ダーク帯（鈍色の黄金）
+    "TabSeparatorColor": "#332B1A",                    // タブ間の区切り線
+    "TabHoverColor": "#2A261D",                        // タブホバー時の背景色
+    "ToolbarSeparatorColor": "#4D4430",                // ツールバーセパレーター色
+    "TreeLineColor": "#5C5238"                         // ツリービュー接続線の色
+  },
+
+  // ── リスト・選択・ホバー ──
+  "List": {
+    "ListHoverColor": "#2A2A2A",                       // リスト項目ホバー時の背景色
+    "SelectionColor": "#403820",                       // 選択項目のハイライト色（深いゴールド）
+    "ButtonHoverColor": "#333333",                     // ボタンホバー時の背景色
+    "InactiveSelectionColor": "#222222",               // 非アクティブペインの選択色
+    "OptionSelectedColor": "#D4AF37",                  // ラジオボタン等の選択時背景色（インペリアルゴールド）
+    "OptionSelectedHoverColor": "#E6BE41",             // ラジオボタン等の選択＋ホバー時背景色
+    "CheckboxHoverColor": "#262218",                   // チェックボックスホバー時の背景色
+    "CheckedHoverAccentColor": "#FFD700"               // チェック済みホバー時のアクセント色（純金）
+  },
+
+  // ── インデックス検索 ──
+  "Search": {
+    "IndexSearchBackgroundColor": "#1E1C15",           // インデックス検索モード時の背景色（暗い琥珀）
+    "IndexSearchIconColor": "#FFD700",                 // インデックス検索の雷アイコン色（純金）
+    "IndexSearchFocusBorderColor": "#D4AF37"           // インデックス検索＋フォーカス時のボーダー色（黄金）
+  },
+
+  // ── アクセント・エラー・破壊的操作 ──
+  "Accent": {
+    "AccentColor": "#D4AF37",                          // アクセントカラー（インペリアルゴールド）
+    "ErrorTextColor": "#FF4444",                       // エラーテキスト色
+    "DestructiveHoverBackgroundColor": "#440000",      // 破壊的操作ホバー時の背景色（暗い赤）
+    "DestructiveIconColor": "#FF6B6B"                  // 破壊的操作のアイコン色（明るい赤）
+  },
+
+  // ── 右クリックメニュー ──
+  "ContextMenu": {
+    "ContextMenuSeparatorColor": "#332B1A",            // コンテキストメニューのセパレーター色
+    "ContextMenuBackgroundColor": "#1A1A1A",           // コンテキストメニューの背景色
+    "ContextMenuBorderColor": "#D4AF37",               // コンテキストメニューの枠線色（ゴールド）
+    "ContextMenuTextColor": "#E0E0E0",                 // コンテキストメニューのテキスト色
+    "ContextMenuIconColor": "#D4AF37",                 // コンテキストメニューのアイコン色
+    "ContextMenuShortcutColor": "#888888",             // コンテキストメニューのショートカットキー表示色
+    "ContextMenuDisabledColor": "#444444",             // コンテキストメニューの無効項目テキスト色
+    "ContextMenuDisabledIconColor": "#333333",         // コンテキストメニューの無効項目アイコン色
+    "ContextMenuHighlightShortcutColor": "#FFD700",    // ハイライト時のショートカットキー表示色
+    "ContextMenuOuterBackgroundColor": "#000000"       // コンテキストメニュー外枠の背景色
+  },
+
+  // ── その他（進捗バー・オーバーレイ・テレメトリー） ──
+  "Misc": {
+    "GlowBarGlowColor": "#FFD700",                     // 進捗バー（GlowBar）のグロー色（黄金の輝き）
+    "ScanBarColor": "#D4AF37",                         // スキャンバーの色
+    "LoadingOverlayColor": "#99000000",                // ローディングオーバーレイ色（#AARRGGBB 半透明）
+    "ShadowColor": "#000000",                          // ダイアログのシャドウ色
+    "TelemetryBackgroundColor": "#E6121212",           // テレメトリーパネル背景色（#AARRGGBB 半透明）
+    "TelemetryBorderColor": "#40D4AF37",               // テレメトリーパネル枠線色（#AARRGGBB 半透明）
+    "TelemetryTitleColor": "#FFD700",                  // テレメトリーパネルのタイトル色
+    "TelemetryValueColor": "#E0E0E0"                   // テレメトリーパネルの値テキスト色
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "Description": "ローズベージュとパールの質感。温かみのある「大人可愛い」コージー・スタイル（女性向け）",
+  "Author": "赤阪和彦",
+  "Base": {
+    "BackgroundColor": "#F9F4F0",
+    "SidebarColor": "#F2EBE4",
+    "HeaderColor": "#F9F4F0",
+    "TitleBarColor": "#A6897E",
+    "BorderColor": "#E8DDD5",
+    "PrimaryTextColor": "#5C4D46",
+    "SecondaryTextColor": "#A6958B",
+    "InputBackgroundColor": "#FFFFFF",
+    "FocusedPaneBackgroundColor": "#F4EDE6",
+    "FocusedPaneTextColor": "#5C4D46",
+    "FocusedPaneHeaderBackgroundColor": "#EBE0D5",
+    "OnePointDarkColor": "#A6897E",
+    "TabSeparatorColor": "#E8DDD5",
+    "TabHoverColor": "#F4EDE6",
+    "ToolbarSeparatorColor": "#A6958B",
+    "TreeLineColor": "#C9B9AD"
+  },
+  "List": {
+    "ListHoverColor": "#EBE0D5",
+    "SelectionColor": "#F0E4D8",
+    "ButtonHoverColor": "#E8DDD5",
+    "InactiveSelectionColor": "#F4EDE6",
+    "OptionSelectedColor": "#C9B9AD",
+    "OptionSelectedHoverColor": "#B8A89C",
+    "CheckboxHoverColor": "#F4EDE6",
+    "CheckedHoverAccentColor": "#A6897E"
+  },
+  "Search": {
+    "IndexSearchBackgroundColor": "#FAF7F5",
+    "IndexSearchIconColor": "#C9B9AD",
+    "IndexSearchFocusBorderColor": "#A6897E"
+  },
+  "Accent": {
+    "AccentColor": "#D1AFA5",
+    "ErrorTextColor": "#E08E8E",
+    "DestructiveHoverBackgroundColor": "#4A1C1C",
+    "DestructiveIconColor": "#E08E8E"
+  },
+  "ContextMenu": {
+    "ContextMenuSeparatorColor": "#E8DDD5",
+    "ContextMenuBackgroundColor": "#F9F4F0",
+    "ContextMenuBorderColor": "#C9B9AD",
+    "ContextMenuTextColor": "#5C4D46",
+    "ContextMenuIconColor": "#A6897E",
+    "ContextMenuShortcutColor": "#A6958B",
+    "ContextMenuDisabledColor": "#E8DDD5",
+    "ContextMenuDisabledIconColor": "#E8DDD5",
+    "ContextMenuHighlightShortcutColor": "#5C4D46",
+    "ContextMenuOuterBackgroundColor": "#FFFFFF"
+  },
+  "Misc": {
+    "GlowBarGlowColor": "#E8DDD5",
+    "ScanBarColor": "#C9B9AD",
+    "LoadingOverlayColor": "#66A6897E",
+    "ShadowColor": "#000000",
+    "TelemetryBackgroundColor": "#E65C4D46",
+    "TelemetryBorderColor": "#40C9B9AD",
+    "TelemetryTitleColor": "#C9B9AD",
+    "TelemetryValueColor": "#F9F4F0"
+  }
+}

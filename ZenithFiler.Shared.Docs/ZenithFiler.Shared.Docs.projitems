@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration">
+    <Import_RootNamespace>ZenithFiler</Import_RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)Views\ManualWindow.xaml.cs">
+      <Link>Views\ManualWindow.xaml.cs</Link>
+    </Compile>
+    <Compile Include="$(MSBuildThisFileDirectory)Views\DocViewerControl.xaml.cs">
+      <Link>Views\DocViewerControl.xaml.cs</Link>
+    </Compile>
+    <Compile Include="$(MSBuildThisFileDirectory)ViewModels\ManualViewModel.cs">
+      <Link>ViewModels\ManualViewModel.cs</Link>
+    </Compile>
+    <Compile Include="$(MSBuildThisFileDirectory)Converters\IndentToMarginConverter.cs">
+      <Link>Converters\IndentToMarginConverter.cs</Link>
+    </Compile>
+    <Compile Include="$(MSBuildThisFileDirectory)Helpers\DocumentSearchHelper.cs">
+      <Link>Helpers\DocumentSearchHelper.cs</Link>
+    </Compile>
+    <Compile Include="$(MSBuildThisFileDirectory)Helpers\DocViewerLogHelper.cs">
+      <Link>Helpers\DocViewerLogHelper.cs</Link>
+    </Compile>
+    <Compile Include="$(MSBuildThisFileDirectory)Helpers\VisualTreeHelperExtensions.cs">
+      <Link>Helpers\VisualTreeHelperExtensions.cs</Link>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Page Include="$(MSBuildThisFileDirectory)Views\ManualWindow.xaml">
+      <Link>Views\ManualWindow.xaml</Link>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="$(MSBuildThisFileDirectory)Views\DocViewerControl.xaml">
+      <Link>Views\DocViewerControl.xaml</Link>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="$(MSBuildThisFileDirectory)Views\MarkdownStyles.xaml">
+      <Link>Views\MarkdownStyles.xaml</Link>
+    </Page>
+    <Page Include="$(MSBuildThisFileDirectory)Resources\DocViewerTheme.xaml">
+      <Link>Resources\DocViewerTheme.xaml</Link>
+    </Page>
+  </ItemGroup>
+</Project>
