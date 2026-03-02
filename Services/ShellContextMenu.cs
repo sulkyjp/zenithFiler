@@ -357,41 +357,45 @@ namespace ZenithFiler
             uint nativeThreadId = NativeMethods.GetCurrentThreadId();
             var startTime = DateTime.UtcNow;
             int quietCount = 0;
-            const int quietThreshold = 15; // 15 * 100ms = 1.5 秒の quiet period
+            bool everSawChildWindow = false;
+            // Phase 1: ダイアログが出ない操作（新規フォルダ等）は 300ms で早期終了
+            // Phase 2: ダイアログが出た場合（圧縮等）は閉じてから 1.5 秒待機
+            const int initialQuietThreshold = 3;   // 3 * 100ms = 300ms
+            const int postDialogQuietThreshold = 15; // 15 * 100ms = 1.5 秒
             const int maxMinutes = 10;
 
             var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
             timer.Tick += (_, _) =>
             {
-                // タイムアウト（最大 10 分）
                 if ((DateTime.UtcNow - startTime).TotalMinutes > maxMinutes)
                 {
                     frame.Continue = false;
                     return;
                 }
 
-                // STA スレッド上のウィンドウを列挙し、ダミーウィンドウ以外が存在するか確認
                 bool hasChildWindows = false;
                 NativeMethods.EnumThreadWindows(nativeThreadId, (hWnd, _) =>
                 {
                     if (hWnd != staHwnd)
                     {
                         hasChildWindows = true;
-                        return false; // 列挙停止
+                        return false;
                     }
                     return true;
                 }, IntPtr.Zero);
 
                 if (hasChildWindows)
                 {
-                    quietCount = 0; // ウィンドウが存在 → quiet カウントリセット
+                    everSawChildWindow = true;
+                    quietCount = 0;
                 }
                 else
                 {
                     quietCount++;
-                    if (quietCount >= quietThreshold)
+                    int threshold = everSawChildWindow ? postDialogQuietThreshold : initialQuietThreshold;
+                    if (quietCount >= threshold)
                     {
-                        frame.Continue = false; // 1.5 秒間ウィンドウなし → 終了
+                        frame.Continue = false;
                     }
                 }
             };

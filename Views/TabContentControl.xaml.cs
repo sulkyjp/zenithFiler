@@ -1247,11 +1247,7 @@ namespace ZenithFiler
                 },
                 onRefreshRequest: () =>
                 {
-                    Dispatcher.InvokeAsync(async () =>
-                    {
-                        await Task.Delay(300);
-                        await vm.LoadDirectoryAsync();
-                    }, DispatcherPriority.Background);
+                    Dispatcher.InvokeAsync(() => vm.LoadDirectoryAsync(), DispatcherPriority.Background);
                 });
             var window = Window.GetWindow(this);
             var workArea = window != null ? WindowHelper.GetWorkArea(window) : (System.Windows.Rect?)null;

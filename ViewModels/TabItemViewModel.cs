@@ -1630,17 +1630,17 @@ namespace ZenithFiler
             // UIスレッドにディスパッチしてから処理を実行
             Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
             {
-                // シェル（エクスプローラ）のコンテキストメニュー等から「新しいフォルダ」が作成された場合、
-                // そのフォルダにフォーカスを当ててリネームを開始するようにフラグを立てる。
-                if (changeType == WatcherChangeTypes.Created && Directory.Exists(fullPath))
+                // シェル（エクスプローラ）のコンテキストメニュー等から新規作成された場合、
+                // そのアイテムにフォーカスを当てる。フォルダの場合はリネームも開始する。
+                if (changeType == WatcherChangeTypes.Created && IsExpectingShellChange)
                 {
-                    if (IsExpectingShellChange && IsDefaultNewFolderName(name))
+                    RequestFocusAfterRefresh = true;
+                    PastedFileNamesToSelect = new List<string> { name };
+                    if (Directory.Exists(fullPath) && IsDefaultNewFolderName(name))
                     {
-                        RequestFocusAfterRefresh = true;
-                        PastedFileNamesToSelect = new List<string> { name };
                         RequestRenameAfterFocusRestore = true;
-                        IsExpectingShellChange = false;
                     }
+                    IsExpectingShellChange = false;
                 }
 
                 // インデックスの差分更新（Auto モード時のみ。Interval/Manual は定例または手動トリガーのみ）
@@ -1694,10 +1694,16 @@ namespace ZenithFiler
                 // デバウンスと異なり、イベントが連続しても必ず一定時間以内に Refresh が実行されるため、
                 // 大量ファイル転送中でもコピー先の一覧がリアルタイム更新される。
                 // クラウド同期パスでは遅延を拡大（1000ms）し、同期ソフトの作成→削除→再作成サイクルを吸収する。
+                // forceRefresh 時はスロットルを 50ms に短縮し、即座に一覧を更新する。
                 if (_watcherCts == null)
                 {
-                    bool isCloudPath = PathHelper.IsCloudSyncedPath(CurrentPath);
-                    int throttleMs = isCloudPath ? 1000 : 500;
+                    int throttleMs;
+                    if (forceRefresh)
+                        throttleMs = 50;
+                    else if (PathHelper.IsCloudSyncedPath(CurrentPath))
+                        throttleMs = 1000;
+                    else
+                        throttleMs = 500;
                     _watcherCts = new System.Threading.CancellationTokenSource();
                     var token = _watcherCts.Token;
                     Task.Delay(throttleMs, token).ContinueWith(t =>
