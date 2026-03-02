@@ -1668,8 +1668,12 @@ namespace ZenithFiler
                     });
                 }
 
+                // シェルコンテキストメニューからの変更を期待している場合は、
+                // アプリが非アクティブでも即時リフレッシュする（STA スレッドのメニュー表示中は Deactivated になるため）
+                bool forceRefresh = IsExpectingShellChange;
+
                 // アプリが非アクティブな間は監視通知を記録するだけにとどめ、UI更新を抑制する
-                if (!AppActivationService.Instance.IsActive)
+                if (!forceRefresh && !AppActivationService.Instance.IsActive)
                 {
                     _needsRefreshOnActivation = true;
                     return;
@@ -1679,7 +1683,7 @@ namespace ZenithFiler
                 // 2画面表示時はA・B両ペインの表示タブを最新化対象とする
                 bool isVisibleTab = ParentPane != null && ParentPane.SelectedTab == this
                     && (ParentPane.IsActive || MainVM?.PaneCount == 2);
-                if (!isVisibleTab)
+                if (!forceRefresh && !isVisibleTab)
                 {
                     _needsRefreshOnTabFocus = true;
                     return;

@@ -10,6 +10,7 @@
 - **Shell コンテキストメニュー「圧縮」「展開」の進捗ダイアログが表示されない問題を修正**: STA スレッドが `InvokeCommand` 後すぐ終了していたため、圧縮/展開の進捗ダイアログが機能しなかった。`DispatcherFrame` + `DispatcherTimer` によるメッセージポンプを追加し、shell 拡張のダイアログウィンドウが閉じるまで STA スレッドを維持するよう修正
 - **Shell ダイアログの z-order を改善**: `GetViewObject`/`GetChildrenUIObjects` のオーナーウィンドウとして STA ダミーウィンドウではなくメインウィンドウのハンドルを使用するよう変更
 - **Shell コンテキストメニュー操作後のフォルダ自動リフレッシュ**: 背景メニュー操作（新規作成等）や長時間 verb（圧縮/展開）完了後に `LoadDirectoryAsync` を呼び出してフォルダ内容を自動再読み込み
+- **Shell コンテキストメニュー操作後にファイル一覧が即時更新されない問題を修正**: STA スレッドでのメニュー表示中にアプリが `Deactivated` 状態となり、FileSystemWatcher の変更通知が「非アクティブ中は後で更新」として保留されていた。`IsExpectingShellChange` が `true` のとき `IsActive` / `isVisibleTab` チェックをバイパスし、即時リフレッシュするよう修正
 
 ## [0.13.3] - 2026-03-02 : インデックス走査の高速化
 
