@@ -1630,6 +1630,11 @@ namespace ZenithFiler
             // UIスレッドにディスパッチしてから処理を実行
             Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
             {
+                // シェルコンテキストメニューからの変更を期待している場合は、
+                // アプリが非アクティブでも即時リフレッシュする（STA スレッドのメニュー表示中は Deactivated になるため）
+                // ※ Created ハンドラで IsExpectingShellChange をリセットする前に取得する
+                bool forceRefresh = IsExpectingShellChange;
+
                 // シェル（エクスプローラ）のコンテキストメニュー等から新規作成された場合、
                 // そのアイテムにフォーカスを当てる。フォルダの場合はリネームも開始する。
                 if (changeType == WatcherChangeTypes.Created && IsExpectingShellChange)
@@ -1667,10 +1672,6 @@ namespace ZenithFiler
                         catch { /* ログなど */ }
                     });
                 }
-
-                // シェルコンテキストメニューからの変更を期待している場合は、
-                // アプリが非アクティブでも即時リフレッシュする（STA スレッドのメニュー表示中は Deactivated になるため）
-                bool forceRefresh = IsExpectingShellChange;
 
                 // アプリが非アクティブな間は監視通知を記録するだけにとどめ、UI更新を抑制する
                 if (!forceRefresh && !AppActivationService.Instance.IsActive)
