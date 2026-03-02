@@ -14,6 +14,7 @@
 - **Shell 新規作成の応答速度を改善**: メッセージポンプを2段階方式に変更（ダイアログなし操作は 300ms で早期終了、ダイアログあり操作は従来通り 1.5 秒待機）。FSW スロットルを `IsExpectingShellChange` 時は 50ms に短縮（通常 500ms）
 - **Shell 新規作成アイテムへの自動フォーカス**: 新規フォルダだけでなく、新規テキストファイル等すべての新規作成アイテムにフォーカスが当たるよう拡張。フォルダの場合は従来通り自動リネームモードも起動
 - **forceRefresh フラグの読み取り順序バグを修正**: `IsExpectingShellChange` が Created ハンドラで `false` にリセットされた後に `forceRefresh` を読んでいたため、常に `false` になり即時リフレッシュが機能していなかった。フラグ取得をリセット前に移動
+- **MVVMTK0034 警告を解消**: `SearchFilterViewModel._dateFilter` backing field の直接参照 3 箇所を生成プロパティ `DateFilter` に変更。`_isLoading` ガードで再帰呼出し・中間通知を抑制
 
 ## [0.13.3] - 2026-03-02 : インデックス走査の高速化
 

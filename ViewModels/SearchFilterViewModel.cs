@@ -114,7 +114,11 @@ namespace ZenithFiler.ViewModels
             if (!string.IsNullOrWhiteSpace(StartDateText) || !string.IsNullOrWhiteSpace(EndDateText))
             {
                 if (DateFilter != DateFilterMode.Custom)
-                    _dateFilter = DateFilterMode.Custom; // backing field 直接代入で再帰回避
+                {
+                    _isLoading = true;   // 再帰呼出しを抑制
+                    DateFilter = DateFilterMode.Custom;
+                    _isLoading = false;
+                }
             }
             FilterChanged?.Invoke();
             SaveToSettings();
@@ -181,7 +185,7 @@ namespace ZenithFiler.ViewModels
             _isLoading = true; // 個別通知・保存を抑制して最後に一括通知
             MinSizeText = "";
             MaxSizeText = "";
-            _dateFilter = DateFilterMode.None; // backing field 直接代入で中間通知を回避
+            DateFilter = DateFilterMode.None; // _isLoading = true のため OnDateFilterChanged は抑制される
             StartDateText = "";
             EndDateText = "";
             _isLoading = false;
@@ -472,9 +476,9 @@ namespace ZenithFiler.ViewModels
                 {
                     StartDateText = s.SearchStartDateText ?? "";
                     EndDateText = s.SearchEndDateText ?? "";
-                    // テキストがあれば Custom モード
+                    // テキストがあれば Custom モード (_isLoading = true のため OnDateFilterChanged は抑制される)
                     if (!string.IsNullOrWhiteSpace(StartDateText) || !string.IsNullOrWhiteSpace(EndDateText))
-                        _dateFilter = DateFilterMode.Custom;
+                        DateFilter = DateFilterMode.Custom;
                 }
                 else if (s.SearchDateFilter is int df && Enum.IsDefined(typeof(DateFilterMode), df))
                 {
