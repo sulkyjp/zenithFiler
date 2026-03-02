@@ -166,14 +166,17 @@ namespace ZenithFiler
                     int offset = (int)cmd - 1;
 
                     // コマンドの Verb を取得して判定
+                    // 7-zip 等のサードパーティ Shell 拡張は GetCommandString で E_NOTIMPL を返すため
+                    // 例外を捕捉して空文字列として扱う
                     const int bufSize = 256;
+                    string verb = "";
                     IntPtr ptr = Marshal.AllocHGlobal(bufSize * 2); // Unicode = 2 bytes per char
-                    string verb;
                     try
                     {
                         contextMenu.GetCommandString((nint)offset, GCS.GCS_VERBW, IntPtr.Zero, ptr, (uint)bufSize);
                         verb = Marshal.PtrToStringUni(ptr)?.ToLowerInvariant() ?? "";
                     }
+                    catch { /* Shell 拡張が GetCommandString 未実装の場合 */ }
                     finally
                     {
                         Marshal.FreeHGlobal(ptr);
@@ -272,7 +275,7 @@ namespace ZenithFiler
 
                     contextMenu.InvokeCommand(ici);
 
-                    bool needsRefresh = isBackground || IsLongRunningVerb(verb ?? "");
+                    bool needsRefresh = isBackground || IsLongRunningVerb(verb ?? "") || IsLongRunningByMenuText(menuText);
 
                     // プロパティなどの場合、スレッドが即終了するとウィンドウが消えることがあるため、少し待つ
                     if (verb == "properties")
@@ -418,6 +421,17 @@ namespace ZenithFiler
             return verb.Contains("compress") || verb.Contains("extract")
                 || verb.Contains("zip") || verb.Contains("sendto")
                 || verb.Contains("7-zip") || verb.Contains("7zip");
+        }
+
+        /// <summary>メニューテキストから長時間操作（圧縮・展開等）かどうかを判定する。verb が空の Shell 拡張向け。</summary>
+        private static bool IsLongRunningByMenuText(string? menuText)
+        {
+            if (string.IsNullOrEmpty(menuText)) return false;
+            var t = menuText.ToLowerInvariant();
+            return t.Contains("7-zip") || t.Contains("7zip")
+                || t.Contains("圧縮") || t.Contains("展開") || t.Contains("解凍")
+                || t.Contains("extract") || t.Contains("compress") || t.Contains("archive")
+                || t.Contains("winrar") || t.Contains("bandizip");
         }
 
         /// <summary>指定したメニュー項目の表示文字列を取得する。GetCommandString が空を返す組み込み「削除」の判定に使用。</summary>
