@@ -3,6 +3,170 @@
 
 # Zenith Filer - Version History
 
+## [0.14.14] - 2026-03-03 : カテゴリランダムモード・カテゴリ選択誘導インジケーター追加
+
+### Added
+- **カテゴリ選択誘導アンカーインジケーター**: 「現在のカテゴリからランダム」モードかつカテゴリ未選択の状態で、各カテゴリグループのヘッダーに「クリックして選択」バッジ（Hand アイコン + テキスト）をパルスアニメーション付きで表示。どれかカテゴリを選択すると非表示になる
+  - **`IsAwaitingCategorySelection` プロパティ**: `IsRandomCategoryModeActive && string.IsNullOrEmpty(SelectedRandomCategory)` で算出。`ThemeRandomizeMode`・`ActiveThemeMode`・`SelectedRandomCategory` の変更時に自動更新
+  - **XAML アンカー Badge**: `DataTrigger.EnterActions/ExitActions` + `BeginStoryboard/StopStoryboard` による Opacity パルスアニメーション（0.4→1.0、0.85秒、AutoReverse・無限ループ）。非表示時は `Visibility="Collapsed"` でレイアウト空間を占有しない
+
+## [0.14.13] - 2026-03-03 : 自動選択モード RadioButton の直接選択バグ修正
+
+### Fixed
+- **「現在のカテゴリからランダム」直接選択バグ**: 他モード中に「現在のカテゴリからランダム」RadioButton をクリックすると必ず「全テーマからランダム」になってしまう問題を修正
+  - **根本原因**: RadioButton StackPanel の `IsEnabled="{Binding AppSettings.IsRandomModeActive}"` により他モード中は RadioButton が無効化。無効コントロールはマウスイベントを処理しないため、クリックが親 Border の `MouseBinding` に素通りし `SetThemeModeCommand(Random)` が発火。`OnActiveThemeModeChanged` 内で `ThemeRandomizeMode==Disabled` → `AllThemes` に強制上書きされていた
+  - **XAML 修正**: `IsEnabled` 属性を除去し、代わりに `<Style>` + `DataTrigger` で `Opacity="0.45"` の淡色表示に切り替え。RadioButton を常時クリック可能にしつつ非アクティブ時は視覚的に控えめに表示
+  - **ViewModel 修正**: `OnThemeRandomizeModeChanged` に「`ThemeRandomizeMode` が非 Disabled 値に変更され かつ `ActiveThemeMode != Random` の場合、自動的に `ActiveThemeMode = Random` にする」処理を追加。RadioButton クリック単体でモード切り替えが完結するよう修正
+
+## [0.14.12] - 2026-03-03 : 適用中テーマタイルのハイライト根本修正
+
+### Fixed
+- **適用中テーマタイルのハイライト根本修正**: `ListBoxItem.IsSelected` に依存する `MultiDataTrigger` を廃止。代わりに `IsCurrentPresetThemeConverter`（新規 `IMultiValueConverter`）を用いた `DataTrigger(MultiBinding)` に置き換え、`ThemeInfo.Name` と `AppSettings.SelectedThemeName` の直接文字列比較で現在適用中テーマを判定する。設定パネル起動直後（`LoadTheme()` による初期化後）から即座に AccentBrush 太枠（2.5px）+ SelectionBrush 背景が表示される
+
+### Added
+- **`IsCurrentPresetThemeConverter`**: `Converters.cs` に追加。`values[0]=ThemeInfo.Name`、`values[1]=SelectedThemeName`、`values[2]=IsAssignmentModeActive` を受け取り、プリセットモード中かつテーマ名が一致する場合のみ `true` を返す。ペイン・ランダムモード中は `IsAssignmentModeActive=true` のため自動的に `false`
+
+## [0.14.11] - 2026-03-03 : カテゴリ選択 UI 強化・モードカード境界線強調・署名改善
+
+### Changed
+- **カテゴリホバー演出の強化**: 「カテゴリからランダム」モード時のホバーに `DropShadowEffect`（BlurRadius=10, Opacity=0.28, SoftBlue）を追加。`BorderThickness` を 1.5 → 2 に変更し、クリック可能な範囲を視覚的に明示
+- **選択カテゴリの発光強化**: 選択カテゴリの `DropShadowEffect` を BlurRadius=18, Opacity=0.52 で設定。ホバーより強い光量で「選ばれた感」を表現。DropShadowEffect は WPF の `Setter.Value` を介して ControlTemplate trigger から直接設定
+- **モードカード 選択境界線の太さ強化**: Preset / Random / Pane 3 枚のカード、アクティブ時の `BorderThickness` を `"2"` → `"2.5"` に拡張し、現在のアクティブモードをより確実に視認できるよう強調
+- **適用中タイルのハイライト条件を厳密化**: `ListBoxItem` の選択状態 MultiDataTrigger の条件を `IsRandomCategoryModeActive=False` から `IsAssignmentModeActive=False` に変更。プリセットモード時のみ AccentBrush の太枠（2.5px）+ SelectionBrush 背景が表示され、ペイン・ランダムモード中は表示しない（カテゴリ枠 or ペイン選択が主役のため）
+- **クリエイター署名の視認性向上**: `Design by KAKASAKA` の `FontSize` を `9` → `11` に拡大、`Opacity` を `0.45` → `0.55` に向上、`Margin` を `0,3,0,0` → `0,4,0,0` に調整
+
+## [0.14.10] - 2026-03-03 : カテゴリカラム構造安定化・選択 UI 整理
+
+### Changed
+- **GroupItem Border 常設化**: カテゴリグループ枠（CategoryGroupBorder）の `Padding="16,12,16,16"` と `Margin="0,0,0,12"` をモード条件なしで常時適用。`BorderBrush="Transparent"` をデフォルトとし、枠は見えないまま常に一定の余白構造を維持するよう変更
+- **カテゴリ枠トリガーの簡素化**: IsRandomCategoryModeActive DataTrigger から Padding・Margin・BorderThickness・BorderBrush の条件付き変更を削除。カーソル変更（`Cursor="Hand"`）のみに絞り、余白・枠は常時デフォルト値で安定
+- **選択カテゴリ枠の明確化**: IsCategorySelected DataTrigger の BorderThickness を 2.5 → 2 に統一。AccentBrush 太枠 + SelectionBrush 背景のみをトリガーし、Margin 二重変更を廃止
+- **HeaderTemplate 外側マージン削除**: HeaderTemplate 外側 StackPanel の `Margin="0,16,0,14"` を `Margin="0,0,0,0"` に変更。Border の常時 Padding が外側余白を担うため、二重加算による過剰な上下余白を解消
+- **説明文 TextBlock MaxWidth 設定**: `MaxWidth="300"` を明示的に設定し、常時 Padding 付き Border 内での折り返し幅を確実に固定
+
+## [0.14.9] - 2026-03-03 : カテゴリ説明文 折り返し根本修正
+
+### Fixed
+- **カテゴリ説明文 TextWrapping 根本修正**: 説明文 TextBlock 自身に `MaxWidth="460"` を追加。従来は親 StackPanel の `MaxWidth="620"` のみだったが、日本語テキスト（FontSize=11、約11px/文字）は最長55文字でも約605px に収まり 620px 内で折り返しが発生しなかった。TextBlock 自身に 460px を指定することで Measure・Arrange 両フェーズで幅が確実にクランプされ、全カテゴリ説明文（48〜55文字）が常に2行に折り返されるよう修正
+
+## [0.14.8] - 2026-03-03 : カテゴリ UI 修正・ランダムモード タイル挙動改善
+
+### Changed
+- **カテゴリヘッダー 幅制限**: `GroupStyle.HeaderTemplate` 外側 `StackPanel` に `MaxWidth="620"` を追加。説明文が横に伸びてレイアウトを押し広げる現象を解消
+- **カテゴリ説明文 余白調整**: 説明文 TextBlock の Margin を `0,5,0,0` → `0,6,0,8` に変更し、ヘッダー行との間隔とタイル群との間隔を確保
+- **カテゴリランダムモード時のタイル選択状態を抑制**: `ListBox.ItemContainerStyle` の `IsSelected` トリガーを `MultiDataTrigger`（IsSelected=True かつ IsRandomCategoryModeActive=False）に変更。「現在のカテゴリからランダム」モード中はタイルをクリックしてもカード個別の青枠は表示されず、カテゴリグループ枠のみが強調される
+- **クリエイター署名のスタイル**: `FontWeight="Light"` を追加し細身のフォントに変更。`Opacity` を `0.5` → `0.45` に微調整
+- **全テーマ JSON Author 更新**: `"K.AKASAKA"` → `"KAKASAKA"` に変更（20テーマ）
+
+## [0.14.7] - 2026-03-03 : テーマギャラリー カテゴリ UI・説明文・クレジット表示の刷新
+
+### Added
+- **カテゴリコンテナ 全域クリック判定**: カテゴリランダムモード時、カードの隙間・余白領域を含めたカテゴリ全体をクリック可能に。`GroupStyle.ContainerStyle` の `ControlTemplate` に `Border.InputBindings` で `SelectRandomCategoryCommand` を登録
+- **カテゴリコンテナ ホバー演出**: `MultiDataTrigger`（IsRandomCategoryModeActive + IsMouseOver）でホバー時に `ListHoverBrush` 背景 + `AccentBrush` 枠に変化。選択状態（DataTrigger 後順）が常に優先
+
+### Changed
+- **カテゴリグループ枠 余白を拡充**: モードアクティブ時の Padding を `8,0` → `16` に拡大し、枠内テーマカードとのゆとりを確保。CornerRadius も `6` → `8` に変更。Margin を `0,0,0,8` → `0,0,0,12` に拡大
+- **カテゴリランダムモード時のカーソル**: `Cursor="Hand"` をモード DataTrigger 内に移動し、モード外は通常カーソルを維持
+- **`StackPanel Background="Transparent"`**: カテゴリコンテナ内の StackPanel に `Background="Transparent"` を追加し、余白部分でのマウスイベントを確実に受け取るよう修正
+- **カテゴリ説明文 深度向上**: `ThemeCategoryDescriptionConverter` の説明文を全カテゴリ刷新。各カテゴリの世界観・用途・雰囲気を具体的かつ文学的に表現した日本語テキストに変更
+- **クリエイター署名のデザイン刷新**: テーマカードの著者表示を `{Binding Author, StringFormat='Design by {0}'}` 形式に変更。フォントサイズを `10` → `9` に縮小し、`Opacity="0.5"` + `Margin="0,3,0,0"` でミニマルかつ高品質な署名スタイルを実現
+- **全テーマ JSON の Author フィールド更新**: `"赤阪和彦"` → `"K.AKASAKA"` に変更（20 テーマ）
+
+## [0.14.6] - 2026-03-03 : テーマ適用モード 排他制御 & カテゴリ選択 UI
+
+### Added
+- **`ThemeApplyMode` 列挙体**: `Preset / Random / Pane` の3値。3カードの排他制御に使用
+- **`ActiveThemeMode` プロパティ**: テーマ適用モードを保持。切り替え時に他モードの内部状態を自動リセット
+- **`IsRandomModeActive` / `IsRandomCategoryModeActive` プロパティ**: 自動選択モード状態の論理プロパティ。XAML の `IsEnabled` バインドに使用
+- **`SelectedRandomCategory` プロパティ**: カテゴリランダムモード時に選択中のカテゴリ名を保持
+- **`SetThemeModeCommand`**: カードクリックで `ActiveThemeMode` を切り替えるコマンド（`RelayCommand<ThemeApplyMode>`）
+- **`SelectRandomCategoryCommand`**: カテゴリヘッダー・テーマタイルクリックで対象カテゴリを設定するコマンド（`RelayCommand<string?>`）
+- **`IsCategorySelectedConverter`**: カテゴリ名・選択カテゴリ・モード有効フラグの3値を受け取る `IMultiValueConverter`。GroupItem の DataTrigger に使用
+- **GroupStyle.ContainerStyle（カテゴリグループ枠）**: カテゴリランダムモード時に全カテゴリへ薄い枠を表示。選択カテゴリはアクセントカラーの太枠 + SelectionBrush 背景でハイライト
+- **カテゴリヘッダー クリック選択**: GroupStyle.HeaderTemplate に `MouseBinding` を追加。ヘッダーをクリックするとそのカテゴリが `SelectedRandomCategory` に設定される
+
+### Changed
+- **「テーマ・適用モード」3カード 排他制御化**: 各カードを `MouseBinding` でクリック選択可能にし、`Style.Triggers` でアクティブカードにアクセントカラー強調枠を表示。3カードは完全排他
+- **パーソナライズ・プリセット カード簡素化**: 20スロット `ListBox` を削除し、「好きなテーマを自由にクリックして適用する標準モード」として機能を整理
+- **自動選択モード カード**: 「無効」RadioButton と「将来実装」バッジを削除。カード非選択時は RadioButton を `IsEnabled=false` でグレーアウト。選択時は「全テーマからランダム」をデフォルト設定
+- **ペイン個別適用 カード**: ペイン RadioButton を `IsEnabled` バインドでカード未選択時はグレーアウト
+- **ヒントバー解除ボタン**: `ClearAssignmentModeCommand` → `SetThemeModeCommand(Preset)` に変更
+- **`GalleryModeHint` 式**: `ActiveThemeMode` のスイッチ式に刷新。各モード・サブモードに応じたテキストを返す
+- **`IsAssignmentModeActive`**: `ActiveThemeMode != Preset` の1式に簡素化
+- **`OnSelectedThemeInfoChanged`**: カテゴリランダムモード時はテーマ適用せずカテゴリを選択するルーティングを追加
+
+### Removed
+- **`PresetSlotViewModel` クラス**: スロット機能廃止に伴い削除
+- **`PresetSlots` プロパティ**: 同上
+- **`ActivePresetSlot` プロパティ**: 同上
+- **`ClearAssignmentModeCommand`**: `SetThemeModeCommand` に統合
+- **`OnActivePresetSlotChanged` / `OnSelectedPaneTargetChanged` ハンドラ**: `OnActiveThemeModeChanged` に統合
+
+## [0.14.5] - 2026-03-03 : テーマ・適用モード インタラクティブ化
+
+### Added
+- **「テーマ・適用モード」セクション名変更**: 「高度なテーマ制御」を「テーマ・適用モード」に改称し、機能の目的を明確化
+- **プリセットスロット インタラクティブ化**: ハードコードされた 20 スロット表示を `PresetSlotViewModel` にバインドした `ListBox` に刷新。スロットをクリックして選択し、テーマギャラリーのタイルをクリックするとそのスロットに登録される（スロット選択中はアクセントカラーで強調表示、登録済みスロットはテーマ名を表示）
+- **ペイン個別適用カードを有効化**: 無効化されていた ComboBox グリッドを `RadioButton` セレクターに置き換え。ナビ / Aペイン / Bペインを選択後にテーマタイルをクリックすると、そのペインにテーマ名が記憶される（将来の実際の適用実装への基盤）
+- **ギャラリー割り当てモード ヒントバー**: スロット・ペインのどちらかが選択されているとき、テーマギャラリー上部にアクセントカラーのバナーで「スロット N を選択中 — テーマをクリックして登録」等のガイダンスを表示。「解除」ボタンでモードを即座に終了可能
+- **テーマタイル ペインバッジ**: 各テーマカードの右上に [ナビ][A][B] バッジを表示するシステムを実装。`ThemePaneBadgeVisibilityConverter`（IMultiValueConverter）でペイン割り当て済みテーマのみバッジが出現
+- **`PaneTarget` 列挙体**: `None / Nav / APane / BPane` の4値を追加
+- **`PresetSlotViewModel` クラス**: スロット番号・テーマ名・表示テキストを保持する Observable なスロット VM
+- **`IsAssignmentModeActive` / `GalleryModeHint` プロパティ**: 割り当てモードの状態とヒント文字列を UI に提供
+- **`ClearAssignmentModeCommand`**: スロット選択とペインターゲット選択を一括クリアするコマンド
+- **スロット / ペイン選択の排他制御**: `OnActivePresetSlotChanged` / `OnSelectedPaneTargetChanged` で双方向の排他制御を実装
+
+## [0.14.4] - 2026-03-03 : テーマ設定ビュー 大幅レイアウト刷新
+
+### Changed
+- **「高度なテーマ制御」をページ最上部に移動**: モード選択 → テーマ選択という論理的な操作順序を実現。テーマギャラリーの上に「高度なテーマ制御」セクションを配置し、ギャラリーとの間に 24px マージンを確保
+- **高度なテーマ制御カードの並び替え**: プリセット（有効）→ 自動選択（将来）→ ペイン個別（将来）の順に再配置
+- **「パーソナライズ・プリセット」を有効機能として強調**: アクセントカラーのボーダー（1.5px）とアクセントアイコンで他カードと差別化。"将来実装" バッジを廃止し、1〜20 のスロットグリッド（52×28px × 20 タイル）で UI ビジョンを視覚化
+- **テーマ・ツール（エクスポート）セクションを完全削除**: デバッグ用途だったカードとエクスポートボタンを除去し、設定画面をクリーンアップ
+
+## [0.14.3] - 2026-03-03 : テーマギャラリー UI 強化・高度テーマ制御フレームワーク
+
+### Added
+- **standard テーマの先頭固定**: スタンダードカテゴリ内で "standard" テーマが常にリスト先頭に表示されるよう `StandardFirstSortKey` プロパティと追加ソートを実装
+- **テーマ・ツール カード**: 「テーマをエクスポート」ボタンを説明文付きの白カードに昇格。他の設定カードと統一されたデザインで配置
+- **高度なテーマ制御セクション**: テーマギャラリー下部に3カードを追加
+  - **自動選択モード（Randomize）**: 起動時のテーマ選択を「無効 / 全テーマからランダム / 現在カテゴリからランダム」で設定可能な RadioButton UI
+  - **パーソナライズ・プリセット**: 将来実装の 20 スロット定義を示すプレースホルダーカード
+  - **ペイン個別適用**: ナビ・Aペイン・Bペインへのテーマ個別割り当て UI（ComboBox レイアウト、将来実装プレースホルダー付き）
+- **`ThemeRandomizeMode` 列挙体**: `Disabled` / `AllThemes` / `CurrentCategory` の3モードを `AppSettingsViewModel` に追加
+
+### Fixed
+- **カテゴリヘッダーの下余白拡張**: 説明文追加後にカードと重なる問題を解消するため StackPanel の下マージンを 8→14px に拡張、説明文に 5px の上マージンを追加
+
+## [0.14.2] - 2026-03-03 : テーマギャラリー説明文・ホバー演出
+
+### Added
+- **カテゴリ概要テキスト**: テーマギャラリーの各カテゴリヘッダー直下にグループのコンセプトを説明する短い文を追加（スタンダード・ウォーム & コージー・プロフェッショナル・プレミアム・レトロ & テック）
+- **テーマカードに説明文を表示**: テーマ名とカラーチップの間に JSON の `Description` フィールドを表示。2行までで折り返し、超えた場合は省略記号で省略。ホバー時はツールチップで全文を確認可能
+- **テーマカードのホバーリフト演出**: マウスホバー時にカードが 2px 上方向に浮き上がる TranslateTransform アニメーション（120ms）を追加
+- **ThemeCategoryDescriptionConverter**: カテゴリ表示名からグループ概要テキストを返す新コンバーター
+
+## [0.14.1] - 2026-03-03 : テーマカテゴリ分類
+
+### Added
+- **テーマカテゴリ分類**: Control Deck のテーマギャラリーを5カテゴリ（スタンダード・ウォーム & コージー・プロフェッショナル・プレミアム・レトロ & テック）でグループ化。カテゴリヘッダーにアイコン・名前・件数を表示し、各グループ内はカードが横並びの WrapPanel で配置
+- **テーマ JSON に Category フィールド追加**: テーマエクスポート時に `"Category"` をメタデータとして出力。再読み込み時にカテゴリが正しく復元される
+- **ThemeCategoryIconConverter**: カテゴリ表示名から PackIconLucide アイコンを解決するコンバーター
+
+### Changed
+- **テーマソート順をカテゴリ順 → 名前順に変更**: カテゴリ内でアルファベット順にソート
+
+## [0.14.0] - 2026-03-03 : Control Deck（ダッシュボード形式の設定ビュー）
+
+### Added
+- **Control Deck（ダッシュボード形式の設定ビュー）**: サイドバー内の設定 ScrollViewer を廃止し、メインウィンドウ全域を使った2カラムのオーバーレイ「Control Deck」に刷新。左ナビで5カテゴリ（基本設定・検索・インデックス・リカバリ・テーマ）を切替え、右コンテンツ領域にカード形式で設定項目を配置
+- **テーマカードにカラーチップ表示**: テーマ選択時に背景色・アクセント色・テキスト色・サイドバー色の4色を Ellipse で視覚的にプレビュー
+- **Control Deck 開閉アニメーション**: 背後のペインを Scale(0.95) + 暗転しつつオーバーレイをフェードイン/アウト。カテゴリ切替時はコンテンツ領域の Opacity フェードで滑らかに遷移
+
+### Changed
+- **設定ボタン (Ctrl+Shift+O) を Control Deck に接続**: 歯車ボタンとキーバインドが新しい Control Deck を開くように変更
+- **「インデックスの設定を開く」を Control Deck のインデックスカテゴリに直接遷移**: インデックス検索ビューからの設定リンクが Control Deck のインデックスカテゴリを即座に表示
+
 ## [0.13.9] - 2026-03-03 : マルチコア JIT プロファイリング＋Debug TieredCompilation による起動高速化
 
 ### Changed

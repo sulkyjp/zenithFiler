@@ -7,7 +7,8 @@
 
   // テーマのメタデータ
   "Description": "クラシックなOSのUIを現代の解釈で再構築したノスタルジックな配色",
-  "Author": "赤阪和彦",
+  "Author": "KAKASAKA",
+  "Category": "RetroTech",
 
   // ── 基本 UI 要素 ──
   "Base": {

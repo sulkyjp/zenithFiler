@@ -4,6 +4,7 @@ public class ThemeModel
 {
     public string? Description { get; set; }
     public string? Author { get; set; }
+    public string? Category { get; set; }
     public ThemeBaseColors? Base { get; set; }
     public ThemeListColors? List { get; set; }
     public ThemeSearchColors? Search { get; set; }

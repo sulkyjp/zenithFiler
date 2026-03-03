@@ -1,6 +1,7 @@
 {
   "Description": "80年代の端末を彷彿とさせる、漆黒に琥珀色が浮かぶレトロコンソール",
-  "Author": "赤阪和彦",
+  "Author": "KAKASAKA",
+  "Category": "RetroTech",
   "Base": {
     "BackgroundColor": "#0A0A0A",
     "SidebarColor": "#121212",

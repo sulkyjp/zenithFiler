@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Windows;
+using System.Windows.Data;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ZenithFiler.Models;
@@ -31,6 +33,33 @@ namespace ZenithFiler
         /// <summary>反対ペインに新規タブを開く。1ペイン時は 2 ペインへ切替。</summary>
         OtherPaneNewTab
     }
+
+    /// <summary>Control Deck の設定カテゴリ。</summary>
+    public enum SettingsCategory
+    {
+        General,
+        Search,
+        Index,
+        Backup,
+        Theme
+    }
+
+    /// <summary>テーマの自動選択モード。</summary>
+    public enum ThemeRandomizeMode
+    {
+        /// <summary>自動選択を無効にする（デフォルト）。</summary>
+        Disabled,
+        /// <summary>登録テーマ全体からランダムに選択。</summary>
+        AllThemes,
+        /// <summary>現在選択中のカテゴリ内からランダムに選択。</summary>
+        CurrentCategory
+    }
+
+    /// <summary>ペイン個別テーマ適用のターゲットペイン。</summary>
+    public enum PaneTarget { None, Nav, APane, BPane }
+
+    /// <summary>テーマ適用モード（プリセット / 自動選択 / ペイン個別）。</summary>
+    public enum ThemeApplyMode { Preset, Random, Pane }
 
     /// <summary>ファイル一覧の右クリック時に表示するコンテキストメニューの種類。</summary>
     public enum ContextMenuMode
@@ -87,6 +116,9 @@ namespace ZenithFiler
         /// <summary>テーマ一覧。</summary>
         public ObservableCollection<ThemeInfo> AvailableThemes { get; } = new();
 
+        /// <summary>カテゴリグループ化済みのテーマビュー。XAML の ListBox.ItemsSource にバインド。</summary>
+        public ICollectionView ThemesView { get; }
+
         /// <summary>選択中のテーマ情報。UI の ListBox にバインドされる。</summary>
         [ObservableProperty]
         private ThemeInfo? _selectedThemeInfo;
@@ -95,12 +127,98 @@ namespace ZenithFiler
         [ObservableProperty]
         private string _selectedThemeName = "standard";
 
+        /// <summary>テーマ自動選択モード。起動時ランダム選択の挙動を制御する。</summary>
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(IsRandomCategoryModeActive))]
+        [NotifyPropertyChangedFor(nameof(IsAwaitingCategorySelection))]
+        [NotifyPropertyChangedFor(nameof(GalleryModeHint))]
+        [NotifyPropertyChangedFor(nameof(IsAssignmentModeActive))]
+        private ThemeRandomizeMode _themeRandomizeMode = ThemeRandomizeMode.Disabled;
+
+        /// <summary>テーマ適用モード（プリセット / 自動 / ペイン個別）。</summary>
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(IsAssignmentModeActive))]
+        [NotifyPropertyChangedFor(nameof(GalleryModeHint))]
+        [NotifyPropertyChangedFor(nameof(IsRandomModeActive))]
+        [NotifyPropertyChangedFor(nameof(IsRandomCategoryModeActive))]
+        [NotifyPropertyChangedFor(nameof(IsAwaitingCategorySelection))]
+        private ThemeApplyMode _activeThemeMode = ThemeApplyMode.Preset;
+
+        /// <summary>ペイン個別テーマ適用の選択ターゲット。</summary>
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(IsAssignmentModeActive))]
+        [NotifyPropertyChangedFor(nameof(GalleryModeHint))]
+        private PaneTarget _selectedPaneTarget = PaneTarget.None;
+
+        /// <summary>ランダム選択のターゲットカテゴリ名（CurrentCategory モード時のみ使用）。</summary>
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(GalleryModeHint))]
+        [NotifyPropertyChangedFor(nameof(IsAwaitingCategorySelection))]
+        private string? _selectedRandomCategory;
+
+        /// <summary>ナビペインに適用中のテーマ名（ペイン個別適用用）。</summary>
+        [ObservableProperty]
+        private string _navPaneThemeName = string.Empty;
+
+        /// <summary>Aペインに適用中のテーマ名（ペイン個別適用用）。</summary>
+        [ObservableProperty]
+        private string _aPaneThemeName = string.Empty;
+
+        /// <summary>Bペインに適用中のテーマ名（ペイン個別適用用）。</summary>
+        [ObservableProperty]
+        private string _bPaneThemeName = string.Empty;
+
+        /// <summary>プリセット以外のモードがアクティブのとき true（ヒントバー表示判定）。</summary>
+        public bool IsAssignmentModeActive => ActiveThemeMode != ThemeApplyMode.Preset;
+
+        /// <summary>自動選択モードがアクティブのとき true。</summary>
+        public bool IsRandomModeActive => ActiveThemeMode == ThemeApplyMode.Random;
+
+        /// <summary>カテゴリランダムモードがアクティブのとき true（ギャラリーグループ枠表示用）。</summary>
+        public bool IsRandomCategoryModeActive =>
+            ActiveThemeMode == ThemeApplyMode.Random && ThemeRandomizeMode == ThemeRandomizeMode.CurrentCategory;
+
+        /// <summary>カテゴリランダムモードがアクティブかつカテゴリ未選択のとき true（選択誘導インジケーター表示用）。</summary>
+        public bool IsAwaitingCategorySelection =>
+            IsRandomCategoryModeActive && string.IsNullOrEmpty(SelectedRandomCategory);
+
+        /// <summary>ギャラリー上部に表示する割り当てモードのヒントテキスト。</summary>
+        public string GalleryModeHint => ActiveThemeMode switch
+        {
+            ThemeApplyMode.Random when ThemeRandomizeMode == ThemeRandomizeMode.CurrentCategory =>
+                string.IsNullOrWhiteSpace(SelectedRandomCategory)
+                    ? "カテゴリをクリックして対象を選択"
+                    : $"「{SelectedRandomCategory}」からランダム選択",
+            ThemeApplyMode.Random =>
+                "起動時に全テーマからランダムでテーマが選択されます",
+            ThemeApplyMode.Pane when SelectedPaneTarget == PaneTarget.None =>
+                "ペインを選択してからテーマをクリックして適用",
+            ThemeApplyMode.Pane =>
+                SelectedPaneTarget switch
+                {
+                    PaneTarget.Nav   => "ナビペインを選択中 — テーマをクリックして適用",
+                    PaneTarget.APane => "Aペインを選択中 — テーマをクリックして適用",
+                    PaneTarget.BPane => "Bペインを選択中 — テーマをクリックして適用",
+                    _                => string.Empty,
+                },
+            _ => string.Empty
+        };
+
+        /// <summary>Control Deck で選択中のカテゴリ。</summary>
+        [ObservableProperty]
+        private SettingsCategory _activeCategory = SettingsCategory.General;
+
         /// <summary>検索結果フィルターバーの有効状態（FileTypeFilter の順）。次回検索時に復元。</summary>
         private List<bool> _searchResultFileTypeFilterEnabled = new();
 
         public AppSettingsViewModel(MainViewModel main)
         {
             _main = main ?? throw new ArgumentNullException(nameof(main));
+            ThemesView = CollectionViewSource.GetDefaultView(AvailableThemes);
+            ThemesView.GroupDescriptions.Add(new PropertyGroupDescription(nameof(ThemeInfo.CategoryDisplayName)));
+            ThemesView.SortDescriptions.Add(new SortDescription(nameof(ThemeInfo.CategorySortOrder), ListSortDirection.Ascending));
+            ThemesView.SortDescriptions.Add(new SortDescription(nameof(ThemeInfo.StandardFirstSortKey), ListSortDirection.Ascending));
+            ThemesView.SortDescriptions.Add(new SortDescription(nameof(ThemeInfo.Name), ListSortDirection.Ascending));
         }
 
         /// <summary>設定読み込み時にホームパスを反映する。</summary>
@@ -331,6 +449,12 @@ namespace ZenithFiler
             dialog.ShowDialog();
         }
 
+        [RelayCommand]
+        private void SetCategory(SettingsCategory category)
+        {
+            ActiveCategory = category;
+        }
+
         // ─── テーマ ───
 
         private bool _suppressThemeChange;
@@ -374,6 +498,27 @@ namespace ZenithFiler
         {
             if (_suppressThemeChange) return;
             if (value == null) return;
+
+            // カテゴリランダム選択モード: テーマのカテゴリを選択（テーマ適用しない）
+            if (ActiveThemeMode == ThemeApplyMode.Random && ThemeRandomizeMode == ThemeRandomizeMode.CurrentCategory)
+            {
+                SelectedRandomCategory = value.CategoryDisplayName;
+                return;
+            }
+
+            // ペイン個別割り当てモード（将来実装のため保存のみ）
+            if (ActiveThemeMode == ThemeApplyMode.Pane && SelectedPaneTarget != PaneTarget.None)
+            {
+                switch (SelectedPaneTarget)
+                {
+                    case PaneTarget.Nav:   NavPaneThemeName = value.Name; break;
+                    case PaneTarget.APane: APaneThemeName   = value.Name; break;
+                    case PaneTarget.BPane: BPaneThemeName   = value.Name; break;
+                }
+                return;
+            }
+
+            // 通常モード: グローバルテーマ変更
             if (string.Equals(SelectedThemeName, value.Name, StringComparison.OrdinalIgnoreCase)) return;
             SelectedThemeName = value.Name;
         }
@@ -388,6 +533,48 @@ namespace ZenithFiler
             // 永続化
             WindowSettings.SaveThemeOnly(value);
         }
+
+        partial void OnActiveThemeModeChanged(ThemeApplyMode value)
+        {
+            switch (value)
+            {
+                case ThemeApplyMode.Random:
+                    if (ThemeRandomizeMode == ThemeRandomizeMode.Disabled)
+                        ThemeRandomizeMode = ThemeRandomizeMode.AllThemes;
+                    SelectedPaneTarget = PaneTarget.None;
+                    SelectedRandomCategory = null;
+                    break;
+                case ThemeApplyMode.Pane:
+                    ThemeRandomizeMode = ThemeRandomizeMode.Disabled;
+                    SelectedRandomCategory = null;
+                    break;
+                default: // Preset
+                    ThemeRandomizeMode = ThemeRandomizeMode.Disabled;
+                    SelectedRandomCategory = null;
+                    SelectedPaneTarget = PaneTarget.None;
+                    break;
+            }
+        }
+
+        partial void OnThemeRandomizeModeChanged(ThemeRandomizeMode value)
+        {
+            // ランダムサブ選択（AllThemes / CurrentCategory）が直接クリックされたとき、
+            // 自動選択モード自体をアクティブにする。これにより他モード中でも
+            // RadioButton をクリックするだけでモード切り替えが完結する。
+            if (value != ThemeRandomizeMode.Disabled && ActiveThemeMode != ThemeApplyMode.Random)
+                ActiveThemeMode = ThemeApplyMode.Random;
+
+            if (value != ThemeRandomizeMode.CurrentCategory)
+                SelectedRandomCategory = null;
+        }
+
+        /// <summary>テーマ適用モードを切り替える。</summary>
+        [RelayCommand]
+        private void SetThemeMode(ThemeApplyMode mode) => ActiveThemeMode = mode;
+
+        /// <summary>ランダム選択のターゲットカテゴリを設定する。</summary>
+        [RelayCommand]
+        private void SelectRandomCategory(string? categoryName) => SelectedRandomCategory = categoryName;
 
         [RelayCommand]
         private async Task ExportThemeAsync()

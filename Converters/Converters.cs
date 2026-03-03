@@ -574,6 +574,98 @@ namespace ZenithFiler
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();
     }
 
+    /// <summary>16進カラー文字列 (#RRGGBB) → Color 変換。テーマカードのカラーチップ用。</summary>
+    public class StringToColorConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is string hex && !string.IsNullOrWhiteSpace(hex))
+            {
+                try
+                {
+                    var color = (Color)ColorConverter.ConvertFromString(hex);
+                    if (targetType == typeof(Brush) || targetType == typeof(SolidColorBrush))
+                        return new SolidColorBrush(color);
+                    return color;
+                }
+                catch { }
+            }
+            return Colors.Transparent;
+        }
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();
+    }
+
+    /// <summary>テーマカテゴリ表示名 → カテゴリ概要テキストに変換。テーマグループヘッダーの説明文用。</summary>
+    public class ThemeCategoryDescriptionConverter : IValueConverter
+    {
+        private static readonly Dictionary<string, string> Map = new()
+        {
+            ["スタンダード"]           = "Zenith Filer の原点。あらゆる作業環境に馴染む、計算し尽くされた視認性と普遍性を備えた基本セット。",
+            ["ウォーム & コージー"]    = "書斎の灯りのような温もり。長時間のドキュメント整理や深い思考を妨げない、目に優しい安らぎの配色。",
+            ["プロフェッショナル"]     = "知的でストイックな集中を。高コントラストな設計が、深夜のシステム管理やコーディングに最高の効率をもたらします。",
+            ["プレミアム"]             = "日常に彩りと高揚感を。宝石や自然の美しさをサンプリングした、道具としての格を一段引き上げる贅沢なセット。",
+            ["レトロ & テック"]        = "記憶の中の銘機へのオマージュ。往年のコンソールや近未来のサイバー空間を彷彿とさせる、趣味性の高いデザイン。",
+        };
+
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is string name && Map.TryGetValue(name, out var desc))
+                return desc;
+            return string.Empty;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();
+    }
+
+    /// <summary>テーマタイルのペインバッジ表示制御。
+    /// values[0]=ThemeName, values[1]=NavTheme, values[2]=ATheme, values[3]=BTheme; parameter="Nav"|"A"|"B"。</summary>
+    public class ThemePaneBadgeVisibilityConverter : IMultiValueConverter
+    {
+        public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (values.Length < 4 || parameter is not string pane) return Visibility.Collapsed;
+            var tileName = values[0] as string;
+            if (string.IsNullOrWhiteSpace(tileName)) return Visibility.Collapsed;
+
+            string? assigned = pane switch
+            {
+                "Nav" => values[1] as string,
+                "A"   => values[2] as string,
+                "B"   => values[3] as string,
+                _     => null
+            };
+
+            return !string.IsNullOrWhiteSpace(assigned) &&
+                   string.Equals(tileName, assigned, StringComparison.OrdinalIgnoreCase)
+                ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+            => throw new NotImplementedException();
+    }
+
+    /// <summary>テーマカテゴリ表示名 → PackIconLucideKind に変換。テーマグループヘッダーのアイコン用。</summary>
+    public class ThemeCategoryIconConverter : IValueConverter
+    {
+        private static readonly Dictionary<string, PackIconLucideKind> Map = new()
+        {
+            ["スタンダード"]         = PackIconLucideKind.Star,
+            ["ウォーム & コージー"]  = PackIconLucideKind.Coffee,
+            ["プロフェッショナル"]   = PackIconLucideKind.Briefcase,
+            ["プレミアム"]           = PackIconLucideKind.Crown,
+            ["レトロ & テック"]      = PackIconLucideKind.Terminal,
+        };
+
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is string name && Map.TryGetValue(name, out var kind))
+                return kind;
+            return PackIconLucideKind.Star;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();
+    }
+
     /// <summary>long (bytes) ↔ double (MB) の双方向変換。検索フィルタのカスタムサイズ入力に使用。</summary>
     public class BytesToMBConverter : IValueConverter
     {
@@ -590,5 +682,48 @@ namespace ZenithFiler
                 return (long)(mb * MB);
             return 0L;
         }
+    }
+
+    /// <summary>
+    /// GroupItem の DataTrigger で使用。カテゴリ名が選択中かつモードが有効なとき true を返す。
+    /// values[0]=GroupName, values[1]=SelectedRandomCategory, values[2]=IsRandomCategoryModeActive
+    /// </summary>
+    public class IsCategorySelectedConverter : IMultiValueConverter
+    {
+        public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (values.Length < 3) return false;
+            var groupName = values[0] as string;
+            var selectedCategory = values[1] as string;
+            var isModeActive = values[2] is bool b && b;
+            return isModeActive &&
+                   !string.IsNullOrWhiteSpace(groupName) &&
+                   string.Equals(groupName, selectedCategory, StringComparison.OrdinalIgnoreCase);
+        }
+        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+            => throw new NotImplementedException();
+    }
+
+    /// <summary>
+    /// テーマタイルが「現在プリセットモードで適用中」かを直接判定するコンバーター。
+    /// ListBoxItem.IsSelected への依存を排除し、SelectedThemeName との文字列比較で確実に動作する。
+    /// values[0]: ThemeInfo.Name (string)
+    /// values[1]: AppSettings.SelectedThemeName (string) — 現在適用中のテーマ名
+    /// values[2]: AppSettings.IsAssignmentModeActive (bool) — プリセット以外のモード中は true
+    /// </summary>
+    public class IsCurrentPresetThemeConverter : IMultiValueConverter
+    {
+        public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (values.Length < 3) return false;
+            var themeName     = values[0] as string;
+            var selectedName  = values[1] as string;
+            var isAssignment  = values[2] is bool b && b;
+            return !isAssignment &&
+                   !string.IsNullOrWhiteSpace(themeName) &&
+                   string.Equals(themeName, selectedName, StringComparison.OrdinalIgnoreCase);
+        }
+        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+            => throw new NotImplementedException();
     }
 }

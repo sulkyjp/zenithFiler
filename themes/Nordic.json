@@ -7,7 +7,8 @@
 
   // テーマのメタデータ
   "Description": "氷河のような清潔感と静寂を併せ持つ、クリアな配色",
-  "Author": "赤阪和彦",
+  "Author": "KAKASAKA",
+  "Category": "Standard",
 
   // ── 基本 UI 要素 ──
   "Base": {

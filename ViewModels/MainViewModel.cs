@@ -74,6 +74,15 @@ namespace ZenithFiler
         /// <summary>ペインコンテナをフェードインする。View が設定する。</summary>
         public Func<Task>? AnimatePaneFadeIn { get; set; }
 
+        // ─── Control Deck（ダッシュボード形式の設定ビュー） ──
+        [ObservableProperty]
+        private bool _isControlDeckOpen;
+
+        /// <summary>Control Deck をオーバーレイ表示する。View が設定する。</summary>
+        public Func<Task>? AnimateControlDeckOpen { get; set; }
+        /// <summary>Control Deck を閉じる。View が設定する。</summary>
+        public Func<Task>? AnimateControlDeckClose { get; set; }
+
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(IsGeneralBusy))]
         private bool _isBusy;
@@ -385,8 +394,7 @@ namespace ZenithFiler
         /// <summary>現在の SidebarMode に応じた目標幅。ビュー側のアニメーションで使用。</summary>
         public double TargetSidebarWidth =>
             SidebarMode is SidebarViewMode.History or SidebarViewMode.Tree
-                or SidebarViewMode.IndexSearch or SidebarViewMode.AppSettings
-                or SidebarViewMode.WorkingSet
+                or SidebarViewMode.IndexSearch or SidebarViewMode.WorkingSet
             ? ExpandedSidebarWidth : _sidebarWidthFavoritesTree;
 
         /// <summary>ナビペイン幅のアニメーション中は true。この間は OnSidebarWidthChanged で _sidebarWidthFavoritesTree を更新しない（ユーザー設定幅を保持するため）。</summary>
@@ -924,29 +932,50 @@ namespace ZenithFiler
         }
 
         [RelayCommand]
-        private void SetSidebarMode(SidebarViewMode mode)
+        private async Task SetSidebarMode(SidebarViewMode mode)
         {
+            if (mode == SidebarViewMode.AppSettings)
+            {
+                await OpenControlDeckAsync();
+                return;
+            }
             SidebarMode = mode;
-            var modeText = mode switch { SidebarViewMode.Favorites => "お気に入り", SidebarViewMode.Tree => "ツリー", SidebarViewMode.History => "参照履歴", SidebarViewMode.IndexSearch => "インデックス検索設定", SidebarViewMode.AppSettings => "アプリ設定", SidebarViewMode.WorkingSet => "ワーキングセット", _ => "お気に入り" };
+            var modeText = mode switch { SidebarViewMode.Favorites => "お気に入り", SidebarViewMode.Tree => "ツリー", SidebarViewMode.History => "参照履歴", SidebarViewMode.IndexSearch => "インデックス検索設定", SidebarViewMode.WorkingSet => "ワーキングセット", _ => "お気に入り" };
             App.Notification.Notify($"ナビを「{modeText}」に切り替えました", $"サイドバーモード変更: {modeText}");
         }
 
-        /// <summary>アプリ設定ビュー内のインデックスセクションへスクロールしてほしいときに発火。</summary>
-        public event Action? AppSettingsIndexSectionRequested;
+        [RelayCommand]
+        private async Task OpenControlDeckAsync()
+        {
+            if (IsControlDeckOpen) return;
+            IsControlDeckOpen = true;
+            AppSettings.RefreshThemes();
+            if (AnimateControlDeckOpen != null)
+                await AnimateControlDeckOpen();
+        }
+
+        [RelayCommand]
+        public async Task CloseControlDeckAsync()
+        {
+            if (!IsControlDeckOpen) return;
+            if (AnimateControlDeckClose != null)
+                await AnimateControlDeckClose();
+            IsControlDeckOpen = false;
+        }
 
         /// <summary>インデックスビューからアプリ設定ビューへ切り替える。</summary>
         public void RequestSwitchToAppSettings()
         {
-            SetSidebarMode(SidebarViewMode.AppSettings);
+            _ = OpenControlDeckAsync();
         }
 
         /// <summary>
-        /// インデックスビューからアプリ設定ビューへ切り替え、インデックス設定セクションが見える位置までスクロールする。
+        /// インデックスビューからアプリ設定ビューへ切り替え、インデックス設定カテゴリを直接開く。
         /// </summary>
         public void RequestSwitchToAppSettingsIndexSection()
         {
-            SetSidebarMode(SidebarViewMode.AppSettings);
-            AppSettingsIndexSectionRequested?.Invoke();
+            AppSettings.ActiveCategory = SettingsCategory.Index;
+            _ = OpenControlDeckAsync();
         }
 
         [RelayCommand]

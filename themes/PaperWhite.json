@@ -7,7 +7,8 @@
 
   // テーマのメタデータ
   "Description": "紙とインクのコントラストを再現した、文字情報の整理に特化したテーマ",
-  "Author": "赤阪和彦",
+  "Author": "KAKASAKA",
+  "Category": "Standard",
 
   // ── 基本 UI 要素 ──
   "Base": {

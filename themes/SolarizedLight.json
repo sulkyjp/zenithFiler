@@ -7,7 +7,8 @@
 
   // テーマのメタデータ
   "Description": "長時間のテキストブラウジングをサポートする、計算された色彩設計",
-  "Author": "赤阪和彦",
+  "Author": "KAKASAKA",
+  "Category": "Standard",
 
   // ── 基本 UI 要素 ──
   "Base": {

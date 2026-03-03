@@ -7,7 +7,8 @@
 
   // テーマのメタデータ
   "Description": "プログラミングやシステム管理の没入感を高める、ハイテク・ダーク",
-  "Author": "赤阪和彦",
+  "Author": "KAKASAKA",
+  "Category": "RetroTech",
 
   // ── 基本 UI 要素 ──
   "Base": {

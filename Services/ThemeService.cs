@@ -12,6 +12,33 @@ public class ThemeService
 {
     private string _currentDescription = "Zenith Filer 標準の落ち着いたベージュ基調のテーマ";
     private string _currentAuthor = "赤阪和彦";
+    private ThemeCategory _currentCategory = ThemeCategory.Standard;
+
+    /// <summary>テーマ名 → ThemeCategory のフォールバックマッピング（JSON に Category がない場合に使用）。</summary>
+    private static readonly Dictionary<string, ThemeCategory> CategoryFallback = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["standard"]       = ThemeCategory.Standard,
+        ["SolarizedLight"] = ThemeCategory.Standard,
+        ["Nordic"]         = ThemeCategory.Standard,
+        ["PaperWhite"]     = ThemeCategory.Standard,
+        ["Espresso"]       = ThemeCategory.WarmCozy,
+        ["MilkTeaPearl"]   = ThemeCategory.WarmCozy,
+        ["Sakura"]         = ThemeCategory.WarmCozy,
+        ["MintSorbet"]     = ThemeCategory.WarmCozy,
+        ["LavenderMist"]   = ThemeCategory.WarmCozy,
+        ["midnight"]       = ThemeCategory.Professional,
+        ["SlateBlue"]      = ThemeCategory.Professional,
+        ["Monochrome"]     = ThemeCategory.Professional,
+        ["blueprint"]      = ThemeCategory.Professional,
+        ["ImperialGold"]   = ThemeCategory.Premium,
+        ["CrimsonPeak"]    = ThemeCategory.Premium,
+        ["Forest"]         = ThemeCategory.Premium,
+        ["DeepSea"]        = ThemeCategory.Premium,
+        ["Terminal"]       = ThemeCategory.RetroTech,
+        ["CyberNeon"]      = ThemeCategory.RetroTech,
+        ["AmberConsole"]   = ThemeCategory.RetroTech,
+        ["Retro95"]        = ThemeCategory.RetroTech,
+    };
 
     private static readonly Dictionary<string, string> Defaults = new()
     {
@@ -210,11 +237,27 @@ public class ThemeService
             }
         }
 
-        results.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
-        // standard は常に先頭（ファイルがなければハードコードデフォルト）
-        standardInfo ??= new ThemeInfo("standard", "Zenith Filer 標準の落ち着いたベージュ基調のテーマ", "赤阪和彦");
-        results.Insert(0, standardInfo);
+        // standard がなければハードコードデフォルト
+        standardInfo ??= new ThemeInfo("standard", "Zenith Filer 標準の落ち着いたベージュ基調のテーマ", "赤阪和彦",
+            backgroundColor: Defaults["BackgroundColor"], accentColor: Defaults["AccentColor"],
+            primaryTextColor: Defaults["PrimaryTextColor"], sidebarColor: Defaults["SidebarColor"],
+            category: ThemeCategory.Standard);
+        results.Add(standardInfo);
+        // カテゴリ順 → 名前順でソート
+        results.Sort((a, b) =>
+        {
+            int cmp = a.CategorySortOrder.CompareTo(b.CategorySortOrder);
+            return cmp != 0 ? cmp : string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase);
+        });
         return results;
+    }
+
+    /// <summary>JSON の Category 文字列またはフォールバック辞書からカテゴリを解決する。</summary>
+    private static ThemeCategory ResolveCategory(string themeName, string? jsonCategory)
+    {
+        if (!string.IsNullOrWhiteSpace(jsonCategory) && Enum.TryParse<ThemeCategory>(jsonCategory, true, out var parsed))
+            return parsed;
+        return CategoryFallback.TryGetValue(themeName, out var fallback) ? fallback : ThemeCategory.Standard;
     }
 
     /// <summary>テーマ JSON からメタデータのみを軽量に読み取る。</summary>
@@ -224,11 +267,17 @@ public class ThemeService
         {
             var json = File.ReadAllText(path);
             var model = JsonSerializer.Deserialize<ThemeModel>(json, _readOptions);
-            return new ThemeInfo(name, model?.Description, model?.Author);
+            var category = ResolveCategory(name, model?.Category);
+            return new ThemeInfo(name, model?.Description, model?.Author,
+                backgroundColor: model?.Base?.BackgroundColor,
+                accentColor: model?.Accent?.AccentColor,
+                primaryTextColor: model?.Base?.PrimaryTextColor,
+                sidebarColor: model?.Base?.SidebarColor,
+                category: category);
         }
         catch
         {
-            return new ThemeInfo(name);
+            return new ThemeInfo(name, category: ResolveCategory(name, null));
         }
     }
 
@@ -290,6 +339,7 @@ public class ThemeService
         _resolvedColors = new Dictionary<string, string>(Defaults);
         _currentDescription = "Zenith Filer 標準の落ち着いたベージュ基調のテーマ";
         _currentAuthor = "赤阪和彦";
+        _currentCategory = ResolveCategory(themeName, null);
 
         if (string.Equals(themeName, "standard", StringComparison.OrdinalIgnoreCase))
         {
@@ -326,6 +376,8 @@ public class ThemeService
                     _currentDescription = model.Description;
                 if (!string.IsNullOrWhiteSpace(model.Author))
                     _currentAuthor = model.Author;
+                _currentCategory = ResolveCategory(
+                    Path.GetFileNameWithoutExtension(path), model.Category);
             }
             return true;
         }
@@ -468,6 +520,7 @@ public class ThemeService
         sb.AppendLine("  // テーマのメタデータ");
         sb.AppendLine($"  \"Description\": \"{EscapeJsonString(_currentDescription)}\",");
         sb.AppendLine($"  \"Author\": \"{EscapeJsonString(_currentAuthor)}\",");
+        sb.AppendLine($"  \"Category\": \"{_currentCategory}\",");
         sb.AppendLine();
 
         sb.AppendLine("  // ── 基本 UI 要素 ──");

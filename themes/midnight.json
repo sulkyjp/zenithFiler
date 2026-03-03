@@ -7,7 +7,8 @@
 
   // テーマのメタデータ
   "Description": "暗所での集中力を高める、目に優しいダークモード",
-  "Author": "赤阪和彦",
+  "Author": "KAKASAKA",
+  "Category": "Professional",
 
   // ── 基本 UI 要素 ──
   "Base": {

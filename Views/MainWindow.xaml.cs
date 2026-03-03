@@ -127,13 +127,14 @@ namespace ZenithFiler
                 vm.FocusHistorySearchRequested += Vm_FocusHistorySearchRequested;
                 vm.FocusActiveSearchRequested += Vm_FocusActiveSearchRequested;
                 vm.FocusIndexSearchRequested += Vm_FocusIndexSearchRequested;
-                vm.AppSettingsIndexSectionRequested += Vm_AppSettingsIndexSectionRequested;
                 vm.RequestScrollToFavorite = Vm_RequestScrollToFavorite;
                 vm.RequestScrollToIndexSearchTarget = Vm_RequestScrollToIndexSearchTarget;
                 vm.PropertyChanged += Vm_PropertyChanged_GlowBar;
                 vm.CancelRetractionRequested += Vm_CancelRetractionRequested;
                 vm.AnimatePaneFadeOut = AnimatePaneFadeOutAsync;
                 vm.AnimatePaneFadeIn = AnimatePaneFadeInAsync;
+                vm.AnimateControlDeckOpen = AnimateControlDeckOpenAsync;
+                vm.AnimateControlDeckClose = AnimateControlDeckCloseAsync;
                 vm.MarkInitializationComplete();
             }
 
@@ -205,6 +206,92 @@ namespace ZenithFiler
             };
             PaneContentArea.BeginAnimation(UIElement.OpacityProperty, anim);
             return tcs.Task;
+        }
+
+        // ── Control Deck オーバーレイ：開閉アニメーション ──
+
+        private bool _isControlDeckOpen;
+
+        /// <summary>Control Deck を開くアニメーション。PaneContentArea を Scale(0.95) + 暗転し、オーバーレイをフェードイン。</summary>
+        private async Task AnimateControlDeckOpenAsync()
+        {
+            // QuickPreview が開いていたら先に閉じる
+            if (_isQuickPreviewOpen) HideQuickPreview();
+
+            _isControlDeckOpen = true;
+            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+            var duration = TimeSpan.FromMilliseconds(200);
+
+            // PaneContentArea に ScaleTransform を設定
+            if (PaneContentArea.RenderTransform is not ScaleTransform)
+            {
+                PaneContentArea.RenderTransform = new ScaleTransform(1, 1);
+                PaneContentArea.RenderTransformOrigin = new Point(0.5, 0.5);
+            }
+            var scale = (ScaleTransform)PaneContentArea.RenderTransform;
+
+            // PaneContentArea: Scale 1→0.95, Opacity 1→0.4
+            var scaleXAnim = new DoubleAnimation(0.95, duration) { EasingFunction = ease };
+            var scaleYAnim = new DoubleAnimation(0.95, duration) { EasingFunction = ease };
+            var paneOpacityAnim = new DoubleAnimation(0.4, duration) { EasingFunction = ease };
+
+            scale.BeginAnimation(ScaleTransform.ScaleXProperty, scaleXAnim);
+            scale.BeginAnimation(ScaleTransform.ScaleYProperty, scaleYAnim);
+            PaneContentArea.BeginAnimation(UIElement.OpacityProperty, paneOpacityAnim);
+            PaneContentArea.IsHitTestVisible = false;
+
+            // ControlDeckOverlay: Visibility=Visible → Opacity 0→1
+            ControlDeckOverlay.Visibility = Visibility.Visible;
+            var tcs = new TaskCompletionSource();
+            var overlayAnim = new DoubleAnimation(0, 1, duration) { EasingFunction = ease };
+            overlayAnim.Completed += (_, _) => tcs.SetResult();
+            ControlDeckOverlay.BeginAnimation(UIElement.OpacityProperty, overlayAnim);
+            await tcs.Task;
+        }
+
+        /// <summary>Control Deck を閉じるアニメーション。オーバーレイをフェードアウトし、PaneContentArea を復元。</summary>
+        private async Task AnimateControlDeckCloseAsync()
+        {
+            var easeIn = new CubicEase { EasingMode = EasingMode.EaseIn };
+            var easeOut = new CubicEase { EasingMode = EasingMode.EaseOut };
+
+            // ControlDeckOverlay: Opacity 1→0
+            var tcsOverlay = new TaskCompletionSource();
+            var overlayAnim = new DoubleAnimation(0, TimeSpan.FromMilliseconds(150)) { EasingFunction = easeIn };
+            overlayAnim.Completed += (_, _) => tcsOverlay.SetResult();
+            ControlDeckOverlay.BeginAnimation(UIElement.OpacityProperty, overlayAnim);
+            await tcsOverlay.Task;
+            ControlDeckOverlay.Visibility = Visibility.Collapsed;
+
+            // PaneContentArea を復元: Scale 0.95→1, Opacity 0.4→1
+            var duration = TimeSpan.FromMilliseconds(200);
+            if (PaneContentArea.RenderTransform is ScaleTransform scale)
+            {
+                var scaleXAnim = new DoubleAnimation(1, duration) { EasingFunction = easeOut };
+                var scaleYAnim = new DoubleAnimation(1, duration) { EasingFunction = easeOut };
+                scaleXAnim.Completed += (_, _) =>
+                {
+                    scale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+                    scale.ScaleX = 1;
+                    scale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+                    scale.ScaleY = 1;
+                };
+                scale.BeginAnimation(ScaleTransform.ScaleXProperty, scaleXAnim);
+                scale.BeginAnimation(ScaleTransform.ScaleYProperty, scaleYAnim);
+            }
+
+            var tcsPane = new TaskCompletionSource();
+            var paneOpacityAnim = new DoubleAnimation(1, duration) { EasingFunction = easeOut };
+            paneOpacityAnim.Completed += (_, _) =>
+            {
+                PaneContentArea.BeginAnimation(UIElement.OpacityProperty, null);
+                PaneContentArea.Opacity = 1;
+                PaneContentArea.IsHitTestVisible = true;
+                tcsPane.SetResult();
+            };
+            PaneContentArea.BeginAnimation(UIElement.OpacityProperty, paneOpacityAnim);
+            await tcsPane.Task;
+            _isControlDeckOpen = false;
         }
 
         /// <summary>
@@ -754,33 +841,6 @@ namespace ZenithFiler
             }), DispatcherPriority.Loaded);
         }
 
-        /// <summary>
-        /// 「インデックスの設定を開く」から呼ばれたとき、アプリ設定ビューの「3. インデックス」見出しがナビペインのトップに来るようスクロールする。
-        /// </summary>
-        private void Vm_AppSettingsIndexSectionRequested()
-        {
-            // サイドバーモード切替後にレイアウトが更新されてからスクロールする必要があるため、Dispatcher で遅延実行
-            Dispatcher.BeginInvoke(new Action(() =>
-            {
-                if (AppSettingsScrollViewer == null || IndexSettingsHeaderBorder == null)
-                    return;
-
-                // インデックス見出しが ScrollViewer のコンテンツ内で上端からどれだけ離れているかを取得し、
-                // その位置が viewport のトップに来るよう ScrollToVerticalOffset でスクロールする
-                var content = AppSettingsScrollViewer.Content as FrameworkElement;
-                if (content != null)
-                {
-                    var transform = IndexSettingsHeaderBorder.TransformToAncestor(content);
-                    var point = transform.Transform(new Point(0, 0));
-                    var offset = Math.Max(0, point.Y - 8); // わずかに余白を残す
-                    AppSettingsScrollViewer.ScrollToVerticalOffset(offset);
-                }
-                else
-                {
-                    IndexSettingsHeaderBorder.BringIntoView();
-                }
-            }), DispatcherPriority.Loaded);
-        }
 
         private void IndexMenuButton_Click(object sender, RoutedEventArgs e)
         {
@@ -976,6 +1036,20 @@ namespace ZenithFiler
             if (e.Key is not (Key.LeftShift or Key.RightShift or Key.LeftCtrl or Key.RightCtrl or Key.LeftAlt or Key.RightAlt or Key.LWin or Key.RWin or Key.System))
             {
                 EnterKeyboardOperationMode();
+            }
+
+            // Control Deck: 開いていれば Esc で閉じる
+            if (_isControlDeckOpen)
+            {
+                if (e.Key == Key.Escape)
+                {
+                    if (DataContext is MainViewModel vmDeck)
+                        _ = vmDeck.CloseControlDeckAsync();
+                    e.Handled = true;
+                    return;
+                }
+                // Control Deck 内の操作は通す（RadioButton、CheckBox 等）
+                return;
             }
 
             // Quick Preview: 開いていれば Space/Esc で閉じる、Left/Right でナビゲーション
@@ -2711,6 +2785,13 @@ namespace ZenithFiler
             // 3. Shift_JIS フォールバック（日本語 Windows）
             System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
             return System.Text.Encoding.GetEncoding(932);
+        }
+
+        private void ControlDeckDimming_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (DataContext is MainViewModel vm)
+                _ = vm.CloseControlDeckAsync();
+            e.Handled = true;
         }
 
         private void QuickPreviewDimming_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
