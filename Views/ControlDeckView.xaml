@@ -17,6 +17,7 @@
         <local:ThemePaneBadgeVisibilityConverter x:Key="ThemePaneBadge"/>
         <local:IsCategorySelectedConverter x:Key="IsCategorySelected"/>
         <local:IsCurrentPresetThemeConverter x:Key="IsCurrentPresetTheme"/>
+        <local:NonEmptyStringToVisibilityConverter x:Key="NonEmptyStringToVis"/>
     </UserControl.Resources>
 
     <Grid>
