@@ -135,16 +135,83 @@ namespace ZenithFiler
                 vm.AnimatePaneFadeIn = AnimatePaneFadeInAsync;
                 vm.AnimateControlDeckOpen = AnimateControlDeckOpenAsync;
                 vm.AnimateControlDeckClose = AnimateControlDeckCloseAsync;
+                vm.AppSettings.OnBeforeThemeChangeAsync = AnimateThemeTransitionBeginAsync;
+                vm.AppSettings.OnAfterThemeChangeApplied = AnimateThemeTransitionEnd;
+                vm.Notification.PropertyChanged += Notification_PropertyChanged;
                 vm.MarkInitializationComplete();
             }
 
             this.PreviewKeyDown += MainWindow_PreviewKeyDown;
             this.KeyDown += MainWindow_KeyDown;
             this.PreviewMouseMove += MainWindow_PreviewMouseMove;
+            this.Activated += MainWindow_Activated;
             this.Deactivated += MainWindow_Deactivated;
             this.Closing += MainWindow_Closing;
             this.DpiChanged += MainWindow_DpiChanged;
             this.ContentRendered += MainWindow_ContentRendered;
+
+            // キーバインドの動的構築
+            RebuildInputBindings();
+            UpdateShortcutTooltips();
+            App.KeyBindings.BindingsChanged += (_, _) =>
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    RebuildInputBindings();
+                    UpdateShortcutTooltips();
+                });
+            };
+        }
+
+        /// <summary>KeyBindingService から動的に InputBindings を構築する。</summary>
+        private void RebuildInputBindings()
+        {
+            InputBindings.Clear();
+            if (DataContext is not MainViewModel vm) return;
+
+            var kb = App.KeyBindings;
+
+            void AddBinding(string actionId, ICommand command, object? parameter = null)
+            {
+                var def = kb.Get(actionId);
+                if (def == null) return;
+                var binding = new KeyBinding(command, def.ActiveKey, def.ActiveModifiers);
+                if (parameter != null) binding.CommandParameter = parameter;
+                InputBindings.Add(binding);
+            }
+
+            AddBinding("Global.Undo", vm.UndoCommand);
+            AddBinding("Global.FocusActivePane", vm.FocusActivePaneCommand);
+            AddBinding("Global.OpenControlDeck", vm.OpenControlDeckCommand);
+            AddBinding("Global.FocusSearch", vm.FocusActiveSearchCommand);
+            AddBinding("Global.FocusIndexSearch", vm.FocusIndexSearchCommand);
+            AddBinding("Global.SetPaneCount1", vm.SetPaneCountCommand, "1");
+            AddBinding("Global.SetPaneCount2", vm.SetPaneCountCommand, "2");
+            AddBinding("Global.SidebarFavorites", vm.SetSidebarModeCommand, SidebarViewMode.Favorites);
+            AddBinding("Global.SidebarTree", vm.SetSidebarModeCommand, SidebarViewMode.Tree);
+            AddBinding("Global.SidebarHistory", vm.SetSidebarModeCommand, SidebarViewMode.History);
+            AddBinding("Global.SidebarIndexSearch", vm.SetSidebarModeCommand, SidebarViewMode.IndexSearch);
+            AddBinding("Global.SidebarWorkingSet", vm.SetSidebarModeCommand, SidebarViewMode.WorkingSet);
+        }
+
+        /// <summary>ツールチップのショートカット表示を KeyBindingService から動的に設定する。</summary>
+        private void UpdateShortcutTooltips()
+        {
+            var kb = App.KeyBindings;
+
+            void SetTip(FrameworkElement? el, string label, string actionId)
+            {
+                if (el == null) return;
+                var shortcut = kb.GetShortcutText(actionId);
+                el.ToolTip = string.IsNullOrEmpty(shortcut) ? label : $"{label} ({shortcut})";
+            }
+
+            SetTip(SidebarFavoritesBtn, "お気に入り", "Global.SidebarFavorites");
+            SetTip(SidebarTreeBtn, "ツリービュー", "Global.SidebarTree");
+            SetTip(SidebarHistoryBtn, "参照履歴", "Global.SidebarHistory");
+            SetTip(SidebarIndexSearchBtn, "インデックス検索設定", "Global.SidebarIndexSearch");
+            SetTip(SidebarWorkingSetBtn, "ワーキングセット", "Global.SidebarWorkingSet");
+            SetTip(OpenSettingsBtn, "アプリ設定を開く", "Global.OpenControlDeck");
         }
 
         private void MainWindow_ContentRendered(object? sender, EventArgs e)
@@ -206,6 +273,77 @@ namespace ZenithFiler
             };
             PaneContentArea.BeginAnimation(UIElement.OpacityProperty, anim);
             return tcs.Task;
+        }
+
+        // ── テーマ切り替えトランジション ──
+
+        /// <summary>テーマ適用前: オーバーレイを 130ms でフェードイン（カバー）。</summary>
+        private async Task AnimateThemeTransitionBeginAsync()
+        {
+            ThemeTransitionOverlay.Visibility = Visibility.Visible;
+            ThemeTransitionOverlay.Opacity = 0;
+            var tcs = new TaskCompletionSource();
+            var anim = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(130))
+            {
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            };
+            anim.Completed += (_, _) => tcs.SetResult();
+            ThemeTransitionOverlay.BeginAnimation(UIElement.OpacityProperty, anim);
+            await tcs.Task;
+        }
+
+        /// <summary>テーマ適用後: オーバーレイを 250ms でフェードアウト（reveal）。30ms の BeginTime で新テーマ初回描画を待つ。</summary>
+        private void AnimateThemeTransitionEnd()
+        {
+            var anim = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(250))
+            {
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
+                BeginTime = TimeSpan.FromMilliseconds(30)
+            };
+            anim.Completed += (_, _) =>
+            {
+                ThemeTransitionOverlay.BeginAnimation(UIElement.OpacityProperty, null);
+                ThemeTransitionOverlay.Opacity = 0;
+                ThemeTransitionOverlay.Visibility = Visibility.Collapsed;
+            };
+            ThemeTransitionOverlay.BeginAnimation(UIElement.OpacityProperty, anim);
+        }
+
+        // ── テーマトースト表示/非表示アニメーション ──
+
+        private void Notification_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName != nameof(NotificationService.IsThemeToastVisible)) return;
+            var vm = DataContext as MainViewModel;
+            if (vm == null) return;
+            if (vm.Notification.IsThemeToastVisible)
+                AnimateThemeToastIn();
+            else
+                AnimateThemeToastOut();
+        }
+
+        private void AnimateThemeToastIn()
+        {
+            ThemeToastBorder.Visibility = Visibility.Visible;
+            ThemeToastBorder.Opacity = 0;
+            var ease = new QuadraticEase { EasingMode = EasingMode.EaseOut };
+            var fadeIn = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(300)) { EasingFunction = ease };
+            var slideIn = new DoubleAnimation(14, 0, TimeSpan.FromMilliseconds(300)) { EasingFunction = ease };
+            ThemeToastBorder.BeginAnimation(UIElement.OpacityProperty, fadeIn);
+            ((TranslateTransform)ThemeToastBorder.RenderTransform).BeginAnimation(TranslateTransform.YProperty, slideIn);
+        }
+
+        private void AnimateThemeToastOut()
+        {
+            var ease = new QuadraticEase { EasingMode = EasingMode.EaseIn };
+            var fadeOut = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(500)) { EasingFunction = ease };
+            fadeOut.Completed += (_, _) =>
+            {
+                ThemeToastBorder.BeginAnimation(UIElement.OpacityProperty, null);
+                ThemeToastBorder.Opacity = 0;
+                ThemeToastBorder.Visibility = Visibility.Collapsed;
+            };
+            ThemeToastBorder.BeginAnimation(UIElement.OpacityProperty, fadeOut);
         }
 
         // ── Control Deck オーバーレイ：開閉アニメーション ──
@@ -519,7 +657,30 @@ namespace ZenithFiler
                 vm.AppSettings.LoadAutoSwitchToSinglePaneOnSearch(settings.AutoSwitchToSinglePaneOnSearch);
                 vm.AppSettings.LoadIndexSettings(settings.IndexSettings);
                 vm.AppSettings.LoadSearchResultFileTypeFilters(settings.SearchResultFileTypeFilterEnabled);
-                vm.AppSettings.LoadTheme(settings.ThemeName);
+                // 適用済みテーマでUIを初期化（Autoモード時はランダム選択後のテーマ名に同期）
+                vm.AppSettings.LoadTheme(App.StartupAppliedThemeName ?? settings.ThemeName);
+                vm.AppSettings.LoadThemeSettings(settings);  // モード・カテゴリ復元
+
+                // ペイン個別テーマ: ResourceDictionary を登録し、Pane モード起動時に復元
+                vm.AppSettings.RegisterPaneResources(
+                    SidebarBorder.Resources,
+                    LeftPaneControl.Resources,
+                    RightPaneControl.Resources);
+                vm.AppSettings.LoadShowStartupToast(settings.ShowStartupToast);
+                vm.AppSettings.LoadDisplayAndGeneralAndSearchSettings(settings);
+                vm.AppSettings.LoadPaneThemeNames(settings);
+                if (settings.CurrentThemeMode == "Pane")
+                {
+                    void ApplyIfSet(string name, ResourceDictionary dict)
+                    {
+                        if (!string.IsNullOrEmpty(name))
+                            App.ThemeService.ApplyThemeLive(name, dict);
+                    }
+                    ApplyIfSet(settings.NavPaneThemeName, SidebarBorder.Resources);
+                    ApplyIfSet(settings.APaneThemeName,   LeftPaneControl.Resources);
+                    ApplyIfSet(settings.BPaneThemeName,   RightPaneControl.Resources);
+                }
+
                 vm.SearchFilter.LoadFromSettings(settings);
                 vm.SearchPresets.LoadFromSettings(settings);
 
@@ -638,6 +799,28 @@ namespace ZenithFiler
         }
 
         /// <summary>
+        /// ウィンドウがアクティブになったとき、フォーカスを持つ要素がなければアクティブペインに復元する。
+        /// ControlDeck / ダイアログ等の Collapse・Hide 後にフォーカスが失われた場合の安全網。
+        /// </summary>
+        private void MainWindow_Activated(object? sender, EventArgs e)
+        {
+            // _isControlDeckOpen が true の間はオーバーレイが管理するためスキップ
+            if (_isControlDeckOpen) return;
+
+            Dispatcher.BeginInvoke(() =>
+            {
+                // ペイン内のどこかに既にフォーカスがあれば何もしない
+                var focused = Keyboard.FocusedElement as DependencyObject;
+                bool inPane = focused != null &&
+                              (IsDescendantOf(focused, LeftPaneControl) ||
+                               IsDescendantOf(focused, RightPaneControl));
+                if (inPane) return;
+
+                Vm_FocusRequested();
+            }, DispatcherPriority.Input);
+        }
+
+        /// <summary>
         /// ウィンドウが非アクティブになったとき（ダイアログ表示など）にキーボード操作モードを解除し、マウスカーソルを復元する。
         /// ダイアログ内でマウス操作が可能になる。
         /// </summary>
@@ -669,6 +852,7 @@ namespace ZenithFiler
         private IntPtr HwndHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
         {
             const int WM_HOTKEY = 0x0312;
+
             if (msg == WM_HOTKEY && wParam.ToInt32() == HOTKEY_ID)
             {
                 ActivateApp();
@@ -794,6 +978,31 @@ namespace ZenithFiler
                 await Dispatcher.InvokeAsync(() => Vm_FocusRequested(), DispatcherPriority.Loaded);
                 InitializationComplete?.Invoke(this, EventArgs.Empty);
                 StartWelcomeAnimation();
+
+                // 起動時テーマトースト（ウィンドウ描画完了・GlowBar 消灯後に表示）
+                if (App.StartupAppliedThemeName is string toastTheme && vm.AppSettings.ShowStartupToast)
+                {
+                    _ = Dispatcher.BeginInvoke(async () =>
+                    {
+                        await Task.Delay(900);
+                        if (vm.AppSettings.ActiveThemeMode == ThemeApplyMode.Pane)
+                        {
+                            var parts = new System.Collections.Generic.List<string>();
+                            if (!string.IsNullOrEmpty(vm.AppSettings.NavPaneThemeName))
+                                parts.Add($"Navi: {vm.AppSettings.NavPaneThemeName}");
+                            if (!string.IsNullOrEmpty(vm.AppSettings.APaneThemeName))
+                                parts.Add($"A: {vm.AppSettings.APaneThemeName}");
+                            if (!string.IsNullOrEmpty(vm.AppSettings.BPaneThemeName))
+                                parts.Add($"B: {vm.AppSettings.BPaneThemeName}");
+                            var text = parts.Count > 0 ? string.Join("  |  ", parts) : toastTheme;
+                            vm.Notification.ShowThemeToast(text, "Applied Themes");
+                        }
+                        else
+                        {
+                            vm.Notification.ShowThemeToast(toastTheme);
+                        }
+                    }, DispatcherPriority.Background);
+                }
             }
         }
 
@@ -1073,8 +1282,9 @@ namespace ZenithFiler
 
             if (DataContext is not MainViewModel vm) return;
 
-            // Space → Quick Preview 表示（修飾キーなし、TextBox 外のとき）
-            if (e.Key == Key.Space && Keyboard.Modifiers == ModifierKeys.None)
+            // Quick Preview 表示（カスタマイズ可能なキー、TextBox 外のとき）
+            var actualKey = e.Key == Key.System ? e.SystemKey : e.Key;
+            if (App.KeyBindings.Matches("Window.QuickPreview", actualKey, Keyboard.Modifiers))
             {
                 var focusedForPreview = Keyboard.FocusedElement as DependencyObject;
                 if (focusedForPreview != null && !(focusedForPreview is System.Windows.Controls.TextBox or System.Windows.Controls.RichTextBox))
@@ -1105,8 +1315,8 @@ namespace ZenithFiler
             bool inLeft = IsDescendantOf(focused, LeftPaneControl);
             bool inRight = IsDescendantOf(focused, RightPaneControl);
 
-            // TAB: Aペイン・Bペインを交互に切り替え（フォーカスがどちらかのペイン内にあるとき）
-            if (e.Key == Key.Tab && Keyboard.Modifiers == ModifierKeys.None)
+            // ペイン切替（カスタマイズ可能なキー）
+            if (App.KeyBindings.Matches("Window.SwitchPanes", actualKey, Keyboard.Modifiers))
             {
                 if (!(inLeft || inRight)) return;
                 if (RightPaneControl.Visibility != Visibility.Visible) return;
@@ -1162,8 +1372,9 @@ namespace ZenithFiler
                 // 修飾キーが押されている場合はInputBindingsの処理を妨げないよう、この処理をスキップ
                 bool hasModifiers = (Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Alt | ModifierKeys.Shift)) != ModifierKeys.None;
                 // アイコンビュー時は修飾キーなしのキーをウィンドウ側で握りつぶす（アドレスバー等にフォーカスがあっても転送経路に依存せず無効化）
-                // Space は Quick Preview で使用するため除外
-                if (!hasModifiers && e.Key != Key.Space)
+                // Quick Preview キーは除外
+                var qpDef = App.KeyBindings.Get("Window.QuickPreview");
+                if (!hasModifiers && !(qpDef != null && actualKey == qpDef.ActiveKey && Keyboard.Modifiers == qpDef.ActiveModifiers))
                 {
                     var tabContent = activePaneControl.GetActiveTabContent();
                     if (tabContent?.DataContext is TabItemViewModel tabVm && tabVm.FileViewMode != FileViewMode.Details)
@@ -1208,8 +1419,10 @@ namespace ZenithFiler
             bool hasModifiers = (Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Alt | ModifierKeys.Shift)) != ModifierKeys.None;
 
             // アイコンビュー時は修飾キーなしのキーをウィンドウ側で握りつぶす（KeyDown フェーズでも確実に無効化）
-            // Space は Quick Preview で使用するため除外
-            if (!hasModifiers && e.Key != Key.Space)
+            // Quick Preview キーは除外
+            var actualKeyDown = e.Key == Key.System ? e.SystemKey : e.Key;
+            var qpDefDown = App.KeyBindings.Get("Window.QuickPreview");
+            if (!hasModifiers && !(qpDefDown != null && actualKeyDown == qpDefDown.ActiveKey && Keyboard.Modifiers == qpDefDown.ActiveModifiers))
             {
                 var tabContent = activePaneControl.GetActiveTabContent();
                 if (tabContent?.DataContext is TabItemViewModel tabVm && tabVm.FileViewMode != FileViewMode.Details)
@@ -1903,6 +2116,27 @@ namespace ZenithFiler
                 SearchCustomStartDate = vm?.SearchFilter?.ParsedStartDate?.ToString("o"),
                 SearchCustomEndDate = vm?.SearchFilter?.ParsedEndDate?.ToString("o"),
                 ThemeName = vm?.AppSettings?.SelectedThemeName ?? "standard",
+                CurrentThemeMode  = vm?.AppSettings != null ? AppSettingsViewModel.ToModeStr(vm.AppSettings.ActiveThemeMode)  : "Personalize",
+                AutoSelectSubMode = vm?.AppSettings != null ? AppSettingsViewModel.ToSubStr(vm.AppSettings.ThemeRandomizeMode) : "All",
+                SelectedCategory  = vm?.AppSettings?.SelectedRandomCategory,
+                SavedThemeName    = vm?.AppSettings?.GetThemePersistenceForSave().SavedTheme ?? "standard",
+                NavPaneThemeName  = vm?.AppSettings?.NavPaneThemeName ?? string.Empty,
+                APaneThemeName    = vm?.AppSettings?.APaneThemeName   ?? string.Empty,
+                BPaneThemeName    = vm?.AppSettings?.BPaneThemeName   ?? string.Empty,
+                ShowStartupToast  = vm?.AppSettings?.ShowStartupToast ?? true,
+                // Display
+                EnableMicroAnimations = vm?.AppSettings?.EnableMicroAnimations ?? true,
+                ListRowHeight = vm?.AppSettings?.ListRowHeight ?? 32,
+                EnableListAnimations = vm?.AppSettings?.EnableListAnimations ?? true,
+                // General 追加分
+                SingleClickOpenFolder = vm?.AppSettings?.SingleClickOpenFolder ?? false,
+                ConfirmDelete = vm?.AppSettings?.ConfirmDelete ?? true,
+                RestoreTabsOnStartup = vm?.AppSettings?.RestoreTabsOnStartup ?? true,
+                NotificationDurationMs = vm?.AppSettings?.NotificationDurationMs ?? 3000,
+                // Search デフォルト
+                DefaultGroupFoldersFirst = vm?.AppSettings?.DefaultGroupFoldersFirst ?? true,
+                DefaultSortProperty = vm?.AppSettings?.DefaultSortProperty ?? "Name",
+                DefaultSortDirection = vm?.AppSettings?.DefaultSortDirection ?? ListSortDirection.Ascending,
                 SettingsVersion = 1,
                 IndexSettings = vm?.AppSettings?.GetIndexSettingsForSave(),
                 LeftPane = new PaneSettings

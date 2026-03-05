@@ -14,10 +14,10 @@
             <local:IndentToMarginConverter x:Key="IndentToMarginConverter" />
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
 
-            <SolidColorBrush x:Key="CardBackgroundBrush" Color="#FFFFFF" />
-            <SolidColorBrush x:Key="CardHoverBrush" Color="#DFDAC8" />
-            <SolidColorBrush x:Key="AcrylicSidebarBrush" Color="{StaticResource SidebarColor}" />
-            <SolidColorBrush x:Key="AcrylicBackgroundBrush" Color="{StaticResource BackgroundColor}" />
+            <SolidColorBrush x:Key="CardBackgroundBrush" Color="{DynamicResource BackgroundColor}" />
+            <SolidColorBrush x:Key="CardHoverBrush" Color="{DynamicResource ListHoverColor}" />
+            <SolidColorBrush x:Key="AcrylicSidebarBrush" Color="{DynamicResource SidebarColor}" />
+            <SolidColorBrush x:Key="AcrylicBackgroundBrush" Color="{DynamicResource BackgroundColor}" />
             <SolidColorBrush x:Key="InvertedTextBrush" Color="#FFFFFF" />
 
             <Style x:Key="TocItemContainerStyle" TargetType="ListBoxItem">

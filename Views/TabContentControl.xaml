@@ -414,7 +414,7 @@
                                     <BeginStoryboard>
                                         <Storyboard>
                                             <DoubleAnimation Storyboard.TargetName="HoverCircle" Storyboard.TargetProperty="Opacity"
-                                                             To="1" Duration="0:0:0.2">
+                                                             To="1" Duration="0:0:0.15">
                                                 <DoubleAnimation.EasingFunction>
                                                     <QuadraticEase EasingMode="EaseOut"/>
                                                 </DoubleAnimation.EasingFunction>
@@ -426,7 +426,7 @@
                                     <BeginStoryboard>
                                         <Storyboard>
                                             <DoubleAnimation Storyboard.TargetName="HoverCircle" Storyboard.TargetProperty="Opacity"
-                                                             To="0" Duration="0:0:0.2">
+                                                             To="0" Duration="0:0:0.15">
                                                 <DoubleAnimation.EasingFunction>
                                                     <QuadraticEase EasingMode="EaseOut"/>
                                                 </DoubleAnimation.EasingFunction>
@@ -681,16 +681,16 @@
                     <!-- 左側: アイコン群 -->
                     <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,8,0">
                         <!-- 1. ナビゲーション (履歴・階層) -->
-                        <Button Style="{StaticResource IconButton}" Command="{Binding BackCommand}" IsTabStop="False" Margin="0,0,2,0" ToolTip="戻る (Alt+←)">
+                        <Button x:Name="BackBtn" Style="{StaticResource IconButton}" Command="{Binding BackCommand}" IsTabStop="False" Margin="0,0,2,0" ToolTip="戻る">
                             <icon:PackIconLucide Kind="ArrowLeft" Width="12" Height="12" Style="{StaticResource ActivePaneToolbarIconStyle}"/>
                         </Button>
-                        <Button Style="{StaticResource IconButton}" Command="{Binding ForwardCommand}" IsTabStop="False" Margin="0,0,4,0" ToolTip="進む (Alt+→)">
+                        <Button x:Name="ForwardBtn" Style="{StaticResource IconButton}" Command="{Binding ForwardCommand}" IsTabStop="False" Margin="0,0,4,0" ToolTip="進む">
                             <icon:PackIconLucide Kind="ArrowRight" Width="12" Height="12" Style="{StaticResource ActivePaneToolbarIconStyle}"/>
                         </Button>
-                        <Button Style="{StaticResource IconButton}" Command="{Binding UpCommand}" IsTabStop="False" Margin="0,0,4,0" ToolTip="上へ (Backspace)">
+                        <Button x:Name="GoUpBtn" Style="{StaticResource IconButton}" Command="{Binding UpCommand}" IsTabStop="False" Margin="0,0,4,0" ToolTip="上へ">
                             <icon:PackIconLucide Kind="ArrowUp" Width="12" Height="12" Style="{StaticResource ActivePaneToolbarIconStyle}"/>
                         </Button>
-                        <Button Style="{StaticResource IconButton}" Command="{Binding RefreshCommand}" IsTabStop="False" Margin="0,0,4,0" ToolTip="更新 (F5)">
+                        <Button x:Name="RefreshBtn" Style="{StaticResource IconButton}" Command="{Binding RefreshCommand}" IsTabStop="False" Margin="0,0,4,0" ToolTip="更新">
                             <icon:PackIconLucide Kind="RotateCw" Width="12" Height="12" Style="{StaticResource ActivePaneToolbarIconStyle}"/>
                         </Button>
                         <TextBlock Text="|" Foreground="{DynamicResource ToolbarSeparatorBrush}" Margin="4,0" VerticalAlignment="Center" FontWeight="SemiBold"/>
@@ -708,7 +708,7 @@
                         <TextBlock Text="|" Foreground="{DynamicResource ToolbarSeparatorBrush}" Margin="4,0" VerticalAlignment="Center" FontWeight="SemiBold"/>
 
                         <!-- 3. 作成・編集 (新規追加) -->
-                        <Button Style="{StaticResource IconButton}" Command="{Binding CreateNewFolderCommand}" IsTabStop="False" Margin="0,0,4,0" ToolTip="フォルダを作成 (Ctrl+Shift+N)">
+                        <Button x:Name="NewFolderBtn" Style="{StaticResource IconButton}" Command="{Binding CreateNewFolderCommand}" IsTabStop="False" Margin="0,0,4,0" ToolTip="フォルダを作成">
                             <icon:PackIconLucide Kind="FolderPlus" Width="12" Height="12" Style="{StaticResource ActivePaneToolbarIconStyle}"/>
                         </Button>
                         <TextBlock Text="|" Foreground="{DynamicResource ToolbarSeparatorBrush}" Margin="4,0" VerticalAlignment="Center" FontWeight="SemiBold"/>
@@ -2846,6 +2846,7 @@
                     <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
                     <Setter Property="BorderThickness" Value="0,0,0,1"/>
                     <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="MinHeight" Value="{DynamicResource ListRowHeight}"/>
                     <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                     <Setter Property="VerticalContentAlignment" Value="Stretch"/>
                     <Setter Property="Template">

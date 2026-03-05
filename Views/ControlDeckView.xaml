@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:icon="http://metro.mahapps.com/winfx/xaml/iconpacks"
              xmlns:local="clr-namespace:ZenithFiler"
+             xmlns:ComponentModel="clr-namespace:System.ComponentModel;assembly=System"
              IsTabStop="False">
 
     <UserControl.Resources>
@@ -54,6 +55,24 @@
                         </StackPanel>
                     </RadioButton>
                     <RadioButton GroupName="ControlDeckNav" Style="{StaticResource ControlDeckNavButton}"
+                                 IsChecked="{Binding AppSettings.ActiveCategory, Mode=TwoWay, Converter={StaticResource EnumEqualityToBool}, ConverterParameter={x:Static local:SettingsCategory.Display}}">
+                        <StackPanel Orientation="Horizontal">
+                            <icon:PackIconLucide Kind="Monitor" Width="14" Height="14"
+                                                 VerticalAlignment="Center" Margin="0,0,10,0"
+                                                 Foreground="{DynamicResource SubTextBrush}"/>
+                            <TextBlock Text="表示" FontSize="13" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </RadioButton>
+                    <RadioButton GroupName="ControlDeckNav" Style="{StaticResource ControlDeckNavButton}"
+                                 IsChecked="{Binding AppSettings.ActiveCategory, Mode=TwoWay, Converter={StaticResource EnumEqualityToBool}, ConverterParameter={x:Static local:SettingsCategory.Theme}}">
+                        <StackPanel Orientation="Horizontal">
+                            <icon:PackIconLucide Kind="Palette" Width="14" Height="14"
+                                                 VerticalAlignment="Center" Margin="0,0,10,0"
+                                                 Foreground="{DynamicResource SubTextBrush}"/>
+                            <TextBlock Text="テーマ" FontSize="13" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </RadioButton>
+                    <RadioButton GroupName="ControlDeckNav" Style="{StaticResource ControlDeckNavButton}"
                                  IsChecked="{Binding AppSettings.ActiveCategory, Mode=TwoWay, Converter={StaticResource EnumEqualityToBool}, ConverterParameter={x:Static local:SettingsCategory.Search}}">
                         <StackPanel Orientation="Horizontal">
                             <icon:PackIconLucide Kind="Search" Width="14" Height="14"
@@ -81,12 +100,32 @@
                         </StackPanel>
                     </RadioButton>
                     <RadioButton GroupName="ControlDeckNav" Style="{StaticResource ControlDeckNavButton}"
-                                 IsChecked="{Binding AppSettings.ActiveCategory, Mode=TwoWay, Converter={StaticResource EnumEqualityToBool}, ConverterParameter={x:Static local:SettingsCategory.Theme}}">
+                                 IsChecked="{Binding AppSettings.ActiveCategory, Mode=TwoWay, Converter={StaticResource EnumEqualityToBool}, ConverterParameter={x:Static local:SettingsCategory.Shortcut}}">
                         <StackPanel Orientation="Horizontal">
-                            <icon:PackIconLucide Kind="Palette" Width="14" Height="14"
+                            <icon:PackIconLucide Kind="Keyboard" Width="14" Height="14"
                                                  VerticalAlignment="Center" Margin="0,0,10,0"
                                                  Foreground="{DynamicResource SubTextBrush}"/>
-                            <TextBlock Text="テーマ" FontSize="13" VerticalAlignment="Center"/>
+                            <TextBlock Text="ショートカットキー" FontSize="13" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </RadioButton>
+                    <!-- セパレーター -->
+                    <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="8,8,8,4"/>
+                    <RadioButton GroupName="ControlDeckNav" Style="{StaticResource ControlDeckNavButton}"
+                                 IsChecked="{Binding AppSettings.ActiveCategory, Mode=TwoWay, Converter={StaticResource EnumEqualityToBool}, ConverterParameter={x:Static local:SettingsCategory.License}}">
+                        <StackPanel Orientation="Horizontal">
+                            <icon:PackIconLucide Kind="KeyRound" Width="14" Height="14"
+                                                 VerticalAlignment="Center" Margin="0,0,10,0"
+                                                 Foreground="{DynamicResource SubTextBrush}"/>
+                            <TextBlock Text="ライセンス" FontSize="13" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </RadioButton>
+                    <RadioButton GroupName="ControlDeckNav" Style="{StaticResource ControlDeckNavButton}"
+                                 IsChecked="{Binding AppSettings.ActiveCategory, Mode=TwoWay, Converter={StaticResource EnumEqualityToBool}, ConverterParameter={x:Static local:SettingsCategory.About}}">
+                        <StackPanel Orientation="Horizontal">
+                            <icon:PackIconLucide Kind="Info" Width="14" Height="14"
+                                                 VerticalAlignment="Center" Margin="0,0,10,0"
+                                                 Foreground="{DynamicResource SubTextBrush}"/>
+                            <TextBlock Text="バージョン情報" FontSize="13" VerticalAlignment="Center"/>
                         </StackPanel>
                     </RadioButton>
                 </StackPanel>
@@ -103,7 +142,7 @@
                     <DockPanel>
                         <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}"
                                 Command="{Binding CloseControlDeckCommand}"
-                                ToolTip="閉じる (Esc)" IsTabStop="False"
+                                ToolTip="閉じる" IsTabStop="False"
                                 VerticalAlignment="Center">
                             <icon:PackIconLucide Kind="X" Width="14" Height="14"
                                                  Foreground="{DynamicResource SubTextBrush}"/>
@@ -126,6 +165,18 @@
                                         </DataTrigger>
                                         <DataTrigger Binding="{Binding AppSettings.ActiveCategory}" Value="{x:Static local:SettingsCategory.Theme}">
                                             <Setter Property="Text" Value="テーマ"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding AppSettings.ActiveCategory}" Value="{x:Static local:SettingsCategory.Display}">
+                                            <Setter Property="Text" Value="表示"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding AppSettings.ActiveCategory}" Value="{x:Static local:SettingsCategory.Shortcut}">
+                                            <Setter Property="Text" Value="ショートカットキー"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding AppSettings.ActiveCategory}" Value="{x:Static local:SettingsCategory.License}">
+                                            <Setter Property="Text" Value="ライセンス"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding AppSettings.ActiveCategory}" Value="{x:Static local:SettingsCategory.About}">
+                                            <Setter Property="Text" Value="バージョン情報"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
@@ -184,6 +235,7 @@
                                         <TextBox Grid.Column="0" Text="{Binding AppSettings.LeftPaneHomePath, UpdateSourceTrigger=PropertyChanged}"
                                                  Margin="0,0,4,0" FontSize="12" VerticalContentAlignment="Center"
                                                  IsReadOnly="True" Background="{DynamicResource InputBackgroundBrush}"
+                                                 Foreground="{DynamicResource TextBrush}"
                                                  HorizontalAlignment="Stretch" MinWidth="80"/>
                                         <Button Grid.Column="1" Style="{StaticResource IconButton}" Command="{Binding AppSettings.SetLeftPaneHomeFromCurrentCommand}"
                                                 ToolTip="表示中のフォルダを設定" IsTabStop="False" Margin="0,0,4,0">
@@ -215,6 +267,7 @@
                                         <TextBox Grid.Column="0" Text="{Binding AppSettings.RightPaneHomePath, UpdateSourceTrigger=PropertyChanged}"
                                                  Margin="0,0,4,0" FontSize="12" VerticalContentAlignment="Center"
                                                  IsReadOnly="True" Background="{DynamicResource InputBackgroundBrush}"
+                                                 Foreground="{DynamicResource TextBrush}"
                                                  HorizontalAlignment="Stretch" MinWidth="80"/>
                                         <Button Grid.Column="1" Style="{StaticResource IconButton}" Command="{Binding AppSettings.SetRightPaneHomeFromCurrentCommand}"
                                                 ToolTip="表示中のフォルダを設定" IsTabStop="False" Margin="0,0,4,0">
@@ -225,6 +278,59 @@
                                             <icon:PackIconLucide Kind="FolderOpen" Width="14" Height="14"/>
                                         </Button>
                                     </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- 操作 -->
+                            <Border Width="400" Margin="0,0,20,20" Padding="16,14" CornerRadius="6"
+                                    Background="{DynamicResource InputBackgroundBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="操作" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                                    <CheckBox IsChecked="{Binding AppSettings.SingleClickOpenFolder, Mode=TwoWay}"
+                                              Margin="0,0,0,2" FontSize="12">
+                                        <TextBlock Text="シングルクリックでフォルダを開く" TextWrapping="Wrap"/>
+                                    </CheckBox>
+                                    <TextBlock Text="オフの場合はダブルクリックでフォルダを開きます"
+                                               FontSize="11" Foreground="{DynamicResource SubTextBrush}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                                    <CheckBox IsChecked="{Binding AppSettings.ConfirmDelete, Mode=TwoWay}"
+                                              Margin="0,0,0,2" FontSize="12">
+                                        <TextBlock Text="ファイル削除時に確認ダイアログを表示する" TextWrapping="Wrap"/>
+                                    </CheckBox>
+                                    <TextBlock Text="オフにすると削除がワンアクションで即実行されます"
+                                               FontSize="11" Foreground="{DynamicResource SubTextBrush}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                                    <CheckBox IsChecked="{Binding AppSettings.RestoreTabsOnStartup, Mode=TwoWay}"
+                                              Margin="0,0,0,2" FontSize="12">
+                                        <TextBlock Text="起動時に前回のタブを復元する" TextWrapping="Wrap"/>
+                                    </CheckBox>
+                                    <TextBlock Text="オフにすると起動時にホームフォルダのみ表示します"
+                                               FontSize="11" Foreground="{DynamicResource SubTextBrush}" TextWrapping="Wrap" Margin="0,0,0,0"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- 通知 -->
+                            <Border Width="400" Margin="0,0,20,20" Padding="16,14" CornerRadius="6"
+                                    Background="{DynamicResource InputBackgroundBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="通知の表示時間" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,10"
+                                               Text="ファイルのコピー・移動・削除の完了や、テーマ変更などの操作結果をステータスバーに表示する時間を設定します。短めにすると素早く消え、長めにすると読み逃しを防げます。"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <RadioButton GroupName="NotificationDurationDeck" Style="{StaticResource OptionRadioButton}" Margin="0,0,12,0"
+                                                    IsChecked="{Binding AppSettings.NotificationDurationMs, Mode=TwoWay, Converter={StaticResource IntEqualityToBool}, ConverterParameter=1500}">
+                                            <TextBlock Text="短め (1.5秒)" FontSize="12"/>
+                                        </RadioButton>
+                                        <RadioButton GroupName="NotificationDurationDeck" Style="{StaticResource OptionRadioButton}" Margin="0,0,12,0"
+                                                    IsChecked="{Binding AppSettings.NotificationDurationMs, Mode=TwoWay, Converter={StaticResource IntEqualityToBool}, ConverterParameter=3000}">
+                                            <TextBlock Text="標準 (3秒)" FontSize="12"/>
+                                        </RadioButton>
+                                        <RadioButton GroupName="NotificationDurationDeck" Style="{StaticResource OptionRadioButton}"
+                                                    IsChecked="{Binding AppSettings.NotificationDurationMs, Mode=TwoWay, Converter={StaticResource IntEqualityToBool}, ConverterParameter=5000}">
+                                            <TextBlock Text="長め (5秒)" FontSize="12"/>
+                                        </RadioButton>
+                                    </StackPanel>
                                 </StackPanel>
                             </Border>
                         </WrapPanel>
@@ -315,6 +421,7 @@
                                                FontSize="11" Foreground="{DynamicResource SubTextBrush}" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </Border>
+
                         </WrapPanel>
                     </ScrollViewer>
 
@@ -443,11 +550,13 @@
                                     </TextBlock>
                                     <StackPanel Orientation="Horizontal">
                                         <Button Content="今すぐバックアップ"
+                                                Style="{StaticResource TextButton}"
                                                 Command="{Binding AppSettings.BackupNowCommand}"
-                                                Padding="12,6" Margin="0,0,8,0" IsTabStop="False"/>
+                                                Padding="12,6" Margin="0,0,8,0"/>
                                         <Button Content="復元..."
+                                                Style="{StaticResource TextButton}"
                                                 Command="{Binding AppSettings.RestoreCommand}"
-                                                Padding="12,6" IsTabStop="False"/>
+                                                Padding="12,6"/>
                                     </StackPanel>
                                 </StackPanel>
                             </Border>
@@ -544,19 +653,8 @@
                                                    TextWrapping="Wrap" Margin="0,0,0,12">
                                             アプリ起動時に、登録されたテーマの中から自動的に一つを選択します
                                         </TextBlock>
-                                        <!-- IsEnabled を除去: 無効化するとクリックが Border の MouseBinding に素通りし
-                                             AllThemes が強制選択される。Opacity で淡色表示しつつ常時クリック可能にする。
-                                             RadioButton クリック時は OnThemeRandomizeModeChanged が Random モードを自動アクティブ化。 -->
-                                        <StackPanel>
-                                            <StackPanel.Style>
-                                                <Style TargetType="StackPanel">
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding AppSettings.IsRandomModeActive}" Value="False">
-                                                            <Setter Property="Opacity" Value="0.45"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </StackPanel.Style>
+                                        <!-- ペイン個別適用セクションと同一の IsEnabled 制御 -->
+                                        <StackPanel IsEnabled="{Binding AppSettings.IsRandomModeActive}">
                                             <RadioButton GroupName="ThemeRandomizeDeck"
                                                          Style="{StaticResource OptionRadioButton}" Margin="0,0,0,6"
                                                          IsChecked="{Binding AppSettings.ThemeRandomizeMode, Mode=TwoWay,
@@ -572,6 +670,97 @@
                                                 <TextBlock Text="現在のカテゴリからランダム" FontSize="12"/>
                                             </RadioButton>
                                         </StackPanel>
+                                        <!-- 即時ランダム抽選ボタン: 自動選択モード時のみ表示 -->
+                                        <!-- IsMouseOver Trigger で全域ホバー検知（EventTrigger MouseEnter は子要素キャプチャ時に発火しないため非採用） -->
+                                        <Button HorizontalAlignment="Stretch" Padding="0,10" Margin="0,22,0,0"
+                                                IsTabStop="False" Cursor="Hand"
+                                                Visibility="{Binding AppSettings.IsRandomModeActive, Converter={StaticResource BoolToVis}}"
+                                                Command="{Binding AppSettings.DrawRandomThemeCommand}">
+                                            <Button.Style>
+                                                <Style TargetType="Button">
+                                                    <Setter Property="Template">
+                                                        <Setter.Value>
+                                                            <ControlTemplate TargetType="Button">
+                                                                <!-- Root を Grid に変更: AccentBrush・HoverGlow がパディング込みの全域をカバー -->
+                                                                <Grid x:Name="Root">
+                                                                    <Grid.RenderTransform>
+                                                                        <ScaleTransform x:Name="ScaleT"/>
+                                                                    </Grid.RenderTransform>
+                                                                    <Grid.RenderTransformOrigin>0.5,0.5</Grid.RenderTransformOrigin>
+                                                                    <!-- AccentBrush 塗りつぶし（全域） -->
+                                                                    <Border CornerRadius="6" Background="{DynamicResource AccentBrush}"/>
+                                                                    <!-- 白発光オーバーレイ（全域・Padding 領域を含む） -->
+                                                                    <Border x:Name="HoverGlow" CornerRadius="6"
+                                                                            Background="White" Opacity="0"
+                                                                            IsHitTestVisible="False"/>
+                                                                    <!-- コンテンツ: Padding を Margin で再現 -->
+                                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                                      Margin="{TemplateBinding Padding}"/>
+                                                                </Grid>
+                                                                <ControlTemplate.Triggers>
+                                                                    <!-- IsMouseOver: Border 全域でホバー検知・スケールアップ + 白発光 -->
+                                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                                        <Trigger.EnterActions>
+                                                                            <BeginStoryboard>
+                                                                                <Storyboard>
+                                                                                    <DoubleAnimation Storyboard.TargetName="ScaleT"
+                                                                                                     Storyboard.TargetProperty="ScaleX"
+                                                                                                     To="1.04" Duration="0:0:0.15">
+                                                                                        <DoubleAnimation.EasingFunction>
+                                                                                            <QuadraticEase EasingMode="EaseOut"/>
+                                                                                        </DoubleAnimation.EasingFunction>
+                                                                                    </DoubleAnimation>
+                                                                                    <DoubleAnimation Storyboard.TargetName="ScaleT"
+                                                                                                     Storyboard.TargetProperty="ScaleY"
+                                                                                                     To="1.04" Duration="0:0:0.15">
+                                                                                        <DoubleAnimation.EasingFunction>
+                                                                                            <QuadraticEase EasingMode="EaseOut"/>
+                                                                                        </DoubleAnimation.EasingFunction>
+                                                                                    </DoubleAnimation>
+                                                                                    <DoubleAnimation Storyboard.TargetName="HoverGlow"
+                                                                                                     Storyboard.TargetProperty="Opacity"
+                                                                                                     To="0.18" Duration="0:0:0.15"/>
+                                                                                </Storyboard>
+                                                                            </BeginStoryboard>
+                                                                        </Trigger.EnterActions>
+                                                                        <Trigger.ExitActions>
+                                                                            <BeginStoryboard>
+                                                                                <Storyboard>
+                                                                                    <DoubleAnimation Storyboard.TargetName="ScaleT"
+                                                                                                     Storyboard.TargetProperty="ScaleX"
+                                                                                                     To="1.0" Duration="0:0:0.2"/>
+                                                                                    <DoubleAnimation Storyboard.TargetName="ScaleT"
+                                                                                                     Storyboard.TargetProperty="ScaleY"
+                                                                                                     To="1.0" Duration="0:0:0.2"/>
+                                                                                    <DoubleAnimation Storyboard.TargetName="HoverGlow"
+                                                                                                     Storyboard.TargetProperty="Opacity"
+                                                                                                     To="0" Duration="0:0:0.2"/>
+                                                                                </Storyboard>
+                                                                            </BeginStoryboard>
+                                                                        </Trigger.ExitActions>
+                                                                    </Trigger>
+                                                                    <!-- IsPressed: アニメーションなし Setter で競合を回避、Opacity で押し込み感 -->
+                                                                    <Trigger Property="IsPressed" Value="True">
+                                                                        <Setter TargetName="Root" Property="Opacity" Value="0.68"/>
+                                                                    </Trigger>
+                                                                    <!-- 無効時: 淡色 -->
+                                                                    <Trigger Property="IsEnabled" Value="False">
+                                                                        <Setter Property="Opacity" Value="0.38"/>
+                                                                    </Trigger>
+                                                                </ControlTemplate.Triggers>
+                                                            </ControlTemplate>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                </Style>
+                                            </Button.Style>
+                                            <StackPanel Orientation="Horizontal">
+                                                <icon:PackIconLucide Kind="Dices" Width="13" Height="13"
+                                                                     Foreground="White"
+                                                                     VerticalAlignment="Center" Margin="0,0,7,0"/>
+                                                <TextBlock Text="今すぐ抽選" FontSize="12" FontWeight="SemiBold"
+                                                           VerticalAlignment="Center" Foreground="White"/>
+                                            </StackPanel>
+                                        </Button>
                                     </StackPanel>
                                 </Border>
 
@@ -654,18 +843,6 @@
                                                 </StackPanel>
                                             </RadioButton>
                                         </StackPanel>
-                                        <Border CornerRadius="4" Padding="10,8"
-                                                Background="{DynamicResource BackgroundBrush}"
-                                                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
-                                            <StackPanel Orientation="Horizontal">
-                                                <icon:PackIconLucide Kind="Clock" Width="11" Height="11"
-                                                                     Foreground="{DynamicResource SubTextBrush}"
-                                                                     Opacity="0.5" VerticalAlignment="Center"
-                                                                     Margin="0,0,6,0"/>
-                                                <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}"
-                                                           Opacity="0.6">将来実装：ペインごとのテーマ割り当て</TextBlock>
-                                            </StackPanel>
-                                        </Border>
                                     </StackPanel>
                                 </Border>
 
@@ -809,8 +986,8 @@
                                                     </StackPanel>
                                                     <TextBlock Text="{Binding Name, Converter={StaticResource ThemeCategoryDesc}}"
                                                                FontSize="11" Foreground="{DynamicResource SubTextBrush}"
-                                                               Opacity="0.7" Margin="0,15,0,15"
-                                                               TextWrapping="Wrap" MaxWidth="250"/>
+                                                               Opacity="0.7" Margin="0,15,12,15"
+                                                               TextWrapping="Wrap" MaxWidth="280"/>
                                                     <!-- カテゴリ選択誘導インジケーター（カテゴリランダムモード・未選択時のみ表示） -->
                                                     <Border HorizontalAlignment="Left" CornerRadius="4" Padding="7,4"
                                                             Margin="0,0,0,6" BorderThickness="1"
@@ -885,7 +1062,7 @@
                                                         <Trigger Property="IsMouseOver" Value="True">
                                                             <Setter TargetName="CardBorder" Property="Background" Value="{DynamicResource ListHoverBrush}"/>
                                                         </Trigger>
-                                                        <!-- プリセットモード時のみ: 適用中テーマを SelectedThemeName 文字列比較で直接判定。
+                                                        <!-- Pane モード以外: 適用中テーマを SelectedThemeName 文字列比較で直接判定。
                                                              ListBoxItem.IsSelected への依存を排除し、設定パネル起動直後から確実に発光する。 -->
                                                         <DataTrigger Value="True">
                                                             <DataTrigger.Binding>
@@ -893,7 +1070,7 @@
                                                                     <Binding Path="Name"/>
                                                                     <Binding Path="DataContext.AppSettings.SelectedThemeName"
                                                                              RelativeSource="{RelativeSource AncestorType=UserControl}"/>
-                                                                    <Binding Path="DataContext.AppSettings.IsAssignmentModeActive"
+                                                                    <Binding Path="DataContext.AppSettings.ActiveThemeMode"
                                                                              RelativeSource="{RelativeSource AncestorType=UserControl}"/>
                                                                 </MultiBinding>
                                                             </DataTrigger.Binding>
@@ -1016,6 +1193,438 @@
                             </ListBox>
                         </StackPanel>
                     </ScrollViewer>
+
+                    <!-- ══ Display ══ -->
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                  Padding="0"
+                                  Visibility="{Binding AppSettings.ActiveCategory, Converter={StaticResource EnumEqualityToVis}, ConverterParameter={x:Static local:SettingsCategory.Display}}">
+                        <WrapPanel Margin="24,20" Orientation="Horizontal">
+
+                            <!-- ファイル一覧の行高 -->
+                            <Border Width="400" Margin="0,0,20,20" Padding="16,14" CornerRadius="6"
+                                    Background="{DynamicResource InputBackgroundBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="ファイル一覧の行高" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,10"
+                                               Text="ファイル一覧の各行の高さを調整します。コンパクトにすると一度に多くのファイルを表示でき、ゆったりにするとクリックしやすくなります。"/>
+                                    <RadioButton GroupName="ListRowHeightDeck" Style="{StaticResource OptionRadioButton}" Margin="0,0,0,6"
+                                                IsChecked="{Binding AppSettings.ListRowHeight, Mode=TwoWay, Converter={StaticResource IntEqualityToBool}, ConverterParameter=24}">
+                                        <TextBlock Text="コンパクト (24 px)" FontSize="12"/>
+                                    </RadioButton>
+                                    <RadioButton GroupName="ListRowHeightDeck" Style="{StaticResource OptionRadioButton}" Margin="0,0,0,6"
+                                                IsChecked="{Binding AppSettings.ListRowHeight, Mode=TwoWay, Converter={StaticResource IntEqualityToBool}, ConverterParameter=32}">
+                                        <TextBlock Text="標準 (32 px)" FontSize="12"/>
+                                    </RadioButton>
+                                    <RadioButton GroupName="ListRowHeightDeck" Style="{StaticResource OptionRadioButton}"
+                                                IsChecked="{Binding AppSettings.ListRowHeight, Mode=TwoWay, Converter={StaticResource IntEqualityToBool}, ConverterParameter=40}">
+                                        <TextBlock Text="ゆったり (40 px)" FontSize="12"/>
+                                    </RadioButton>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- マイクロアニメーション -->
+                            <Border Width="400" Margin="0,0,20,20" Padding="16,14" CornerRadius="6"
+                                    Background="{DynamicResource InputBackgroundBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="マイクロアニメーション" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,10"
+                                               Text="タブ操作・パネル切り替えなど UI ナビゲーション時のトランジション効果を制御します。"/>
+                                    <CheckBox IsChecked="{Binding AppSettings.EnableMicroAnimations, Mode=TwoWay}"
+                                              Margin="0,0,0,10" FontSize="12">
+                                        <TextBlock Text="マイクロアニメーションを有効にする" TextWrapping="Wrap"/>
+                                    </CheckBox>
+                                    <TextBlock Text="対象のアニメーション:" FontSize="11" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,4"/>
+                                    <StackPanel Margin="8,0,0,0">
+                                        <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,2" TextWrapping="Wrap"
+                                                   Text="・ タブ切り替え — コンテンツのフェードイン"/>
+                                        <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,2" TextWrapping="Wrap"
+                                                   Text="・ タブインジケーター — アクティブタブ下線のスライド移動"/>
+                                        <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,2" TextWrapping="Wrap"
+                                                   Text="・ クイックプレビュー — 開閉時のフェード・スライド"/>
+                                        <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,2" TextWrapping="Wrap"
+                                                   Text="・ タブ D&amp;D — ドラッグ中の挿入マーカーのフェードイン"/>
+                                        <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,0" TextWrapping="Wrap"
+                                                   Text="・ インデックスポップアップ — ステータスバーのポップアップのフェード"/>
+                                    </StackPanel>
+                                    <TextBlock Text="無効にすると動作が軽くなる場合があります"
+                                               FontSize="11" Foreground="{DynamicResource SubTextBrush}"
+                                               TextWrapping="Wrap" Margin="0,8,0,0"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- 一覧表示アニメーション -->
+                            <Border Width="400" Margin="0,0,20,20" Padding="16,14" CornerRadius="6"
+                                    Background="{DynamicResource InputBackgroundBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="一覧表示アニメーション" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,10"
+                                               Text="ファイル一覧上でのホバーエフェクト（フェード・スケール）を制御します。無効にすると即時切り替えになり、低スペック環境での動作を改善できます。"/>
+                                    <CheckBox IsChecked="{Binding AppSettings.EnableListAnimations, Mode=TwoWay}"
+                                              Margin="0,0,0,10" FontSize="12">
+                                        <TextBlock Text="一覧のホバーアニメーションを有効にする" TextWrapping="Wrap"/>
+                                    </CheckBox>
+                                    <TextBlock Text="対象のアニメーション:" FontSize="11" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,4"/>
+                                    <StackPanel Margin="8,0,0,0">
+                                        <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,2" TextWrapping="Wrap"
+                                                   Text="・ アイコンビュー — ホバー時の情報オーバーレイのフェードイン"/>
+                                        <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,2" TextWrapping="Wrap"
+                                                   Text="・ お気に入りボタン — ホバー時の円形背景のフェードイン"/>
+                                        <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,0" TextWrapping="Wrap"
+                                                   Text="・ 検索アイコン — インデックスモード時のホバースケール拡大"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- 起動時の通知 -->
+                            <Border Width="400" Margin="0,0,20,20" Padding="16,14" CornerRadius="6"
+                                    Background="{DynamicResource InputBackgroundBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="起動時の通知" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,10"
+                                               Text="アプリ起動直後にテーマ適用結果をトースト通知で表示するか設定します。テーマをランダム・カテゴリモードで使用している場合に、どのテーマが適用されたか確認するのに役立ちます。"/>
+                                    <CheckBox IsChecked="{Binding AppSettings.ShowStartupToast, Mode=TwoWay}"
+                                              FontSize="12">
+                                        <TextBlock Text="起動時のテーマ適用通知を表示する" TextWrapping="Wrap"/>
+                                    </CheckBox>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- 新規タブのデフォルト表示 -->
+                            <Border Width="400" Margin="0,0,20,20" Padding="16,14" CornerRadius="6"
+                                    Background="{DynamicResource InputBackgroundBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="新規タブのデフォルト表示" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,10"
+                                               Text="Ctrl+T やパスを指定して開いた新規タブに適用されるデフォルトの並び順です。検索結果タブには適用されません。"/>
+                                    <CheckBox IsChecked="{Binding AppSettings.DefaultGroupFoldersFirst, Mode=TwoWay}"
+                                              Margin="0,0,0,10" FontSize="12">
+                                        <TextBlock Text="フォルダを先頭に表示する" TextWrapping="Wrap"/>
+                                    </CheckBox>
+                                    <TextBlock Text="デフォルトのソート順" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,6"
+                                               Foreground="{DynamicResource SubTextBrush}"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6" FlowDirection="LeftToRight">
+                                        <RadioButton GroupName="DefaultSortPropertyDeck" Style="{StaticResource OptionRadioButton}" Margin="0,0,8,0"
+                                                    IsChecked="{Binding AppSettings.DefaultSortProperty, Mode=TwoWay, Converter={StaticResource EnumEqualityToBool}, ConverterParameter=Name}">
+                                            <TextBlock Text="名前" FontSize="12"/>
+                                        </RadioButton>
+                                        <RadioButton GroupName="DefaultSortPropertyDeck" Style="{StaticResource OptionRadioButton}" Margin="0,0,8,0"
+                                                    IsChecked="{Binding AppSettings.DefaultSortProperty, Mode=TwoWay, Converter={StaticResource EnumEqualityToBool}, ConverterParameter=LastModified}">
+                                            <TextBlock Text="更新日" FontSize="12"/>
+                                        </RadioButton>
+                                        <RadioButton GroupName="DefaultSortPropertyDeck" Style="{StaticResource OptionRadioButton}" Margin="0,0,8,0"
+                                                    IsChecked="{Binding AppSettings.DefaultSortProperty, Mode=TwoWay, Converter={StaticResource EnumEqualityToBool}, ConverterParameter=Size}">
+                                            <TextBlock Text="サイズ" FontSize="12"/>
+                                        </RadioButton>
+                                        <RadioButton GroupName="DefaultSortPropertyDeck" Style="{StaticResource OptionRadioButton}"
+                                                    IsChecked="{Binding AppSettings.DefaultSortProperty, Mode=TwoWay, Converter={StaticResource EnumEqualityToBool}, ConverterParameter=Extension}">
+                                            <TextBlock Text="拡張子" FontSize="12"/>
+                                        </RadioButton>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" FlowDirection="LeftToRight">
+                                        <RadioButton GroupName="DefaultSortDirectionDeck" Style="{StaticResource OptionRadioButton}" Margin="0,0,8,0"
+                                                    IsChecked="{Binding AppSettings.DefaultSortDirection, Mode=TwoWay, Converter={StaticResource EnumEqualityToBool}, ConverterParameter={x:Static ComponentModel:ListSortDirection.Ascending}}">
+                                            <TextBlock Text="昇順" FontSize="12"/>
+                                        </RadioButton>
+                                        <RadioButton GroupName="DefaultSortDirectionDeck" Style="{StaticResource OptionRadioButton}"
+                                                    IsChecked="{Binding AppSettings.DefaultSortDirection, Mode=TwoWay, Converter={StaticResource EnumEqualityToBool}, ConverterParameter={x:Static ComponentModel:ListSortDirection.Descending}}">
+                                            <TextBlock Text="降順" FontSize="12"/>
+                                        </RadioButton>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                        </WrapPanel>
+                    </ScrollViewer>
+
+                    <!-- ═══ ショートカットキー ═══ -->
+                    <ScrollViewer Visibility="{Binding AppSettings.ActiveCategory, Converter={StaticResource EnumEqualityToVis}, ConverterParameter={x:Static local:SettingsCategory.Shortcut}}"
+                                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                  Padding="0,0,4,0"
+                                  xmlns:controls="clr-namespace:ZenithFiler.Controls">
+                        <StackPanel Margin="24,20" MaxWidth="640">
+                            <!-- 一括リセットボタン -->
+                            <DockPanel Margin="0,0,0,16">
+                                <TextBlock DockPanel.Dock="Left" FontSize="12" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource SubTextBrush}"
+                                           Text="キーバインドをクリックしてキーを入力すると変更できます"/>
+                                <Button DockPanel.Dock="Right" HorizontalAlignment="Right"
+                                        Style="{StaticResource IconButton}"
+                                        Command="{Binding AppSettings.ResetAllKeyBindingsCommand}"
+                                        ToolTip="すべてのショートカットキーを標準に戻す"
+                                        Padding="8,4">
+                                    <StackPanel Orientation="Horizontal">
+                                        <icon:PackIconLucide Kind="RotateCcw" Width="12" Height="12"
+                                                             VerticalAlignment="Center" Margin="0,0,4,0"
+                                                             Foreground="{DynamicResource SubTextBrush}"/>
+                                        <TextBlock Text="すべて標準に戻す" FontSize="11" VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource SubTextBrush}"/>
+                                    </StackPanel>
+                                </Button>
+                            </DockPanel>
+
+                            <!-- グループ別キーバインド一覧 -->
+                            <ItemsControl ItemsSource="{Binding AppSettings.KeyBindingGroups}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Margin="0,0,0,20">
+                                            <!-- グループ見出し -->
+                                            <TextBlock Text="{Binding GroupName}" FontSize="13" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                                            <Border Background="{DynamicResource InputBackgroundBrush}"
+                                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                                    CornerRadius="6" Padding="0">
+                                                <ItemsControl ItemsSource="{Binding Bindings}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border Padding="12,8"
+                                                                    BorderBrush="{DynamicResource BorderBrush}"
+                                                                    BorderThickness="0,0,0,1">
+                                                                <Grid>
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="*"/>
+                                                                        <ColumnDefinition Width="Auto"/>
+                                                                        <ColumnDefinition Width="Auto"/>
+                                                                    </Grid.ColumnDefinitions>
+
+                                                                    <!-- アクション名 -->
+                                                                    <TextBlock Grid.Column="0" Text="{Binding DisplayName}"
+                                                                               FontSize="12" VerticalAlignment="Center"
+                                                                               Foreground="{DynamicResource TextBrush}"/>
+
+                                                                    <!-- キーバインド表示（HotkeyRecorderControl） -->
+                                                                    <controls:HotkeyRecorderControl Grid.Column="1"
+                                                                        BindingDefinition="{Binding}"
+                                                                        Margin="8,0"
+                                                                        KeyChanged="HotkeyRecorder_KeyChanged"/>
+
+                                                                    <!-- 個別リセットボタン（カスタマイズ済みの行のみ表示） -->
+                                                                    <Button Grid.Column="2" Style="{StaticResource IconButton}"
+                                                                            Command="{Binding DataContext.AppSettings.ResetKeyBindingCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                            CommandParameter="{Binding ActionId}"
+                                                                            ToolTip="デフォルトに戻す"
+                                                                            Visibility="{Binding IsCustomized, Converter={StaticResource BoolToVis}}"
+                                                                            Padding="4">
+                                                                        <icon:PackIconLucide Kind="RotateCcw" Width="10" Height="10"
+                                                                                             Foreground="{DynamicResource SubTextBrush}"/>
+                                                                    </Button>
+                                                                </Grid>
+
+                                                                <!-- 競合警告 -->
+                                                                <Border.Style>
+                                                                    <Style TargetType="Border">
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding ConflictWarning}" Value="">
+                                                                                <Setter Property="Tag" Value=""/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </Border.Style>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </Border>
+                                            <!-- 競合警告をグループ外に表示 -->
+                                            <ItemsControl ItemsSource="{Binding Bindings}" Margin="4,4,0,0">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding ConflictWarning}" FontSize="11"
+                                                                   Foreground="#E53935" Margin="0,2,0,0"
+                                                                   Visibility="{Binding ConflictWarning, Converter={StaticResource NonEmptyStringToVis}}"/>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- ═══ ライセンス ═══ -->
+                    <ScrollViewer Visibility="{Binding AppSettings.ActiveCategory, Converter={StaticResource EnumEqualityToVis}, ConverterParameter={x:Static local:SettingsCategory.License}}"
+                                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                  Padding="0,0,4,0">
+                        <StackPanel Margin="24,40" HorizontalAlignment="Center" MaxWidth="480">
+
+                            <!-- ライセンス状態バナー -->
+                            <Border Background="{DynamicResource PanelBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                    CornerRadius="8" Padding="24,20" Margin="0,0,0,24">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <!-- Full: チェック / Free: 鍵アイコン -->
+                                    <icon:PackIconLucide Width="28" Height="28" VerticalAlignment="Center" Margin="0,0,12,0">
+                                        <icon:PackIconLucide.Style>
+                                            <Style TargetType="icon:PackIconLucide">
+                                                <Setter Property="Kind" Value="Lock"/>
+                                                <Setter Property="Foreground" Value="{DynamicResource SubTextBrush}"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding AppSettings.IsFullLicense}" Value="True">
+                                                        <Setter Property="Kind" Value="ShieldCheck"/>
+                                                        <Setter Property="Foreground" Value="#4CAF50"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </icon:PackIconLucide.Style>
+                                    </icon:PackIconLucide>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding AppSettings.LicenseStatusText}" FontSize="16" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextBrush}"/>
+                                        <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}" Margin="0,2,0,0">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Text" Value="一部の機能に使用回数の制限があります"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding AppSettings.IsFullLicense}" Value="True">
+                                                            <Setter Property="Text" Value="すべての機能を無制限にご利用いただけます"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- 機能使用状況リスト -->
+                            <TextBlock Text="機能の使用状況" FontSize="14" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextBrush}" Margin="0,0,0,12"/>
+                            <ItemsControl ItemsSource="{Binding AppSettings.FeatureUsages}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{DynamicResource PanelBrush}"
+                                                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                                CornerRadius="6" Padding="16,12" Margin="0,0,0,8">
+                                            <Grid>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                </Grid.RowDefinitions>
+                                                <DockPanel Grid.Row="0" Margin="0,0,0,6">
+                                                    <TextBlock Text="{Binding DisplayName}" FontSize="13" FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource TextBrush}"/>
+                                                    <TextBlock Text="{Binding RemainingText}" FontSize="12"
+                                                               Foreground="{DynamicResource SubTextBrush}"
+                                                               HorizontalAlignment="Right"/>
+                                                </DockPanel>
+                                                <Grid Grid.Row="1">
+                                                    <ProgressBar Value="{Binding UsageRatio, Mode=OneWay}" Minimum="0" Maximum="1"
+                                                                 Height="6" Background="{DynamicResource BackgroundBrush}"
+                                                                 Foreground="{DynamicResource AccentBrush}"
+                                                                 BorderThickness="0"/>
+                                                    <TextBlock Text="{Binding UsageText}" FontSize="11"
+                                                               Foreground="{DynamicResource SubTextBrush}"
+                                                               HorizontalAlignment="Right" Margin="0,8,0,0"/>
+                                                </Grid>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- ライセンスキー入力欄（将来用） -->
+                            <Border Background="{DynamicResource PanelBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                    CornerRadius="8" Padding="24,20" Margin="0,16,0,0">
+                                <StackPanel>
+                                    <TextBlock Text="ライセンスキー" FontSize="12" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource SubTextBrush}"
+                                               Margin="0,0,0,8"/>
+                                    <Border Background="{DynamicResource BackgroundBrush}"
+                                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                            CornerRadius="4" Padding="12,10" IsEnabled="False">
+                                        <TextBlock Text="XXXX-XXXX-XXXX-XXXX" FontSize="13" FontFamily="Consolas"
+                                                   Foreground="{DynamicResource SubTextBrush}" Opacity="0.5"/>
+                                    </Border>
+                                    <TextBlock Text="※ ライセンスキーによる認証は今後のアップデートで対応予定です" FontSize="11"
+                                               Foreground="{DynamicResource SubTextBrush}"
+                                               Margin="0,10,0,0" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- ═══ バージョン情報 ═══ -->
+                    <ScrollViewer Visibility="{Binding AppSettings.ActiveCategory, Converter={StaticResource EnumEqualityToVis}, ConverterParameter={x:Static local:SettingsCategory.About}}"
+                                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                  Padding="0,0,4,0">
+                        <StackPanel Margin="24,40" HorizontalAlignment="Center" MaxWidth="520">
+                            <!-- アプリアイコン -->
+                            <Image Source="/assets/app_icon2_1.ico" Width="64" Height="64"
+                                   HorizontalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"
+                                   Margin="0,0,0,16"/>
+                            <!-- アプリ名 -->
+                            <TextBlock Text="ZenithFiler" FontSize="26" FontWeight="Bold"
+                                       HorizontalAlignment="Center"
+                                       Foreground="{DynamicResource TextBrush}"
+                                       Margin="0,0,0,4"/>
+                            <!-- バージョン -->
+                            <TextBlock Text="Version 0.17.0" FontSize="13"
+                                       HorizontalAlignment="Center"
+                                       Foreground="{DynamicResource SubTextBrush}"
+                                       Margin="0,0,0,24"/>
+                            <!-- キャッチコピー -->
+                            <Border Background="{DynamicResource PanelBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                    CornerRadius="8" Padding="24,20" Margin="0,0,0,20">
+                                <StackPanel>
+                                    <TextBlock FontSize="14" FontWeight="SemiBold" TextAlignment="Center"
+                                               Foreground="{DynamicResource TextBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,12"
+                                               Text="あなたの仕事の流れを、もっとスマートに。"/>
+                                    <TextBlock FontSize="12.5" TextAlignment="Center" LineHeight="22"
+                                               Foreground="{DynamicResource SubTextBrush}"
+                                               TextWrapping="Wrap"
+                                               Text="ZenithFiler はデュアルペイン構成とインテリジェント検索を核に、&#x0a;日常のファイル管理をすばやく・直感的に行えるよう設計された&#x0a;モダン Windows ファイラーです。&#x0a;シンプルな操作の中に、プロフェッショナルな効率を。"/>
+                                </StackPanel>
+                            </Border>
+                            <!-- 作者・著作権 -->
+                            <Border Background="{DynamicResource PanelBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                    CornerRadius="8" Padding="20,16">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="作者" FontSize="12"
+                                               Foreground="{DynamicResource SubTextBrush}"
+                                               FontWeight="SemiBold" Width="100" Margin="0,0,0,8"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="K.AKASAKA" FontSize="12"
+                                               Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="プラットフォーム" FontSize="12"
+                                               Foreground="{DynamicResource SubTextBrush}"
+                                               FontWeight="SemiBold" Width="100" Margin="0,0,0,8"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Text=".NET 8 / WPF" FontSize="12"
+                                               Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Copyright" FontSize="12"
+                                               Foreground="{DynamicResource SubTextBrush}"
+                                               FontWeight="SemiBold" Width="100"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="© 2024-2026 K.AKASAKA" FontSize="12"
+                                               Foreground="{DynamicResource TextBrush}"/>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+
                 </Grid>
             </DockPanel>
         </Border>

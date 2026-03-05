@@ -4,11 +4,13 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ZenithFiler.Models;
+using ZenithFiler.Services;
 
 namespace ZenithFiler
 {
@@ -41,7 +43,11 @@ namespace ZenithFiler
         Search,
         Index,
         Backup,
-        Theme
+        Theme,
+        Display,
+        Shortcut,
+        License,
+        About
     }
 
     /// <summary>テーマの自動選択モード。</summary>
@@ -142,6 +148,7 @@ namespace ZenithFiler
         [NotifyPropertyChangedFor(nameof(IsRandomModeActive))]
         [NotifyPropertyChangedFor(nameof(IsRandomCategoryModeActive))]
         [NotifyPropertyChangedFor(nameof(IsAwaitingCategorySelection))]
+        [NotifyCanExecuteChangedFor(nameof(DrawRandomThemeCommand))]
         private ThemeApplyMode _activeThemeMode = ThemeApplyMode.Preset;
 
         /// <summary>ペイン個別テーマ適用の選択ターゲット。</summary>
@@ -455,9 +462,226 @@ namespace ZenithFiler
             ActiveCategory = category;
         }
 
+        /// <summary>起動時テーマ適用トーストを表示するか。</summary>
+        [ObservableProperty]
+        private bool _showStartupToast = true;
+
+        partial void OnShowStartupToastChanged(bool value)
+        {
+            WindowSettings.SaveShowStartupToastOnly(value);
+        }
+
+        /// <summary>設定読み込み時に ShowStartupToast を反映する（保存トリガーなし）。</summary>
+        public void LoadShowStartupToast(bool value)
+        {
+            // OnShowStartupToastChanged の保存処理を起動させないためフィールドを直接更新する（意図的）
+#pragma warning disable MVVMTK0034
+            _showStartupToast = value;
+#pragma warning restore MVVMTK0034
+            OnPropertyChanged(nameof(ShowStartupToast));
+        }
+
+        // ─── Display ───
+
+        /// <summary>マイクロアニメーション ON/OFF。</summary>
+        [ObservableProperty]
+        private bool _enableMicroAnimations = true;
+
+        partial void OnEnableMicroAnimationsChanged(bool value)
+        {
+            WindowSettings.SetMicroAnimationsRuntime(value);
+            WindowSettings.SaveDisplaySettingsOnly(value, ListRowHeight);
+        }
+
+        /// <summary>ファイル一覧の行高（px）。24=コンパクト, 32=標準, 40=ゆったり。</summary>
+        [ObservableProperty]
+        private int _listRowHeight = 32;
+
+        partial void OnListRowHeightChanged(int value)
+        {
+            WindowSettings.SetListRowHeightRuntime(value);
+            Application.Current.Resources["ListRowHeight"] = (double)value;
+            WindowSettings.SaveDisplaySettingsOnly(EnableMicroAnimations, value);
+        }
+
+        /// <summary>一覧表示のホバーアニメーション（フェード・スケール等）ON/OFF。</summary>
+        [ObservableProperty]
+        private bool _enableListAnimations = true;
+
+        partial void OnEnableListAnimationsChanged(bool value)
+        {
+            WindowSettings.SetListAnimationsRuntime(value);
+            Application.Current.Resources["ListItemHoverDuration"] = new System.Windows.Duration(
+                value ? TimeSpan.FromSeconds(0.15) : TimeSpan.Zero);
+            WindowSettings.SaveListAnimationsOnly(value);
+        }
+
+        // ─── General 追加 ───
+
+        /// <summary>シングルクリックでフォルダを開く。</summary>
+        [ObservableProperty]
+        private bool _singleClickOpenFolder = false;
+
+        partial void OnSingleClickOpenFolderChanged(bool value)
+        {
+            WindowSettings.SetSingleClickOpenFolderRuntime(value);
+            WindowSettings.SaveGeneralSettingsOnly(value, ConfirmDelete, RestoreTabsOnStartup, NotificationDurationMs);
+        }
+
+        /// <summary>ファイル削除時に確認ダイアログを表示するか。</summary>
+        [ObservableProperty]
+        private bool _confirmDelete = true;
+
+        partial void OnConfirmDeleteChanged(bool value)
+        {
+            WindowSettings.SetConfirmDeleteRuntime(value);
+            WindowSettings.SaveGeneralSettingsOnly(SingleClickOpenFolder, value, RestoreTabsOnStartup, NotificationDurationMs);
+        }
+
+        /// <summary>起動時に前回のタブ構成を復元するか。</summary>
+        [ObservableProperty]
+        private bool _restoreTabsOnStartup = true;
+
+        partial void OnRestoreTabsOnStartupChanged(bool value)
+        {
+            WindowSettings.SaveGeneralSettingsOnly(SingleClickOpenFolder, ConfirmDelete, value, NotificationDurationMs);
+        }
+
+        /// <summary>通知トーストの表示時間（ms）。</summary>
+        [ObservableProperty]
+        private int _notificationDurationMs = 3000;
+
+        partial void OnNotificationDurationMsChanged(int value)
+        {
+            WindowSettings.SetNotificationDurationRuntime(value);
+            WindowSettings.SaveGeneralSettingsOnly(SingleClickOpenFolder, ConfirmDelete, RestoreTabsOnStartup, value);
+        }
+
+        // ─── Search デフォルト ───
+
+        /// <summary>新規タブ作成時のフォルダ先頭表示デフォルト。</summary>
+        [ObservableProperty]
+        private bool _defaultGroupFoldersFirst = true;
+
+        partial void OnDefaultGroupFoldersFirstChanged(bool value)
+        {
+            WindowSettings.SetDefaultGroupFoldersFirstRuntime(value);
+            WindowSettings.SaveSearchDefaultsOnly(value, DefaultSortProperty, DefaultSortDirection);
+        }
+
+        /// <summary>新規タブ作成時のデフォルトソートプロパティ名。</summary>
+        [ObservableProperty]
+        private string _defaultSortProperty = "Name";
+
+        partial void OnDefaultSortPropertyChanged(string value)
+        {
+            WindowSettings.SetDefaultSortPropertyRuntime(value);
+            WindowSettings.SaveSearchDefaultsOnly(DefaultGroupFoldersFirst, value, DefaultSortDirection);
+        }
+
+        /// <summary>新規タブ作成時のデフォルトソート方向。</summary>
+        [ObservableProperty]
+        private ListSortDirection _defaultSortDirection = ListSortDirection.Ascending;
+
+        partial void OnDefaultSortDirectionChanged(ListSortDirection value)
+        {
+            WindowSettings.SetDefaultSortDirectionRuntime(value);
+            WindowSettings.SaveSearchDefaultsOnly(DefaultGroupFoldersFirst, DefaultSortProperty, value);
+        }
+
+        /// <summary>設定読み込み時に Display / General追加 / Search デフォルト 設定を反映する（保存トリガーなし）。</summary>
+        public void LoadDisplayAndGeneralAndSearchSettings(WindowSettings s)
+        {
+#pragma warning disable MVVMTK0034
+            _enableMicroAnimations = s.EnableMicroAnimations;
+            _listRowHeight = s.ListRowHeight;
+            _singleClickOpenFolder = s.SingleClickOpenFolder;
+            _confirmDelete = s.ConfirmDelete;
+            _restoreTabsOnStartup = s.RestoreTabsOnStartup;
+            _notificationDurationMs = s.NotificationDurationMs;
+            _defaultGroupFoldersFirst = s.DefaultGroupFoldersFirst;
+            _defaultSortProperty = s.DefaultSortProperty;
+            _defaultSortDirection = s.DefaultSortDirection;
+            _enableListAnimations = s.EnableListAnimations;
+#pragma warning restore MVVMTK0034
+            OnPropertyChanged(nameof(EnableMicroAnimations));
+            OnPropertyChanged(nameof(ListRowHeight));
+            OnPropertyChanged(nameof(SingleClickOpenFolder));
+            OnPropertyChanged(nameof(ConfirmDelete));
+            OnPropertyChanged(nameof(RestoreTabsOnStartup));
+            OnPropertyChanged(nameof(NotificationDurationMs));
+            OnPropertyChanged(nameof(DefaultGroupFoldersFirst));
+            OnPropertyChanged(nameof(DefaultSortProperty));
+            OnPropertyChanged(nameof(DefaultSortDirection));
+            OnPropertyChanged(nameof(EnableListAnimations));
+        }
+
+        // ── ペイン個別テーマ ──
+        private ResourceDictionary? _navPaneResources;
+        private ResourceDictionary? _aPaneResources;
+        private ResourceDictionary? _bPaneResources;
+
+        /// <summary>MainWindow から起動時に各ペインの ResourceDictionary を登録する。</summary>
+        public void RegisterPaneResources(
+            ResourceDictionary navPane,
+            ResourceDictionary aPane,
+            ResourceDictionary bPane)
+        {
+            _navPaneResources = navPane;
+            _aPaneResources   = aPane;
+            _bPaneResources   = bPane;
+        }
+
+        private ResourceDictionary? GetPaneResources(PaneTarget target) => target switch
+        {
+            PaneTarget.Nav   => _navPaneResources,
+            PaneTarget.APane => _aPaneResources,
+            PaneTarget.BPane => _bPaneResources,
+            _                => null,
+        };
+
+        private void ClearPaneResources()
+        {
+            foreach (var dict in new[] { _navPaneResources, _aPaneResources, _bPaneResources })
+                dict?.Clear();
+        }
+
+        /// <summary>起動時に保存済みペインテーマ名を ViewModel に反映する（実際の適用は MainWindow.xaml.cs で行う）。</summary>
+        public void LoadPaneThemeNames(WindowSettings settings)
+        {
+            _suppressThemeChange = true;
+            NavPaneThemeName = settings.NavPaneThemeName;
+            APaneThemeName   = settings.APaneThemeName;
+            BPaneThemeName   = settings.BPaneThemeName;
+            _suppressThemeChange = false;
+        }
+
         // ─── テーマ ───
 
         private bool _suppressThemeChange;
+        private bool _isLoadingSettings = false;
+        private bool _themeTransitionInProgress;
+
+        /// <summary>テーマ適用前のフェードインアニメーション。MainWindow が設定する。</summary>
+        internal Func<Task>? OnBeforeThemeChangeAsync { get; set; }
+        /// <summary>テーマ適用後のフェードアウトアニメーション開始。MainWindow が設定する。</summary>
+        internal Action? OnAfterThemeChangeApplied { get; set; }
+
+        /// <summary>「パーソナライズ」モード時の最終テーマ名キャッシュ。閉じる時の SavedThemeName 保存に使用。</summary>
+        private string _savedThemeNameCache = "standard";
+
+        internal static string ToModeStr(ThemeApplyMode m) => m switch
+        {
+            ThemeApplyMode.Random => "Auto", ThemeApplyMode.Pane => "Pane", _ => "Personalize"
+        };
+        internal static string ToSubStr(ThemeRandomizeMode s) =>
+            s == ThemeRandomizeMode.CurrentCategory ? "Category" : "All";
+        private static ThemeApplyMode ParseMode(string? s) => s switch
+        {
+            "Auto" => ThemeApplyMode.Random, "Pane" => ThemeApplyMode.Pane, _ => ThemeApplyMode.Preset
+        };
+        private static ThemeRandomizeMode ParseSubMode(string? s) =>
+            s == "Category" ? ThemeRandomizeMode.CurrentCategory : ThemeRandomizeMode.AllThemes;
 
         /// <summary>設定読み込み時にテーマ名とテーマ一覧を初期化する。</summary>
         public void LoadTheme(string? themeName)
@@ -469,6 +693,32 @@ namespace ZenithFiler
             SelectedThemeInfo = AvailableThemes.FirstOrDefault(t => string.Equals(t.Name, name, StringComparison.OrdinalIgnoreCase))
                 ?? AvailableThemes.FirstOrDefault();
             _suppressThemeChange = false;
+        }
+
+        /// <summary>起動時に保存済みのモード設定を復元する（保存トリガーなし）。</summary>
+        public void LoadThemeSettings(WindowSettings settings)
+        {
+            // App.StartupSavedThemeName は ReadThemeSettingsFromSettings で ThemeName フォールバック済み
+            _savedThemeNameCache = App.StartupSavedThemeName;
+            _isLoadingSettings = true;
+            try
+            {
+                // OnXxxChanged の副作用（他フィールド上書き・保存）を起動させないためフィールドを直接更新する（意図的）
+#pragma warning disable MVVMTK0034
+                _selectedRandomCategory = settings.SelectedCategory;
+                _themeRandomizeMode = ParseSubMode(settings.AutoSelectSubMode);
+                _activeThemeMode = ParseMode(settings.CurrentThemeMode);
+#pragma warning restore MVVMTK0034
+                OnPropertyChanged(nameof(IsAssignmentModeActive));
+                OnPropertyChanged(nameof(IsRandomModeActive));
+                OnPropertyChanged(nameof(IsRandomCategoryModeActive));
+                OnPropertyChanged(nameof(IsAwaitingCategorySelection));
+                OnPropertyChanged(nameof(GalleryModeHint));
+            }
+            finally
+            {
+                _isLoadingSettings = false;
+            }
         }
 
         /// <summary>themes フォルダをスキャンしてテーマ一覧を更新する。</summary>
@@ -506,15 +756,20 @@ namespace ZenithFiler
                 return;
             }
 
-            // ペイン個別割り当てモード（将来実装のため保存のみ）
+            // ペイン個別割り当てモード
             if (ActiveThemeMode == ThemeApplyMode.Pane && SelectedPaneTarget != PaneTarget.None)
             {
+                var dict = GetPaneResources(SelectedPaneTarget);
+                if (dict != null)
+                    App.ThemeService.ApplyThemeLive(value.Name, dict);
+
                 switch (SelectedPaneTarget)
                 {
                     case PaneTarget.Nav:   NavPaneThemeName = value.Name; break;
                     case PaneTarget.APane: APaneThemeName   = value.Name; break;
                     case PaneTarget.BPane: BPaneThemeName   = value.Name; break;
                 }
+                WindowSettings.SavePaneThemeNames(NavPaneThemeName, APaneThemeName, BPaneThemeName);
                 return;
             }
 
@@ -523,16 +778,73 @@ namespace ZenithFiler
             SelectedThemeName = value.Name;
         }
 
+        /// <summary>アニメーション付きでテーマを適用する共通ヘルパー。連続クリック時はアニメなし即時適用。</summary>
+        private async Task ApplyThemeAnimatedAsync(string themeName, System.Windows.ResourceDictionary resources)
+        {
+            if (_themeTransitionInProgress)
+            {
+                App.ThemeService.ApplyThemeLive(themeName, resources);
+                return;
+            }
+            _themeTransitionInProgress = true;
+            try
+            {
+                if (OnBeforeThemeChangeAsync != null)
+                    await OnBeforeThemeChangeAsync();
+                App.ThemeService.ApplyThemeLive(themeName, resources);
+                OnAfterThemeChangeApplied?.Invoke();
+            }
+            finally
+            {
+                _themeTransitionInProgress = false;
+            }
+        }
+
         partial void OnSelectedThemeNameChanged(string value)
         {
             if (_suppressThemeChange) return;
             if (string.IsNullOrWhiteSpace(value)) return;
 
-            // ライブ適用
-            App.ThemeService.ApplyThemeLive(value, Application.Current.Resources);
+            // fire-and-forget でアニメーション付き適用（保存は同期で即実行）
+            _ = ApplyThemeAnimatedAsync(value, Application.Current.Resources);
             // 永続化
             WindowSettings.SaveThemeOnly(value);
+            // プリセットモード時は SavedThemeName にも保存し、キャッシュを更新
+            if (ActiveThemeMode == ThemeApplyMode.Preset)
+            {
+                _savedThemeNameCache = value;
+                WindowSettings.SavePresetThemeNameOnly(value);
+            }
         }
+
+        /// <summary>閉じる時の保存用に現在のテーマモード設定をまとめて返す。</summary>
+        public (string Mode, string SubMode, string? Category, string SavedTheme) GetThemePersistenceForSave() =>
+            (ToModeStr(ActiveThemeMode), ToSubStr(ThemeRandomizeMode), SelectedRandomCategory, _savedThemeNameCache);
+
+        /// <summary>自動選択モード時に即座にランダム抽選してテーマを適用する。</summary>
+        [RelayCommand(CanExecute = nameof(CanDrawRandomTheme))]
+        private async Task DrawRandomThemeAsync()
+        {
+            var allThemes = AvailableThemes.ToList();
+            var pool = (ThemeRandomizeMode == ThemeRandomizeMode.CurrentCategory && !string.IsNullOrEmpty(SelectedRandomCategory)
+                ? allThemes.Where(t => t.CategoryDisplayName == SelectedRandomCategory)
+                : (IEnumerable<Models.ThemeInfo>)allThemes).ToList();
+            if (pool.Count == 0) return;
+
+            var preferred = pool.Where(t => t.Name != SelectedThemeName).ToList();
+            var candidates = preferred.Count > 0 ? preferred : pool;
+            var pick = candidates[Random.Shared.Next(candidates.Count)];
+
+            await ApplyThemeAnimatedAsync(pick.Name, Application.Current.Resources);
+            _suppressThemeChange = true;
+            SelectedThemeName = pick.Name;
+            SelectedThemeInfo = AvailableThemes.FirstOrDefault(t => t.Name == pick.Name);
+            _suppressThemeChange = false;
+            WindowSettings.SaveThemeOnly(pick.Name);
+            App.Notification.Notify($"テーマを変更: {pick.Name}");
+        }
+
+        private bool CanDrawRandomTheme() => ActiveThemeMode == ThemeApplyMode.Random;
 
         partial void OnActiveThemeModeChanged(ThemeApplyMode value)
         {
@@ -543,6 +855,8 @@ namespace ZenithFiler
                         ThemeRandomizeMode = ThemeRandomizeMode.AllThemes;
                     SelectedPaneTarget = PaneTarget.None;
                     SelectedRandomCategory = null;
+                    // ペイン個別設定をクリア → Application.Current.Resources にフォールバック
+                    ClearPaneResources();
                     break;
                 case ThemeApplyMode.Pane:
                     ThemeRandomizeMode = ThemeRandomizeMode.Disabled;
@@ -552,8 +866,12 @@ namespace ZenithFiler
                     ThemeRandomizeMode = ThemeRandomizeMode.Disabled;
                     SelectedRandomCategory = null;
                     SelectedPaneTarget = PaneTarget.None;
+                    // ペイン個別設定をクリア → Application.Current.Resources にフォールバック
+                    ClearPaneResources();
                     break;
             }
+            if (!_isLoadingSettings)
+                WindowSettings.SaveThemeModeOnly(ToModeStr(value), ToSubStr(ThemeRandomizeMode), SelectedRandomCategory);
         }
 
         partial void OnThemeRandomizeModeChanged(ThemeRandomizeMode value)
@@ -566,6 +884,15 @@ namespace ZenithFiler
 
             if (value != ThemeRandomizeMode.CurrentCategory)
                 SelectedRandomCategory = null;
+
+            if (!_isLoadingSettings)
+                WindowSettings.SaveThemeModeOnly(ToModeStr(ActiveThemeMode), ToSubStr(value), SelectedRandomCategory);
+        }
+
+        partial void OnSelectedRandomCategoryChanged(string? value)
+        {
+            if (!_isLoadingSettings)
+                WindowSettings.SaveThemeModeOnly(ToModeStr(ActiveThemeMode), ToSubStr(ThemeRandomizeMode), value);
         }
 
         /// <summary>テーマ適用モードを切り替える。</summary>
@@ -588,6 +915,93 @@ namespace ZenithFiler
             catch (Exception ex)
             {
                 App.Notification.Notify("テーマのエクスポートに失敗しました", ex.Message);
+            }
+        }
+
+        // ═══ ライセンス ═══
+
+        /// <summary>ライセンス状態の表示テキスト。</summary>
+        [ObservableProperty]
+        private string _licenseStatusText = "読み込み中...";
+
+        /// <summary>Full ライセンスかどうか。</summary>
+        [ObservableProperty]
+        private bool _isFullLicense;
+
+        /// <summary>各機能の使用状況一覧。</summary>
+        public ObservableCollection<FeatureUsageInfo> FeatureUsages { get; } = new();
+
+        // ── ショートカットキー設定 ──
+
+        /// <summary>グループ別キーバインド定義。UI バインド用。</summary>
+        public ObservableCollection<Models.KeyBindingGroupViewModel> KeyBindingGroups { get; } = new();
+
+        private bool _keyBindingsLoaded;
+
+        /// <summary>ショートカットキー設定をロードする。</summary>
+        public void LoadKeyBindings()
+        {
+            if (_keyBindingsLoaded) return;
+            _keyBindingsLoaded = true;
+
+            KeyBindingGroups.Clear();
+            foreach (var group in App.KeyBindings.GetGroups())
+                KeyBindingGroups.Add(group);
+        }
+
+        [RelayCommand]
+        private void ResetAllKeyBindings()
+        {
+            App.KeyBindings.ResetAll();
+            WindowSettings.SaveKeyBindingsOnly(null);
+
+            // グループを再ロード
+            _keyBindingsLoaded = false;
+            LoadKeyBindings();
+        }
+
+        [RelayCommand]
+        private void ResetKeyBinding(string? actionId)
+        {
+            if (string.IsNullOrEmpty(actionId)) return;
+            App.KeyBindings.ResetToDefault(actionId);
+            SaveKeyBindings();
+        }
+
+        /// <summary>現在のカスタムバインドを保存する。</summary>
+        internal void SaveKeyBindings()
+        {
+            var customBindings = App.KeyBindings.GetCustomBindingsForSave();
+            WindowSettings.SaveKeyBindingsOnly(customBindings.Count > 0 ? customBindings : null);
+        }
+
+        /// <summary>カテゴリ切替時に License / Shortcut を選んだ場合に読み込みを実行する。</summary>
+        partial void OnActiveCategoryChanged(SettingsCategory value)
+        {
+            if (value == SettingsCategory.License)
+                _ = LoadLicenseStatusAsync();
+            else if (value == SettingsCategory.Shortcut)
+                LoadKeyBindings();
+        }
+
+        /// <summary>ライセンス状態と各機能の使用状況を読み込みます。</summary>
+        public async Task LoadLicenseStatusAsync()
+        {
+            try
+            {
+                var svc = App.License;
+                IsFullLicense = svc.IsFullLicense;
+                LicenseStatusText = svc.IsFullLicense ? "製品版（Full License）" : "無料版（Free）";
+
+                var usages = await svc.GetAllFeatureUsagesAsync();
+                FeatureUsages.Clear();
+                foreach (var u in usages)
+                    FeatureUsages.Add(u);
+            }
+            catch (Exception ex)
+            {
+                LicenseStatusText = "読み込みに失敗しました";
+                _ = App.FileLogger.LogAsync($"[AppSettingsVM] LoadLicenseStatusAsync failed: {ex.Message}");
             }
         }
     }

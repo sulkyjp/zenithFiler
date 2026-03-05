@@ -90,7 +90,7 @@ namespace ZenithFiler
         private bool _isNotificationFlashActive;
 
         [ObservableProperty]
-        private bool _isGroupFoldersFirst = true;
+        private bool _isGroupFoldersFirst = WindowSettings.DefaultGroupFoldersFirstValue;
 
         partial void OnIsGroupFoldersFirstChanged(bool value)
         {
@@ -99,7 +99,7 @@ namespace ZenithFiler
         }
 
         [ObservableProperty]
-        private string _sortProperty = "Name";
+        private string _sortProperty = WindowSettings.DefaultSortPropertyValue;
 
         partial void OnSortPropertyChanged(string value)
         {
@@ -109,7 +109,7 @@ namespace ZenithFiler
         }
 
         [ObservableProperty]
-        private ListSortDirection _sortDirection = ListSortDirection.Ascending;
+        private ListSortDirection _sortDirection = WindowSettings.DefaultSortDirectionValue;
 
         partial void OnSortDirectionChanged(ListSortDirection value)
         {
@@ -1089,7 +1089,7 @@ namespace ZenithFiler
             _indexingCts = new System.Threading.CancellationTokenSource();
 
             SetupWatcher();
-            UpdatePathSegments();
+            _ = UpdatePathSegmentsAsync();
             UpdateIsFavorite();
         }
 
@@ -1254,202 +1254,197 @@ namespace ZenithFiler
             }).ConfigureAwait(false);
         }
 
-        private void UpdatePathSegments()
+        /// <summary>
+        /// パスセグメントをバックグラウンドで計算し、UIスレッドに反映する。
+        /// ShellItem COM 呼び出しを Task.Run に移すことで起動・ナビ時のUIスレッドブロックを解消。
+        /// </summary>
+        private async Task UpdatePathSegmentsAsync()
         {
+            var pathAtStart = CurrentPath;
+
+            // ShellItem COM 呼び出しをバックグラウンドスレッドで実行
+            List<NavigationPathSegment> segments;
             try
             {
-                if (string.IsNullOrEmpty(CurrentPath))
-                {
-                    PathSegments.Clear();
-                    return;
-                }
-
-                var segments = new List<NavigationPathSegment>();
-
-                // 仮想 PC パスの場合は「PC」のみ表示
-                if (PathHelper.IsPCPath(CurrentPath))
-                {
-                    segments.Add(new NavigationPathSegment
-                    {
-                        Name = PathHelper.PCDisplayName,
-                        FullPath = PathHelper.PCPath,
-                        IsLast = true
-                    });
-                    PathSegments.Clear();
-                    foreach (var seg in segments) PathSegments.Add(seg);
-                    return;
-                }
-
-                if (CurrentPath.StartsWith(@"\\"))
-                {
-                    // UNCパスの処理
-                    string[] parts = CurrentPath.Substring(2).Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
-                    string currentBuildingPath = @"\\";
-                    for (int i = 0; i < parts.Length; i++)
-                    {
-                        currentBuildingPath = i == 0 ? currentBuildingPath + parts[i] : Path.Combine(currentBuildingPath, parts[i]);
-                        try
-                        {
-                            using (var item = new ShellItem(currentBuildingPath))
-                            {
-                                string displayName = item.Name ?? parts[i];
-                                // OneDriveなどで GUID形式（::{...}）が返される場合は、フォルダ名を優先する
-                                if (displayName.StartsWith("::"))
-                                {
-                                    displayName = parts[i];
-                                }
-
-                                segments.Add(new NavigationPathSegment
-                                {
-                                    Name = displayName,
-                                    FullPath = currentBuildingPath
-                                });
-                            }
-                        }
-                        catch
-                        {
-                            segments.Add(new NavigationPathSegment
-                            {
-                                Name = parts[i],
-                                FullPath = currentBuildingPath
-                            });
-                        }
-                    }
-                }
-                else
-                {
-                    // ドライブレター等の処理
-                    string[] parts = CurrentPath.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
-                    string currentBuildingPath = "";
-
-                    if (CurrentPath.Contains(":"))
-                    {
-                        int colonIndex = CurrentPath.IndexOf(':');
-                        currentBuildingPath = CurrentPath.Substring(0, colonIndex + 1) + Path.DirectorySeparatorChar;
-
-                        try
-                        {
-                            using (var root = new ShellItem(currentBuildingPath))
-                            {
-                                string displayName = root.Name ?? currentBuildingPath;
-                                // GUID形式（::{...}）が返される場合は、パス名を優先する
-                                if (displayName.StartsWith("::"))
-                                {
-                                    displayName = currentBuildingPath;
-                                }
-
-                                segments.Add(new NavigationPathSegment
-                                {
-                                    Name = displayName,
-                                    FullPath = currentBuildingPath
-                                });
-                            }
-                        }
-                        catch
-                        {
-                            segments.Add(new NavigationPathSegment
-                            {
-                                Name = currentBuildingPath,
-                                FullPath = currentBuildingPath
-                            });
-                        }
-                    }
-
-                    string tempPath = currentBuildingPath;
-                    for (int i = 0; i < parts.Length; i++)
-                    {
-                        if (parts[i].EndsWith(":")) continue;
-
-                        tempPath = string.IsNullOrEmpty(tempPath) ? parts[i] : Path.Combine(tempPath, parts[i]);
-                        try
-                        {
-                            using (var item = new ShellItem(tempPath))
-                            {
-                                string displayName = item.Name ?? parts[i];
-                                // OneDriveなどで GUID形式（::{...}）が返される場合は、フォルダ名を優先する
-                                if (displayName.StartsWith("::"))
-                                {
-                                    displayName = parts[i];
-                                }
-
-                                segments.Add(new NavigationPathSegment
-                                {
-                                    Name = displayName,
-                                    FullPath = tempPath
-                                });
-                            }
-                        }
-                        catch
-                        {
-                            segments.Add(new NavigationPathSegment
-                            {
-                                Name = parts[i],
-                                FullPath = tempPath
-                            });
-                        }
-                    }
-                }
-
-                // ローカルパス（非UNC）の場合、先頭に PC セグメントを挿入
-                if (!CurrentPath.StartsWith(@"\\"))
-                {
-                    segments.Insert(0, new NavigationPathSegment
-                    {
-                        Name = PathHelper.PCDisplayName,
-                        FullPath = PathHelper.PCPath
-                    });
-                }
-
-                if (segments.Count > 0) segments.Last().IsLast = true;
-
-                // 一括で更新して通知を最小限にする
-                PathSegments.Clear();
-                foreach (var seg in segments) PathSegments.Add(seg);
+                segments = await Task.Run(() => ComputePathSegmentsCore(pathAtStart));
             }
             catch
             {
-                // フォールバック: 単純な文字列分割
-                var segments = new List<NavigationPathSegment>();
-                bool isUnc = CurrentPath.StartsWith(@"\\");
-                string[] parts = (isUnc ? CurrentPath.Substring(2) : CurrentPath).Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
-                string currentBuildingPath = isUnc ? @"\\" : "";
-
-                for (int i = 0; i < parts.Length; i++)
-                {
-                    if (isUnc)
-                    {
-                        currentBuildingPath = i == 0 ? currentBuildingPath + parts[i] : Path.Combine(currentBuildingPath, parts[i]);
-                    }
-                    else
-                    {
-                        currentBuildingPath = i == 0 ? parts[i] : Path.Combine(currentBuildingPath, parts[i]);
-                        if (i == 0 && currentBuildingPath.Length == 2 && currentBuildingPath[1] == ':') currentBuildingPath += Path.DirectorySeparatorChar;
-                    }
-
-                    segments.Add(new NavigationPathSegment
-                    {
-                        Name = parts[i],
-                        FullPath = currentBuildingPath,
-                        IsLast = i == parts.Length - 1
-                    });
-                }
-
-                PathSegments.Clear();
-                foreach (var seg in segments) PathSegments.Add(seg);
+                segments = ComputePathSegmentsFallback(pathAtStart);
             }
+
+            // バックグラウンド処理中にパスが変わっていたら結果を破棄
+            if (CurrentPath != pathAtStart) return;
+
+            PathSegments.Clear();
+            foreach (var seg in segments) PathSegments.Add(seg);
 
             // パス変更直後のレイアウト連鎖による StackOverflow を防ぐため、表示セグメント更新を Loaded で遅延
             var dispatcher = Application.Current?.Dispatcher;
             if (dispatcher != null)
             {
-                dispatcher.BeginInvoke(() => UpdateVisibleSegments(_lastBreadcrumbWidth), DispatcherPriority.Loaded);
+                _ = dispatcher.BeginInvoke(() => UpdateVisibleSegments(_lastBreadcrumbWidth), DispatcherPriority.Loaded);
                 // パンくず再描画を確実に発火させるため、PropertyChanged を手動通知
-                dispatcher.BeginInvoke(() => OnPropertyChanged(nameof(PathSegments)), DispatcherPriority.Render);
+                _ = dispatcher.BeginInvoke(() => OnPropertyChanged(nameof(PathSegments)), DispatcherPriority.Render);
             }
             else
             {
                 UpdateVisibleSegments(_lastBreadcrumbWidth);
             }
+        }
+
+        /// <summary>
+        /// バックグラウンドスレッドから呼び出し可能なパスセグメント計算コア。
+        /// UIアクセスなし・スレッドセーフ。ShellItem の COM 呼び出しを含む。
+        /// </summary>
+        private static List<NavigationPathSegment> ComputePathSegmentsCore(string currentPath)
+        {
+            if (string.IsNullOrEmpty(currentPath))
+                return new List<NavigationPathSegment>();
+
+            // 仮想 PC パスの場合は「PC」のみ表示
+            if (PathHelper.IsPCPath(currentPath))
+            {
+                return new List<NavigationPathSegment>
+                {
+                    new NavigationPathSegment
+                    {
+                        Name = PathHelper.PCDisplayName,
+                        FullPath = PathHelper.PCPath,
+                        IsLast = true
+                    }
+                };
+            }
+
+            var segments = new List<NavigationPathSegment>();
+
+            if (currentPath.StartsWith(@"\\"))
+            {
+                // UNCパスの処理
+                string[] parts = currentPath.Substring(2).Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
+                string currentBuildingPath = @"\\";
+                for (int i = 0; i < parts.Length; i++)
+                {
+                    currentBuildingPath = i == 0 ? currentBuildingPath + parts[i] : Path.Combine(currentBuildingPath, parts[i]);
+                    try
+                    {
+                        using (var item = new ShellItem(currentBuildingPath))
+                        {
+                            string displayName = item.Name ?? parts[i];
+                            // OneDriveなどで GUID形式（::{...}）が返される場合は、フォルダ名を優先する
+                            if (displayName.StartsWith("::"))
+                                displayName = parts[i];
+                            segments.Add(new NavigationPathSegment { Name = displayName, FullPath = currentBuildingPath });
+                        }
+                    }
+                    catch
+                    {
+                        segments.Add(new NavigationPathSegment { Name = parts[i], FullPath = currentBuildingPath });
+                    }
+                }
+            }
+            else
+            {
+                // ドライブレター等の処理
+                string[] parts = currentPath.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
+                string currentBuildingPath = "";
+
+                if (currentPath.Contains(":"))
+                {
+                    int colonIndex = currentPath.IndexOf(':');
+                    currentBuildingPath = currentPath.Substring(0, colonIndex + 1) + Path.DirectorySeparatorChar;
+
+                    try
+                    {
+                        using (var root = new ShellItem(currentBuildingPath))
+                        {
+                            string displayName = root.Name ?? currentBuildingPath;
+                            // GUID形式（::{...}）が返される場合は、パス名を優先する
+                            if (displayName.StartsWith("::"))
+                                displayName = currentBuildingPath;
+                            segments.Add(new NavigationPathSegment { Name = displayName, FullPath = currentBuildingPath });
+                        }
+                    }
+                    catch
+                    {
+                        segments.Add(new NavigationPathSegment { Name = currentBuildingPath, FullPath = currentBuildingPath });
+                    }
+                }
+
+                string tempPath = currentBuildingPath;
+                for (int i = 0; i < parts.Length; i++)
+                {
+                    if (parts[i].EndsWith(":")) continue;
+
+                    tempPath = string.IsNullOrEmpty(tempPath) ? parts[i] : Path.Combine(tempPath, parts[i]);
+                    try
+                    {
+                        using (var item = new ShellItem(tempPath))
+                        {
+                            string displayName = item.Name ?? parts[i];
+                            // OneDriveなどで GUID形式（::{...}）が返される場合は、フォルダ名を優先する
+                            if (displayName.StartsWith("::"))
+                                displayName = parts[i];
+                            segments.Add(new NavigationPathSegment { Name = displayName, FullPath = tempPath });
+                        }
+                    }
+                    catch
+                    {
+                        segments.Add(new NavigationPathSegment { Name = parts[i], FullPath = tempPath });
+                    }
+                }
+            }
+
+            // ローカルパス（非UNC）の場合、先頭に PC セグメントを挿入
+            if (!currentPath.StartsWith(@"\\"))
+            {
+                segments.Insert(0, new NavigationPathSegment
+                {
+                    Name = PathHelper.PCDisplayName,
+                    FullPath = PathHelper.PCPath
+                });
+            }
+
+            if (segments.Count > 0) segments.Last().IsLast = true;
+            return segments;
+        }
+
+        /// <summary>
+        /// パスセグメントのフォールバック計算（ShellItem なし・単純な文字列分割）。
+        /// ComputePathSegmentsCore が例外を投げた場合に使用。
+        /// </summary>
+        private static List<NavigationPathSegment> ComputePathSegmentsFallback(string currentPath)
+        {
+            var segments = new List<NavigationPathSegment>();
+            if (string.IsNullOrEmpty(currentPath)) return segments;
+
+            bool isUnc = currentPath.StartsWith(@"\\");
+            string[] parts = (isUnc ? currentPath.Substring(2) : currentPath)
+                .Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
+            string currentBuildingPath = isUnc ? @"\\" : "";
+
+            for (int i = 0; i < parts.Length; i++)
+            {
+                if (isUnc)
+                {
+                    currentBuildingPath = i == 0 ? currentBuildingPath + parts[i] : Path.Combine(currentBuildingPath, parts[i]);
+                }
+                else
+                {
+                    currentBuildingPath = i == 0 ? parts[i] : Path.Combine(currentBuildingPath, parts[i]);
+                    if (i == 0 && currentBuildingPath.Length == 2 && currentBuildingPath[1] == ':')
+                        currentBuildingPath += Path.DirectorySeparatorChar;
+                }
+
+                segments.Add(new NavigationPathSegment
+                {
+                    Name = parts[i],
+                    FullPath = currentBuildingPath,
+                    IsLast = i == parts.Length - 1
+                });
+            }
+
+            return segments;
         }
 
         private double _lastBreadcrumbWidth;
@@ -1762,7 +1757,7 @@ namespace ZenithFiler
 
             SetupWatcher();
             IsExpectingShellChange = false;
-            UpdatePathSegments();
+            _ = UpdatePathSegmentsAsync();
             UpdateIsFavorite();
             OpenCurrentFolderInExplorerCommand.NotifyCanExecuteChanged();
         }
@@ -2699,9 +2694,11 @@ namespace ZenithFiler
                             MergeItems(newItemsMap);
                             StatusText = $"{Items.Count} 個の項目";
                             UpdateSelectionInfo(null);
-                            ApplySort();
                             _ = LoadFolderSizesAsync(folderSizeToken);
                         }, DispatcherPriority.Background);
+
+                        // MergeItems と ApplySort を分割して Dispatcher に入力イベント処理の隙間を与える
+                        await Application.Current.Dispatcher.InvokeAsync(ApplySort, DispatcherPriority.Background);
 
                         // アイコンと種類の取得をバックグラウンドで開始
                         await LoadIconsAsync(allItems, iconToken);
@@ -3148,6 +3145,10 @@ namespace ZenithFiler
                 try
                 {
                     using var op = new ShellFileOperations();
+
+                    // 確認ダイアログ OFF の場合はシェルの確認を抑制する
+                    if (!WindowSettings.ConfirmDeleteEnabled)
+                        op.Options |= ShellFileOperations.OperationFlags.NoConfirmation;
 
                     // 親ウィンドウの設定（確認ダイアログをモーダルにするため）
                     Application.Current.Dispatcher.Invoke(() =>

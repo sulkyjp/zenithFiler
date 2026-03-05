@@ -14,20 +14,21 @@
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="ContextMenu">
-                            <!-- 外枠: 濃いめのエッジ + ライトリム（1px Padding）で削り出しエッジを表現 -->
-                            <!-- Margin="0,0,R,B" で右下のみ影の描画領域を確保（左上はクリップ） -->
-                            <!-- ※Popup内のためStaticResource不可: ContextMenuBorderColor/ContextMenuOuterBackgroundColor/ContextMenuBackgroundColor/ShadowColor に対応 -->
+                            <!-- DynamicResource はポップアップ内でも PlacementTarget 経由で解決される -->
                             <Border x:Name="ContextMenuBorder"
-                                    BorderBrush="#B0B0B0" BorderThickness="1" Background="#FEFEFE"
+                                    BorderBrush="{DynamicResource ContextMenuBorderBrush}"
+                                    BorderThickness="1"
+                                    Background="{DynamicResource ContextMenuOuterBackgroundBrush}"
                                     CornerRadius="5" Padding="1" MinWidth="180"
                                     Margin="0,0,28,28">
                                 <Border.Effect>
                                     <DropShadowEffect BlurRadius="24" ShadowDepth="6" Opacity="0.22" Direction="315" Color="#000000"/>
                                 </Border.Effect>
-                                <Border Background="#F5F5F0" CornerRadius="4" ClipToBounds="True">
+                                <Border Background="{DynamicResource ContextMenuBackgroundBrush}" CornerRadius="4" ClipToBounds="True">
                                     <ScrollViewer VerticalScrollBarVisibility="Auto"
                                                   HorizontalScrollBarVisibility="Disabled"
-                                                  Focusable="False">
+                                                  Focusable="False"
+                                                  MaxHeight="600">
                                         <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle" Margin="0,3,0,3"/>
                                     </ScrollViewer>
                                 </Border>

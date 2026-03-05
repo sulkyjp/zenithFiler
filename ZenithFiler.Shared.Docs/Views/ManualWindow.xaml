@@ -8,16 +8,16 @@
         Width="1400"
         PreviewKeyDown="Window_PreviewKeyDown"
         WindowStartupLocation="CenterOwner"
-        Background="#F5F1E3"
-        Foreground="#1A1A1A"
+        Background="{DynamicResource BackgroundBrush}"
+        Foreground="{DynamicResource TextBrush}"
         UseLayoutRounding="True"
         SnapsToDevicePixels="True">
 
     <Window.Resources>
         <ResourceDictionary>
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
-            <SolidColorBrush x:Key="CardBackgroundBrush" Color="#FFFFFF" />
-            <SolidColorBrush x:Key="CardHoverBrush" Color="#DFDAC8" />
+            <SolidColorBrush x:Key="CardBackgroundBrush" Color="{DynamicResource SidebarColor}" />
+            <SolidColorBrush x:Key="CardHoverBrush" Color="{DynamicResource ButtonHoverColor}" />
 
             <Style x:Key="SegmentToggleButtonStyle" TargetType="ToggleButton">
                 <Setter Property="Margin" Value="4,4" />
@@ -108,7 +108,7 @@
                 </StackPanel>
 
                 <Border Grid.Column="1"
-                        Background="#F3F4F6"
+                        Background="{DynamicResource InputBackgroundBrush}"
                         BorderBrush="{DynamicResource BorderBrush}"
                         BorderThickness="1"
                         CornerRadius="8"

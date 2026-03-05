@@ -9,6 +9,7 @@ using System.Windows.Documents;
 using System.Collections;
 using System.Collections.ObjectModel;
 using ZenithFiler.Helpers;
+using ZenithFiler.Models;
 using ZenithFiler.ViewModels;
 
 namespace ZenithFiler
@@ -459,6 +460,11 @@ namespace ZenithFiler
         /// <summary>表示時に短いフェードインアニメーションを実行する。</summary>
         public void FadeIn()
         {
+            if (!WindowSettings.MicroAnimationsEnabled)
+            {
+                Opacity = 1;
+                return;
+            }
             Opacity = 0;
             var anim = new DoubleAnimation(1.0, TimeSpan.FromMilliseconds(120))
             {

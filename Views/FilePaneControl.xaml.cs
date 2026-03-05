@@ -244,7 +244,7 @@ namespace ZenithFiler
             e.Handled = true;
         }
 
-        private void TabHeader_Drop(object sender, DragEventArgs e)
+        private async void TabHeader_Drop(object sender, DragEventArgs e)
         {
             // タブの D&D は TabControlDragDropBehavior が処理する（イベントをバブルさせる）
             if (e.Data.GetDataPresent("ZenithFilerTabItem"))
@@ -269,7 +269,7 @@ namespace ZenithFiler
                     var window = Window.GetWindow(this);
                     if (favItem != null && window?.DataContext is MainViewModel mainVm)
                     {
-                        if (mainVm.Favorites.EnsurePathExists(favItem))
+                        if (await mainVm.Favorites.EnsurePathExistsAsync(favItem))
                         {
                             path = favItem.Path;
                         }

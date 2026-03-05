@@ -3,6 +3,218 @@
 
 # Zenith Filer - Version History
 
+## [0.19.0] - 2026-03-05 : ショートカットキーカスタマイズ
+
+### Added
+- **設定 › ショートカットキー（新規カテゴリ）**: キーボードショートカットのカスタマイズ機能を追加。全25アクション（グローバル/サイドバー/ウィンドウ/ファイル一覧）のキーバインドをクリック→キー入力で変更可能
+- **HotkeyRecorderControl**: クリックで録音モードに入り、任意のキー＋修飾子をキャプチャするカスタムコントロール
+- **KeyBindingService**: キーバインドの中央レジストリ。デフォルト値の管理、競合検出、カスタムバインドの永続化を提供
+- **ツールチップ動的化**: サイドバー切替ボタン・ツールバーボタンのショートカット表示をキーバインド設定に連動して動的に更新
+
+### Changed
+- **InputBindings 動的構築**: MainWindow の InputBindings を XAML ハードコードからコードビハインドでの動的構築に移行し、キーバインド変更の即時反映を実現
+- **キー判定の一元化**: TabContentControl / MainWindow の PreviewKeyDown 内のハードコードキー判定を `App.KeyBindings.Matches()` に統一
+- **ツールチップからショートカット表記を削除**: FilePaneControl（タブ追加/閉じる）、ControlDeckView（閉じる）のツールチップからハードコードされたショートカット表記を削除
+- **WelcomeWindow のショートカット表示を削除**: 初回チュートリアルのショートカット TextBlock を6箇所削除（カスタマイズ可能になったため）
+- **MANUAL.md**: ショートカット一覧に「標準のキー割り当て」注釈を追加
+
+## [0.18.0] - 2026-03-05 : シェアウェアライセンス基盤
+
+### Added
+- **シェアウェアライセンス基盤**: 有償機能の使用回数カウント（SQLite `UsageRecords` テーブル）とロックファイル（`.zenith_license`）による全機能解除の仕組みを追加
+- **LicenseService**: `App.License` として提供。`CanUseAsync` / `RecordUsageAsync` / `GetRemainingAsync` で任意の機能にガードを追加可能
+- **設定 › ライセンス画面**: ライセンス状態バナー（Free/Full）と各機能の使用状況（使用回数・上限・ProgressBar）を表示するUIに更新
+- **テーマ変更回数カウント**: テーマ変更を有償機能として `ThemeChange` キーで使用回数を追跡（ライセンス画面に表示）
+- **ワーキングセット ツールチップ**: 保存済みセットをホバーすると A/B ペインの全タブのフルパスをポップアップ表示
+- **テーマタイル選択グロー拡張**: ランダムモード・ランダム抽選時にも、適用中テーマのタイルにプリセットモードと同じ選択グロー（AccentBrush 枠）を表示するよう変更
+
+## [0.17.1] - 2026-03-05 : クラウドドライブお気に入りの遅延アクセス対応
+
+### Fixed
+- **BOX Drive / OneDrive 等クラウドドライブのお気に入りが初回クリック時に「パスが見つかりません」となる問題を修正**: クラウドパス（Box / SPO）のオンデマンドハイドレーション遅延に対応し、親ディレクトリへのアクセスでトリガー後に最大2回リトライするよう変更
+
+## [0.17.0] - 2026-03-05 : 設定ページ拡充（Display カテゴリ新設・General/Search 設定追加）
+
+### Added
+- **設定 › 表示 › 一覧表示アニメーション**: ファイル一覧のホバーエフェクト（アイコンビューのオーバーレイフェード・お気に入りボタン円背景・検索アイコンスケール）の ON/OFF を追加
+- **設定 › 表示 › 起動時の通知**: 起動時テーマ適用トーストの ON/OFF 設定をテーマページから表示ページへ移動し、詳細説明を追加
+- **設定 › ライセンス（新規カテゴリ）**: シェアウェア化に向けてライセンス登録ページを追加（現在は準備中プレースホルダー）
+- **設定 › バージョン情報（新規カテゴリ）**: アプリ概要・バージョン・作者情報を表示するページを追加
+- **設定 › 表示（新規カテゴリ）**: ファイル一覧の行高をコンパクト(24px) / 標準(32px) / ゆったり(40px) から選択できるように。設定は即座に反映され再起動後も保持される
+- **設定 › 表示 › マイクロアニメーション**: ホバーフェード・タブ切替トランジション等の ON/OFF を設定ページから直接切り替えできるように
+- **設定 › 基本設定 › 操作**: シングルクリックでフォルダを開くモード、ファイル削除時の確認ダイアログ表示、起動時タブ復元の各トグルを追加
+- **設定 › 基本設定 › 通知の表示時間**: トースト通知の表示時間を短め(1.5秒) / 標準(3秒) / 長め(5秒) から選択できるように
+- **設定 › 表示 › 新規タブのデフォルト表示**: 新規タブ作成時のフォルダ先頭表示・ソートプロパティ・ソート方向のデフォルト値を設定できるように
+
+### Changed
+- **設定 › 表示 › 新規タブのデフォルト表示**: 検索ページから表示ページへ移動し、「Ctrl+T やパスを指定して開いた新規タブに適用される」旨の説明文を追加
+- **設定 › 基本設定 › 通知の表示時間**: 説明テキスト「ファイルのコピー・移動・削除の完了や、テーマ変更などの操作結果をステータスバーに表示する時間を設定します」を追加
+- **設定 › 基本設定 › 操作**: 各チェックボックス（シングルクリック・削除確認・タブ復元）の下に補足説明を追加
+- **設定 › 表示 › ファイル一覧の行高**: 説明テキスト「ファイル一覧の各行の高さを調整します。コンパクトにすると一度に多くのファイルを表示でき、ゆったりにするとクリックしやすくなります」を追加
+- **テーマページのヘッダーを簡略化**: 「通知を表示」チェックボックスをテーマセクションのヘッダーから削除し、設定 › 表示に専用カードとして移動
+- **設定ナビゲーションの並び順を変更**: 基本設定 → 表示 → テーマ → 検索 → インデックス → リカバリ → ライセンス → バージョン情報 の順に整理し、ライセンス・バージョン情報の前にセパレーターを追加
+- `WindowSettings.cs`: `ListRowHeight`, `SingleClickOpenFolder`, `ConfirmDelete`, `RestoreTabsOnStartup`, `NotificationDurationMs`, `DefaultGroupFoldersFirst`, `DefaultSortProperty`, `DefaultSortDirection` の各フィールドを追加。それぞれ static アクセサ・runtime setter・デバウンス保存ヘルパーを整備
+- `NotificationService.cs`: `Notify` のデフォルト表示時間を固定値 3000ms から `WindowSettings.NotificationDurationMsValue` に変更
+- `TabItemViewModel.cs`: `_isGroupFoldersFirst` / `_sortProperty` / `_sortDirection` のフィールド初期値をグローバル設定から取得するよう変更。新規タブのデフォルト表示に即座に反映
+- `MainViewModel.cs`: `RestoreTabsOnStartup = false` の場合、ホームフォルダのみで起動するよう `InitializeAsync` を変更
+- `TabContentControl.xaml.cs`: シングルクリックモード時にフォルダをシングルクリックでナビゲーション、ダブルクリックの重複実行を防止
+
+### Fixed
+- **「新規タブのデフォルト表示」のソート方向設定が反映されないバグを修正**: ConverterParameter に文字列 "Ascending"/"Descending" を渡していたため `ListSortDirection` enum への変換が失敗していた。`{x:Static}` で enum 値を直接渡すよう修正
+- **起動時タブ復元 OFF で起動後にペインが空になるバグを修正**: `RestoreTabsOnStartup = false` 時に生成する `PaneSettings` の `TabPaths` が空リストのため `RestoreTabsAsync` が早期 return していた。`EnsureTabPaths` を適用してホームフォルダ（未設定時はデスクトップ/ダウンロード）を確実にセットするよう修正
+- **マイクロアニメーション OFF 時にタブインジケーターのスライドが止まらないバグを修正**: `TabIndicatorSlideBehavior` が `MicroAnimationsEnabled` を参照しておらず、設定に関わらずインジケーターがアニメーションし続けていた
+- **マイクロアニメーション OFF 時に D&D 挿入マーカーのフェードが止まらないバグを修正**: `TabControlDragDropBehavior.FadeIn()` が `MicroAnimationsEnabled` を参照しておらず、設定に関わらずフェードインが発生していた
+- **設定ページのカテゴリ切り替えアニメーションを削除**: `ControlDeckView.xaml.cs` の `AnimateCategorySwitch()` (フェードアウト80ms + フェードイン120ms) を除去し、即時切り替えに変更
+- **ファイル一覧の行高設定が反映されないバグを修正**: `FileListView` の inline `ItemContainerStyle` が `AppResources.xaml` の implicit style を上書きしており `MinHeight` が届いていなかった。inline スタイルに `<Setter Property="MinHeight" Value="{DynamicResource ListRowHeight}"/>` を追加
+- **v0.17.0 追加設定がアプリ終了時にリセットされるバグを修正**: `MainWindow_Closing` の終了時保存オブジェクトに `EnableMicroAnimations` / `ListRowHeight` / `SingleClickOpenFolder` / `ConfirmDelete` / `RestoreTabsOnStartup` / `NotificationDurationMs` / `DefaultGroupFoldersFirst` / `DefaultSortProperty` / `DefaultSortDirection` が含まれておらず、終了のたびにデフォルト値で上書きされていた
+
+## [0.16.9] - 2026-03-04 : WPF-UI implicit style 未定義による UI テーマ非追従を修正
+
+### Added
+- **テーマ切り替えトランジションアニメーション**: テーマ変更時に背景色ディゾルブオーバーレイ（フェードイン 130ms → フェードアウト 250ms）で滑らかに切り替わるようになった
+
+### Fixed
+- **履歴ビューの各行の背景がテーマに追従しないグレーになる問題を修正**: `AppResources.xaml` が `<ui:ControlsDictionary />` を取り込んでいるが `Expander` の implicit style が未定義のため WPF-UI のグレーカード背景が適用されていた。カスタム `Expander` implicit style を追加し、コンテンツ領域を透明テンプレートで上書き
+- **アプリ設定 › リカバリの「今すぐバックアップ」「復元...」ボタンが他のボタンとデザインが異なる問題を修正**: `Button` の implicit style が未定義のため WPF-UI の Fluent アクセントスタイルが適用されていた。`x:Key="TextButton"` の名前付きスタイルを `AppResources.xaml` に追加し `ControlDeckView.xaml` のリカバリボタンに適用
+- **アプリ設定 › A/Bペインのホームパス TextBox の背景色・罫線がテーマに追従しない問題を修正**: `TextBox` の implicit style が未定義のため WPF-UI の TextBox スタイル（ReadOnly 状態でグレー上書き等）が適用されていた。カスタム `TextBox` implicit style を `AppResources.xaml` に追加し、すべての色を `DynamicResource` で参照するテンプレートで上書き
+  - `MainWindow.xaml`: `ThemeTransitionOverlay`（ZIndex=850）を追加
+  - `MainWindow.xaml.cs`: `AnimateThemeTransitionBeginAsync` / `AnimateThemeTransitionEnd` を実装し、デリゲートとして ViewModel に配線
+  - `AppSettingsViewModel.cs`: `ApplyThemeAnimatedAsync` ヘルパーを追加。`OnSelectedThemeNameChanged` および `DrawRandomThemeAsync` からアニメーション付き適用を呼び出すよう変更。連続クリック時はアニメなしで即時適用
+
+## [0.16.8] - 2026-03-04 : 起動後フリーズ改善（パンくずリスト非同期化）
+
+### Fixed
+- **起動直後に少しの間操作できないフリーズを改善**: タブ復元時（`RestoreTabsAsync`）のコンストラクタ内で `UpdatePathSegments()` が ShellItem COM 呼び出しをUIスレッドで同期実行していたため、タブ数 × パス深度分のブロックが発生していた（例：4タブ × 深さ4 = 16回のCOM呼び出し）
+  - `TabItemViewModel.cs`: `UpdatePathSegments()` を3つのメソッドに分離
+    - `UpdatePathSegmentsAsync()` — `Task.Run` でコアを呼び出しUIスレッドに反映するオーケストレーター
+    - `ComputePathSegmentsCore(string path)` — ShellItem COM 呼び出しを含む純粋な計算（バックグラウンド・スレッドセーフ）
+    - `ComputePathSegmentsFallback(string path)` — 例外時の単純文字列分割フォールバック
+  - コンストラクタおよびナビゲーション完了後の呼び出しを `_ = UpdatePathSegmentsAsync()` に変更
+  - パンくずリストの表示は `await` 完了後に更新されるが、バックグラウンド処理が高速なため視覚的な遅延は生じない
+  - パス変更中に別ナビゲーションが来た場合は結果を破棄（`CurrentPath != pathAtStart` チェック）
+
+## [0.16.7] - 2026-03-04 : ファイル操作後のUIフリーズ改善
+
+### Fixed
+- **ファイル操作・自動リフレッシュ後にUIが短時間フリーズする問題を改善**: `LoadDirectoryAsync` の Dispatcher ブロック内で `MergeItems` と `ApplySort` を連続実行していたため、500〜2000件規模のフォルダで30〜200msのUIスレッドブロックが発生していた
+  - `TabItemViewModel.cs`: `MergeItems`（リスト更新）と `ApplySort`（ソート）を別の `Dispatcher.InvokeAsync(Background)` に分割し、両者の間でキーボード・マウス入力を処理できる隙間を確保
+  - `AppSettingsViewModel.cs`: `DrawRandomTheme()` で毎回 `ScanThemes()`（ディスクI/O）を呼んでいた箇所をキャッシュ済みの `AvailableThemes` を使うよう変更
+
+## [0.16.6] - 2026-03-04 : ホーム設定カードのテキスト・アイコン不可視問題を修正
+
+### Fixed
+- **Aペイン・Bペインのホーム設定カードでテキストとアイコンが不可視になる問題を修正**: 暗色テーマ（blueprint 等）でカード背景と同色の `InputBackgroundBrush` を TextBox 背景に使用した際、Foreground 未指定によりテキストが見えなくなっていた
+  - `ControlDeckView.xaml`: Aペイン・Bペインのホームパス TextBox に `Foreground="{DynamicResource TextBrush}"` を追加
+  - `AppResources.xaml`: `IconButton` スタイルに `Foreground="{DynamicResource TextBrush}"` を追加（`IconToggleButton` と統一）。アイコンが暗色カード上で不可視になる問題を解消
+
+## [0.16.5] - 2026-03-04 : ショートカット全無効バグ修正
+
+### Fixed
+- **ControlDeck を閉じるとショートカットキーが全て無効になる問題を修正**: ControlDeck（設定パネル）を Esc キー等で閉じると、オーバーレイが `Collapsed` になった際に ControlDeckView 内の要素（RadioButton 等）が持っていたフォーカスが失われ、`Keyboard.FocusedElement` が `null` になっていた。この状態では WPF のキーイベントルーティングが機能せず全ショートカットが無効になっていた
+  - `CloseControlDeckAsync()` 完了後にアクティブペインのファイルリストへフォーカスを明示的に復元するよう修正
+  - `MainWindow.Activated` ハンドラーを追加し、ウィンドウがアクティブ化した際にペイン内にフォーカスがなければ自動復元する安全網を追加
+
+## [0.16.4] - 2026-03-04 : コンテキストメニュー白飛び根本修正
+
+### Fixed
+- **コンテキストメニューの白背景問題を根本修正**: `App.xaml` に定義された `Style TargetType="ContextMenu"` がハードコードカラー（`#FEFEFE` / `#F5F5F0`）を使用していたため、テーマ変更が反映されず常に白背景になっていた問題を修正
+  - `App.xaml` の `ContextMenu` スタイルテンプレート内の色をすべて `{DynamicResource}` 参照に変更（`ContextMenuBorderBrush` / `ContextMenuOuterBackgroundBrush` / `ContextMenuBackgroundBrush`）
+  - `AppResources.xaml` の同名スタイル（`App.xaml` に隠されていた死コード）を削除
+
+## [0.16.3] - 2026-03-04 : コンテキストメニュー・マニュアルページのテーマ対応修正
+
+### Fixed
+- **マニュアルウィンドウのテーマ非対応を修正**: ハードコードされた色をテーマ対応の DynamicResource に統一
+  - `ManualWindow.xaml`: `Background="#F5F1E3"` → `{DynamicResource BackgroundBrush}`、ヘッダー・タブセグメント背景もテーマブラシに変更
+  - `DocViewerControl.xaml`: `CardBackgroundBrush` / `CardHoverBrush` / `AcrylicSidebarBrush` / `AcrylicBackgroundBrush` をすべて `{DynamicResource}` に変更（テーマ変更で即時更新）
+  - `MarkdownStyles.xaml`: テーブルヘッダー・セル罫線・引用ブロック・コードスパン・見出し2背景のハードコード色を `{DynamicResource}` に統一。グラデーションブラシを廃止しテーマの `SelectionBrush` / `ListHoverBrush` / `BorderBrush` / `InputBackgroundBrush` で代替
+- **マニュアルウィンドウのテーマ非対応を修正**: ハードコードされた色をテーマ対応の DynamicResource に統一
+  - `ManualWindow.xaml`: `Background="#F5F1E3"` → `{DynamicResource BackgroundBrush}`、ヘッダー・タブセグメント背景もテーマブラシに変更
+  - `DocViewerControl.xaml`: `CardBackgroundBrush` / `CardHoverBrush` / `AcrylicSidebarBrush` / `AcrylicBackgroundBrush` をすべて `{DynamicResource}` に変更（テーマ変更で即時更新）
+  - `MarkdownStyles.xaml`: テーブルヘッダー・セル罫線・引用ブロック・コードスパン・見出し2背景のハードコード色を `{DynamicResource}` に統一。グラデーションブラシを廃止しテーマの `SelectionBrush` / `ListHoverBrush` / `BorderBrush` / `InputBackgroundBrush` で代替
+
+### Changed
+- **blueprint テーマ**: テーマ Author を `KAKASAKA` → `K.AKASAKA` に変更
+
+## [0.16.2] - 2026-03-04 : 起動トースト位置をコーナー通知スタイルに変更
+
+### Removed
+- **ControlDeck のペイン個別テーマ「将来実装」プレースホルダーを削除**: ペインごとのテーマ割り当てが v0.16.0 で実装済みのため、旧来の予告ラベルを除去
+
+### Changed
+- **起動時テーマトーストを右下コーナー通知に変更**: 画面中央から右下に移動し、操作を妨げない配置に改善
+  - スライドイン演出を追加（下から上へ 14px、`QuadraticEase`、0.3s）
+  - フェードアウトを 0.75s → 0.5s に短縮
+  - サイズをコンパクト化（`MaxWidth 640 → 300`、パディング `22,14 → 16,12`、フォントサイズ 14 → 13）
+  - `Grid.RowSpan="3"` 中央配置 → `Grid.Row="1"` 右下 `Margin="0,0,20,16"` に変更
+  - テキストを `TextWrapping="Wrap"` → `NoWrap` に変更（コーナー通知は1行が自然なため）
+
+## [0.16.1] - 2026-03-04 : 起動トースト通知改善・ON/OFF 設定追加
+
+### Added
+- **「通知を表示」トグル**: Control Deck テーマセクションのヘッダー右端に小型チェックボックスを追加。起動時テーマ適用トーストの表示／非表示を即座に切り替え・保存できる
+  - `ShowStartupToast` フィールドを `settings.json` に追加（デフォルト `true`）
+  - `WindowSettings.SaveShowStartupToastOnly` デバウンス保存メソッドを追加
+
+### Changed
+- **ペイン個別適用モードの起動トースト**: 全ペインのテーマを一覧表示するフォーマットに変更
+  - 例: `Applied Themes` / `Navi: Standard  |  A: Midnight  |  B: Crimson`
+  - パーソナライズ・自動選択モードは従来通り `Applied Theme` / `[テーマ名]` を表示
+  - `NotificationService.ShowThemeToast` に `label` 引数を追加しヘッダー文字列を動的切り替え
+- **トースト Border の幅制限**: `MaxWidth="640"` と `Margin="20,0"` を設定し、長いペイン名テキストでもはみ出さないよう調整
+- **トーストラベルをバインディング化**: `Text="Applied Theme"` を `{Binding Notification.ThemeToastLabel}` に変更
+
+## [0.16.0] - 2026-03-04 : ペイン個別テーマ適用
+
+### Added
+- **ペイン個別テーマ適用**: Control Deck の「ペイン個別適用」モードで、ナビペイン・Aペイン・Bペインに異なるテーマを独立して設定できるようになった
+  - 各ペインの `ResourceDictionary` にテーマカラーを書き込み、WPF の DynamicResource 解決メカニズムにより自動的にペイン固有テーマが優先される
+  - 選択したテーマは `settings.json` に `NavPaneThemeName` / `APaneThemeName` / `BPaneThemeName` として保存され、再起動後に復元される
+  - 「パーソナライズ」または「自動選択モード」に切り替えると全ペインをリセットしてグローバルテーマに統一する
+- **`WindowSettings` ペインテーマフィールド追加**: `NavPaneThemeName`・`APaneThemeName`・`BPaneThemeName` の 3 フィールドと `SavePaneThemeNames` デバウンス保存メソッドを追加
+- **`AppSettingsViewModel` ペイン ResourceDictionary 管理**: `RegisterPaneResources`・`LoadPaneThemeNames`・`ClearPaneResources` メソッドを追加
+- **`App.StartupPaneThemes`**: 起動時高速パーサーにペインテーマ名読み取りを追加し、`StartupPaneThemes` プロパティとして公開
+
+## [0.15.2] - 2026-03-03 : 即時ランダム抽選ボタン追加・自動選択モードカード UI ブラッシュアップ
+
+### Added
+- **「今すぐ抽選」ボタン**: Control Deck の「自動選択モード」カード内に即時ランダム抽選ボタンを追加。起動を待たずに現在の抽選設定（全テーマ／カテゴリ指定）に従ってテーマをランダム選択・ライブ適用する
+  - `DrawRandomThemeCommand`（CanExecute: `IsRandomModeActive`）として実装
+  - AccentBrush 枠線スタイル・ホバー/プレス視覚フィードバック付き
+  - 自動選択モード有効時のみ `Visibility="Visible"`、無効時は `Visibility="Collapsed"` で非表示
+  - AccentBrush 塗りつぶし背景 + 白テキスト・アイコン・スケールアニメーション
+
+### Changed
+- **「今すぐ抽選」ボタンを AccentBrush 塗りつぶしアクションスタイルに変更**: 設定 RadioButton との役割差別化
+  - AccentBrush 背景 + 白テキスト・アイコンで「実行スイッチ」として際立たせる
+  - ホバー時: スケール 1.0→1.04 アニメーション（QuadraticEase）+ 白発光オーバーレイ (Opacity 0.15)
+  - プレス時: スケール 0.96 の押し込み感 → リリースで 1.04 に戻るバウンス感
+- **ThemeRandomizeDeck RadioButton をペイン個別適用と完全統一**: Opacity トリガーを除去し `IsEnabled="{Binding AppSettings.IsRandomModeActive}"` に変更。`OptionRadioButton` スタイル・制御方式ともにペイン個別適用セクションと同一に
+- **「今すぐ抽選」ボタンのホバー検知を全域対応に修正**: `EventTrigger RoutedEvent="MouseEnter/Leave"` → `Trigger Property="IsMouseOver"` + `EnterActions/ExitActions` に置換。子要素がイベントをキャプチャした場合でも Button 全域でホバーを正確に検知する
+- **ホバーオーバーレイが Padding 領域を含む全域を覆うよう修正**: ControlTemplate のルートを `Border (Padding="0,10")` → `Grid` に変更。AccentBrush 用 Border と HoverGlow Border をともに Grid 直下に配置し、Padding 由来の「境界線」アーティファクトを根本解消。ContentPresenter の Padding は `Margin="{TemplateBinding Padding}"` で等価再現
+- **プレス演出をアニメーション競合なし方式に変更**: `EventTrigger PreviewMouseLeftButtonDown/Up` → `Trigger Property="IsPressed"` Setter（`Opacity=0.68`）でシンプルな押し込み感を実現。IsMouseOver アニメーションとの競合を排除
+- **上部 Margin を 15px → 22px に拡大**: ゆとりある配置に調整
+- **「今すぐ抽選」ボタンの Margin をボタン側に移動**: `Margin="0,22,0,0"` をボタン自身に設定。`Visibility="Collapsed"` 時に余白が残らない構造に改善
+
+## [0.15.1] - 2026-03-03 : トーストUI位置修正・上部空白解消
+
+### Fixed
+- **トーストが Grid Row 0（TitleBar）に入り上部に空白が発生する問題を修正**: `Grid.RowSpan="3"` を付与してオーバーレイ配置に変更。レイアウトに影響しない
+- **トースト表示位置を中央に変更**: `HorizontalAlignment="Center" VerticalAlignment="Center"` に修正。アイコン・フォントサイズも中央向けに拡大調整
+
+## [0.15.0] - 2026-03-03 : テーマ永続化・ランダム選択エンジン・起動時トースト通知
+
+### Added
+- **テーマモード永続化**: `settings.json` に `CurrentThemeMode`・`AutoSelectSubMode`・`SelectedCategory`・`SavedThemeName` の4フィールドを追加。再起動後も「自動選択モード」「カテゴリ指定」「プリセット選択テーマ」が完全復元される
+  - `MainWindow_Closing` の全体保存に4フィールドを含めることで、デフォルト値への上書きを防止
+  - `App.StartupSavedThemeName` を `ReadThemeSettingsFromSettings` から取得・キャッシュし、`LoadThemeSettings` で `_savedThemeNameCache` を初期化
+  - マイグレーション互換: `SavedThemeName` が旧 settings.json に未記録の場合は `ThemeName` でフォールバック
+- **ランダム選択エンジン**: 起動時に `CurrentThemeMode == "Auto"` の場合、`PickRandomTheme` で前回適用テーマを除いたプールからランダム選択。`AutoSelectSubMode == "Category"` 時は指定カテゴリに絞って選択
+- **起動時テーマトースト通知**: ウィンドウ描画完了後 900ms に右下コーナートーストで「Applied Theme: [テーマ名]」を表示。0.35秒でフェードイン → 2.5秒後に 0.75秒でフェードアウト
+
+### Changed
+- **カテゴリ説明文の MaxWidth 調整**: `ThemeCategoryDesc` TextBlock の MaxWidth を 250 → 280 に変更、右 Margin を 12 に拡張して折り返し安定化
+
 ## [0.14.14] - 2026-03-03 : カテゴリランダムモード・カテゴリ選択誘導インジケーター追加
 
 ### Added

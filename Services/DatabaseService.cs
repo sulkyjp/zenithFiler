@@ -79,6 +79,7 @@ namespace ZenithFiler
                 await _db.CreateTableAsync<SearchHistoryRecord>().ConfigureAwait(false);
                 await _db.CreateTableAsync<RenameHistory>().ConfigureAwait(false);
                 await _db.CreateTableAsync<CustomRenameButton>().ConfigureAwait(false);
+                await _db.CreateTableAsync<UsageRecord>().ConfigureAwait(false);
                 await MigrateSearchHistoryTableIfNeededAsync().ConfigureAwait(false);
                 await MigrateSearchHistoryV2Async().ConfigureAwait(false);
                 _ = Task.Run(CleanupHistoryAsync);

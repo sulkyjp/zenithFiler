@@ -292,18 +292,119 @@ namespace ZenithFiler
         /// <summary>マイクロアニメーション（ホバーフェード・タブ切替トランジション等）の有効/無効。</summary>
         public bool EnableMicroAnimations { get; set; } = true;
 
+        // ─── Display ───
+        /// <summary>ファイル一覧の行高（px）。24=コンパクト, 32=標準, 40=ゆったり。</summary>
+        public int ListRowHeight { get; set; } = 32;
+
+        /// <summary>ファイル一覧ビューのホバーアニメーション（フェード・スケール等）を有効にするか。</summary>
+        public bool EnableListAnimations { get; set; } = true;
+
+        // ─── General 追加 ───
+        /// <summary>シングルクリックでフォルダを開く（false=ダブルクリック）。</summary>
+        public bool SingleClickOpenFolder { get; set; } = false;
+
+        /// <summary>ファイル削除時に確認ダイアログを表示するか。</summary>
+        public bool ConfirmDelete { get; set; } = true;
+
+        /// <summary>起動時に前回のタブ構成を復元するか（false=ホームフォルダのみ）。</summary>
+        public bool RestoreTabsOnStartup { get; set; } = true;
+
+        /// <summary>通知トーストの表示時間（ms）。</summary>
+        public int NotificationDurationMs { get; set; } = 3000;
+
+        // ─── Search デフォルト ───
+        /// <summary>新規タブ作成時のフォルダ先頭表示デフォルト。</summary>
+        public bool DefaultGroupFoldersFirst { get; set; } = true;
+
+        /// <summary>新規タブ作成時のデフォルトソートプロパティ名。</summary>
+        public string DefaultSortProperty { get; set; } = "Name";
+
+        /// <summary>新規タブ作成時のデフォルトソート方向。</summary>
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public ListSortDirection DefaultSortDirection { get; set; } = ListSortDirection.Ascending;
+
+        /// <summary>起動時テーマ適用トーストを表示するか。</summary>
+        public bool ShowStartupToast { get; set; } = true;
+
         /// <summary>適用中のテーマ名（themes/ フォルダ内の拡張子なしファイル名）。</summary>
         public string ThemeName { get; set; } = "standard";
+
+        /// <summary>テーマ適用モード ("Personalize" / "Auto" / "Pane")。</summary>
+        public string CurrentThemeMode { get; set; } = "Personalize";
+
+        /// <summary>自動選択サブモード ("All" / "Category")。</summary>
+        public string AutoSelectSubMode { get; set; } = "All";
+
+        /// <summary>カテゴリランダム時の対象カテゴリ名。</summary>
+        public string? SelectedCategory { get; set; }
+
+        /// <summary>パーソナライズモード時の最終適用テーマ名。</summary>
+        public string SavedThemeName { get; set; } = "standard";
+
+        /// <summary>ナビペインに適用するテーマ名。</summary>
+        public string NavPaneThemeName { get; set; } = string.Empty;
+
+        /// <summary>Aペインに適用するテーマ名。</summary>
+        public string APaneThemeName { get; set; } = string.Empty;
+
+        /// <summary>Bペインに適用するテーマ名。</summary>
+        public string BPaneThemeName { get; set; } = string.Empty;
 
         /// <summary>マイクロアニメーションの有効状態を static に参照するアクセサ。Behavior や code-behind から使用。</summary>
         private static bool _microAnimationsEnabled = true;
         public static bool MicroAnimationsEnabled => _microAnimationsEnabled;
 
+        private static int _listRowHeight = 32;
+        public static int ListRowHeightValue => _listRowHeight;
+
+        private static bool _singleClickOpenFolder = false;
+        public static bool SingleClickOpenFolderEnabled => _singleClickOpenFolder;
+
+        private static bool _confirmDelete = true;
+        public static bool ConfirmDeleteEnabled => _confirmDelete;
+
+        private static int _notificationDurationMs = 3000;
+        public static int NotificationDurationMsValue => _notificationDurationMs;
+
+        private static bool _defaultGroupFoldersFirst = true;
+        public static bool DefaultGroupFoldersFirstValue => _defaultGroupFoldersFirst;
+
+        private static string _defaultSortProperty = "Name";
+        public static string DefaultSortPropertyValue => _defaultSortProperty;
+
+        private static ListSortDirection _defaultSortDirection = ListSortDirection.Ascending;
+        public static ListSortDirection DefaultSortDirectionValue => _defaultSortDirection;
+
+        private static bool _listAnimationsEnabled = true;
+        public static bool ListAnimationsEnabled => _listAnimationsEnabled;
+
         /// <summary>インスタンスプロパティの値を static フラグへ反映する。Load() 完了後に呼び出す。</summary>
         internal void ApplyStaticFlags()
         {
             _microAnimationsEnabled = EnableMicroAnimations;
+            _listRowHeight = ListRowHeight;
+            _singleClickOpenFolder = SingleClickOpenFolder;
+            _confirmDelete = ConfirmDelete;
+            _notificationDurationMs = NotificationDurationMs;
+            _defaultGroupFoldersFirst = DefaultGroupFoldersFirst;
+            _defaultSortProperty = DefaultSortProperty;
+            _defaultSortDirection = DefaultSortDirection;
+            _listAnimationsEnabled = EnableListAnimations;
         }
+
+        // ─── Runtime setter メソッド（ViewModel から呼び出し）───
+        internal static void SetMicroAnimationsRuntime(bool v) => _microAnimationsEnabled = v;
+        internal static void SetListRowHeightRuntime(int v) => _listRowHeight = v;
+        internal static void SetSingleClickOpenFolderRuntime(bool v) => _singleClickOpenFolder = v;
+        internal static void SetConfirmDeleteRuntime(bool v) => _confirmDelete = v;
+        internal static void SetNotificationDurationRuntime(int v) => _notificationDurationMs = v;
+        internal static void SetListAnimationsRuntime(bool v) => _listAnimationsEnabled = v;
+        internal static void SetDefaultGroupFoldersFirstRuntime(bool v) => _defaultGroupFoldersFirst = v;
+        internal static void SetDefaultSortPropertyRuntime(string v) => _defaultSortProperty = v;
+        internal static void SetDefaultSortDirectionRuntime(ListSortDirection v) => _defaultSortDirection = v;
+
+        /// <summary>カスタムキーバインド設定。null の場合はすべてデフォルト。</summary>
+        public List<Models.KeyBindingDto>? CustomKeyBindings { get; set; }
 
         /// <summary>設定スキーマのバージョン。マイグレーション判定に使用。</summary>
         public int SettingsVersion { get; set; } = 1;
@@ -603,6 +704,86 @@ namespace ZenithFiler
         public static void SaveThemeOnly(string themeName)
         {
             DebouncedSettingsSaver.ScheduleSave(s => s.ThemeName = themeName);
+        }
+
+        /// <summary>テーマモード設定のみを更新して保存する。</summary>
+        public static void SaveThemeModeOnly(string mode, string subMode, string? category)
+        {
+            DebouncedSettingsSaver.ScheduleSave(s =>
+            {
+                s.CurrentThemeMode = mode;
+                s.AutoSelectSubMode = subMode;
+                s.SelectedCategory = category;
+            });
+        }
+
+        /// <summary>パーソナライズモードの選択テーマ名のみ保存する。</summary>
+        public static void SavePresetThemeNameOnly(string themeName)
+        {
+            DebouncedSettingsSaver.ScheduleSave(s => s.SavedThemeName = themeName);
+        }
+
+        /// <summary>起動時テーマトーストの表示設定を保存する。</summary>
+        public static void SaveShowStartupToastOnly(bool show)
+        {
+            DebouncedSettingsSaver.ScheduleSave(s => s.ShowStartupToast = show);
+        }
+
+        /// <summary>Display 設定（マイクロアニメーション・行高）を保存する。</summary>
+        public static void SaveDisplaySettingsOnly(bool microAnim, int rowHeight)
+        {
+            DebouncedSettingsSaver.ScheduleSave(s =>
+            {
+                s.EnableMicroAnimations = microAnim;
+                s.ListRowHeight = rowHeight;
+            });
+        }
+
+        /// <summary>一覧アニメーション設定のみを保存する。</summary>
+        public static void SaveListAnimationsOnly(bool enable)
+        {
+            DebouncedSettingsSaver.ScheduleSave(s => s.EnableListAnimations = enable);
+        }
+
+        /// <summary>General 追加設定（シングルクリック・削除確認・タブ復元・通知時間）を保存する。</summary>
+        public static void SaveGeneralSettingsOnly(bool singleClick, bool confirmDelete, bool restoreTabs, int notifMs)
+        {
+            DebouncedSettingsSaver.ScheduleSave(s =>
+            {
+                s.SingleClickOpenFolder = singleClick;
+                s.ConfirmDelete = confirmDelete;
+                s.RestoreTabsOnStartup = restoreTabs;
+                s.NotificationDurationMs = notifMs;
+            });
+        }
+
+        /// <summary>Search デフォルト設定（フォルダ先頭・ソート）を保存する。</summary>
+        public static void SaveSearchDefaultsOnly(bool foldersFirst, string sortProp, ListSortDirection sortDir)
+        {
+            DebouncedSettingsSaver.ScheduleSave(s =>
+            {
+                s.DefaultGroupFoldersFirst = foldersFirst;
+                s.DefaultSortProperty = sortProp;
+                s.DefaultSortDirection = sortDir;
+            });
+        }
+
+        /// <summary>ペイン個別テーマ名を保存する。</summary>
+        public static void SavePaneThemeNames(string nav, string aPane, string bPane)
+        {
+            DebouncedSettingsSaver.ScheduleSave(s =>
+            {
+                s.NavPaneThemeName = nav;
+                s.APaneThemeName   = aPane;
+                s.BPaneThemeName   = bPane;
+            });
+        }
+
+        /// <summary>カスタムキーバインドのみを更新して settings.json に保存する。</summary>
+        public static void SaveKeyBindingsOnly(List<Models.KeyBindingDto>? bindings)
+        {
+            DebouncedSettingsSaver.ScheduleSave(s =>
+                s.CustomKeyBindings = bindings);
         }
 
         /// <summary>お気に入りを保存する。失敗した場合は例外を投げる（ロールバック判定用）。即時保存。</summary>

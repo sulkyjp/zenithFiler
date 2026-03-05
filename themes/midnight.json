@@ -1,85 +1,83 @@
 {
   // ============================================================
-  //  Zenith Filer Theme Configuration
-  //  カラーコード: #RRGGBB / #AARRGGBB / 色名 (例: Cyan)
-  //  テーマ選択時に即座に反映されます（再起動不要）
+  //  Zenith Filer Theme Configuration: Midnight (Professional)
+  //  抜本的改善：境界線の強調、ボタン・フォームの視認性を最大化
   // ============================================================
 
-  // テーマのメタデータ
-  "Description": "暗所での集中力を高める、目に優しいダークモード",
-  "Author": "KAKASAKA",
+  "Description": "暗所での集中力を極限まで高める、目に優しいモダンな漆黒のダークモード",
+  "Author": "K.AKASAKA",
   "Category": "Professional",
 
-  // ── 基本 UI 要素 ──
+  // ── 基本 UI 要素（境界線とテキストのコントラストを強化） ──
   "Base": {
-    "BackgroundColor": "#181818",                      // メイン背景色
-    "SidebarColor": "#1E1E1E",                         // サイドバー（ナビペイン）背景色
-    "HeaderColor": "#181818",                          // ヘッダー背景色
-    "TitleBarColor": "#2D2D2D",                        // タイトルバー背景色（チャコールブラック）
-    "BorderColor": "#333333",                          // 枠線・区切り線の色
-    "PrimaryTextColor": "#D4D4D4",                     // メインテキスト色（ほぼ黒）
-    "SecondaryTextColor": "#808080",                   // サブテキスト・補足情報の色
-    "InputBackgroundColor": "#2D2D2D",                 // テキスト入力欄の背景色
-    "FocusedPaneBackgroundColor": "#1E1E1E",           // フォーカス中ペインの背景色（標準よりわずかに濃い）
-    "FocusedPaneTextColor": "#FFFFFF",                 // フォーカス中ペインのテキスト色
-    "FocusedPaneHeaderBackgroundColor": "#252526",     // フォーカス中ペインのヘッダー背景色（一覧より濃い）
-    "OnePointDarkColor": "#3E3E42",                    // ワンポイント用ダーク帯（お気に入り第1階層・アクティブタブ）
-    "TabSeparatorColor": "#333333",                    // タブ間の区切り線
-    "TabHoverColor": "#2A2D2E",                        // タブホバー時の背景色
-    "ToolbarSeparatorColor": "#454545",                // ツールバーセパレーター色
-    "TreeLineColor": "#454545"                        // ツリービュー接続線の色
+    "BackgroundColor": "#121212",                      // メイン背景：より深い漆黒へ
+    "SidebarColor": "#1A1A1A",                         // サイドバー：操作エリアとの分離を明確化
+    "HeaderColor": "#121212",                          // ヘッダー背景
+    "TitleBarColor": "#252525",                        // タイトルバー
+    "BorderColor": "#4A4A4A",                          // ★枠線：ボタンやフォームの輪郭を「見える」ように明度を大幅向上
+    "PrimaryTextColor": "#F0F0F0",                     // ★メイン文字色：暗い背景で最も読みやすい高輝度グレーへ
+    "SecondaryTextColor": "#B0B0B0",                   // ★サブ文字色：補足情報が消えないよう濃度を調整
+    "InputBackgroundColor": "#222222",                 // ★入力欄背景：枠線を目立たせるため、あえて背景より一段深く設定
+    "FocusedPaneBackgroundColor": "#1E1E1E",           // フォーカス中ペイン背景
+    "FocusedPaneTextColor": "#FFFFFF",                 // フォーカス中文字色：純白
+    "FocusedPaneHeaderBackgroundColor": "#2A2A2A",     // フォーカス中ヘッダー
+    "OnePointDarkColor": "#3E3E42",                    // アクセント用ダーク帯
+    "TabSeparatorColor": "#4A4A4A",                    // タブ区切り線
+    "TabHoverColor": "#2D2D2E",                        // タブホバー背景
+    "ToolbarSeparatorColor": "#454545",                // ツールバーセパレーター
+    "TreeLineColor": "#606060"                         // ツリー階層線：視認性を向上
   },
 
-  // ── リスト・選択・ホバー ──
+  // ── リスト・選択・ボタン（リカバリ画面等の視認性を解決） ──
   "List": {
-    "ListHoverColor": "#2A2D2E",                       // リスト項目ホバー時の背景色
-    "SelectionColor": "#264F78",                       // 選択項目のハイライト色
-    "ButtonHoverColor": "#3E3E42",                     // ボタンホバー時の背景色
-    "InactiveSelectionColor": "#37373D",               // 非アクティブペインの選択色
-    "OptionSelectedColor": "#094771",                  // ラジオボタン等の選択時背景色
-    "OptionSelectedHoverColor": "#0C5A94",             // ラジオボタン等の選択＋ホバー時背景色
-    "CheckboxHoverColor": "#2D2D30",                   // チェックボックスホバー時の背景色
-    "CheckedHoverAccentColor": "#007ACC"              // チェック済みホバー時のアクセント色（暗めのアクセント）
+    "ListHoverColor": "#2A2D2E",                       // リスト項目ホバー
+    "SelectionColor": "#264F78",                       // リスト項目選択
+    "ButtonHoverColor": "#4E4E52",                     // ★ボタンホバー：マウスを乗せた際に確実に「押せる」ことを明示
+    "InactiveSelectionColor": "#37373D",               // 非アクティブ選択背景
+    "OptionSelectedColor": "#335C99",                  // ★選択ボタン背景：リカバリ画面等の「選んでいる」ボタンを際立たせる
+    "OptionSelectedHoverColor": "#4070B0",             // 選択中ホバー
+    "CheckboxHoverColor": "#2D2D30",                   // チェックボックスホバー
+    "CheckedHoverAccentColor": "#007ACC"               // チェック済み強調
   },
 
   // ── インデックス検索 ──
   "Search": {
-    "IndexSearchBackgroundColor": "#3E3723",           // インデックス検索モード時の背景色（穏やかな黄色）
-    "IndexSearchIconColor": "#F1C40F",                 // インデックス検索の雷アイコン色（ゴールド）
-    "IndexSearchFocusBorderColor": "#D4AC0D"          // インデックス検索＋フォーカス時のボーダー色（アンバー）
+    "IndexSearchBackgroundColor": "#3E3723",           // 検索バー背景
+    "IndexSearchIconColor": "#F1C40F",                 // 検索アイコン
+    "IndexSearchFocusBorderColor": "#D4AC0D"           // 検索フォーカス枠
   },
 
-  // ── アクセント・エラー・破壊的操作 ──
+  // ── アクセント・エラー ──
   "Accent": {
-    "AccentColor": "#007ACC",                          // アクセントカラー（リンク・強調 / Solarized Blue）
-    "ErrorTextColor": "#F44747",                       // エラーテキスト色
-    "DestructiveHoverBackgroundColor": "#611616",      // 破壊的操作ホバー時の背景色（暗い赤）
-    "DestructiveIconColor": "#D16969"                 // 破壊的操作のアイコン色（明るい赤）
+    "AccentColor": "#007ACC",                          // 強調色：VSCode風ブルー
+    "ErrorTextColor": "#F44747",                       // エラー文字
+    "DestructiveHoverBackgroundColor": "#611616",      // 破壊的ホバー
+    "DestructiveIconColor": "#D16969"                  // 破壊的アイコン
   },
 
   // ── 右クリックメニュー ──
   "ContextMenu": {
-    "ContextMenuSeparatorColor": "#454545",            // コンテキストメニューのセパレーター色
-    "ContextMenuBackgroundColor": "#252526",           // コンテキストメニューの背景色
-    "ContextMenuBorderColor": "#454545",               // コンテキストメニューの枠線色
-    "ContextMenuTextColor": "#CCCCCC",                 // コンテキストメニューのテキスト色
-    "ContextMenuIconColor": "#BBBBBB",                 // コンテキストメニューのアイコン色
-    "ContextMenuShortcutColor": "#808080",             // コンテキストメニューのショートカットキー表示色
-    "ContextMenuDisabledColor": "#666666",             // コンテキストメニューの無効項目テキスト色
-    "ContextMenuDisabledIconColor": "#555555",         // コンテキストメニューの無効項目アイコン色
-    "ContextMenuHighlightShortcutColor": "#FFFFFF",    // ハイライト時のショートカットキー表示色
-    "ContextMenuOuterBackgroundColor": "#1E1E1E"      // コンテキストメニュー外枠の背景色
+    "ContextMenuSeparatorColor": "#454545",            // メニュー区切り線
+    "ContextMenuBackgroundColor": "#1E1E1E",           // メニュー背景
+    "ContextMenuBorderColor": "#4A4A4A",               // メニュー枠線
+    "ContextMenuTextColor": "#E0E0E0",                 // メニュー文字色
+    "ContextMenuIconColor": "#BBBBBB",                 // メニューアイコン
+    "ContextMenuShortcutColor": "#909090",             // ショートカット文字
+    "ContextMenuDisabledColor": "#666666",             // 無効項目
+    "ContextMenuDisabledIconColor": "#555555",         // 無効アイコン
+    "ContextMenuHighlightShortcutColor": "#FFFFFF",    // ハイライト時ショートカット
+    "ContextMenuOuterBackgroundColor": "#121212"       // メニュー外枠
   },
 
-  // ── その他（進捗バー・オーバーレイ・テレメトリー） ──
+  // ── その他（マニュアル・統計情報） ──
   "Misc": {
-    "GlowBarGlowColor": "#00CCFF",                     // 進捗バー（GlowBar）のグロー色
-    "ScanBarColor": "#007ACC",                         // スキャンバーの色
-    "LoadingOverlayColor": "#99181818",                // ローディングオーバーレイ色（#AARRGGBB 半透明）
-    "ShadowColor": "#000000",                          // ダイアログのシャドウ色
-    "TelemetryBackgroundColor": "#E61E1E1E",           // テレメトリーパネル背景色（#AARRGGBB 半透明）
-    "TelemetryBorderColor": "#40808080",               // テレメトリーパネル枠線色（#AARRGGBB 半透明）
-    "TelemetryTitleColor": "#569CD6",                  // テレメトリーパネルのタイトル色
-    "TelemetryValueColor": "#DCDCDC"                  // テレメトリーパネルの値テキスト色
+    "GlowBarGlowColor": "#00CCFF",                     // 進捗バー光
+    "ScanBarColor": "#007ACC",                         // スキャンバー
+    "LoadingOverlayColor": "#CC121212",                // マニュアル背景
+    "ShadowColor": "#000000",                          // シャドウ
+    "TelemetryBackgroundColor": "#E61A1A1A",           // 統計・マニュアルパネル背景
+    "TelemetryBorderColor": "#40808080",               // パネル枠線
+    "TelemetryTitleColor": "#569CD6",                  // マニュアルタイトル
+    "TelemetryValueColor": "#DCDCDC"                   // マニュアル本文・数値
   }
 }

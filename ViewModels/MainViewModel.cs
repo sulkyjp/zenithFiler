@@ -703,8 +703,21 @@ namespace ZenithFiler
             EnsureTabPaths(settings.RightPane, isRight: true);
 
             // タブ復元（fire-and-forget: NavigateAsync 内で無効パスは安全に処理される）
-            _ = LeftPane.RestoreTabsAsync(settings.LeftPane);
-            _ = RightPane.RestoreTabsAsync(settings.RightPane);
+            if (settings.RestoreTabsOnStartup)
+            {
+                _ = LeftPane.RestoreTabsAsync(settings.LeftPane);
+                _ = RightPane.RestoreTabsAsync(settings.RightPane);
+            }
+            else
+            {
+                // タブ復元 OFF: ホームフォルダのみで開始
+                var leftHome = new PaneSettings { CurrentPath = settings.LeftPane.HomePath, HomePath = settings.LeftPane.HomePath, FileViewMode = settings.LeftPane.FileViewMode };
+                var rightHome = new PaneSettings { CurrentPath = settings.RightPane.HomePath, HomePath = settings.RightPane.HomePath, FileViewMode = settings.RightPane.FileViewMode };
+                EnsureTabPaths(leftHome, isRight: false);
+                EnsureTabPaths(rightHome, isRight: true);
+                _ = LeftPane.RestoreTabsAsync(leftHome);
+                _ = RightPane.RestoreTabsAsync(rightHome);
+            }
 
             // フィルター適用
             await Application.Current.Dispatcher.InvokeAsync(() => ApplySearchResultFilterStateToAllTabs());
@@ -961,6 +974,11 @@ namespace ZenithFiler
             if (AnimateControlDeckClose != null)
                 await AnimateControlDeckClose();
             IsControlDeckOpen = false;
+            // ControlDeck 内の要素が持っていたフォーカスが Collapsed により失われるため、
+            // アクティブペインのファイルリストへ明示的に戻す。
+            Application.Current?.Dispatcher.BeginInvoke(
+                () => FocusRequested?.Invoke(),
+                System.Windows.Threading.DispatcherPriority.Input);
         }
 
         /// <summary>インデックスビューからアプリ設定ビューへ切り替える。</summary>

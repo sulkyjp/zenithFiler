@@ -144,7 +144,7 @@
                                             Style="{StaticResource IconButton}" 
                                             Command="{Binding AddTabCommand}"
                                             Width="24" Height="24"
-                                            ToolTip="タブを追加 (Ctrl+T)"
+                                            ToolTip="タブを追加"
                                             Margin="0,0,4,0"
                                             VerticalAlignment="Center">
                                         <icon:PackIconLucide Kind="Plus" Width="12" Height="12" Foreground="{DynamicResource SubTextBrush}"/>
@@ -442,7 +442,7 @@
                                                     ClipToBounds="False"
                                                     VerticalAlignment="Center"
                                                     Margin="2,0,0,0"
-                                                    ToolTip="閉じる (Ctrl+W)"
+                                                    ToolTip="閉じる"
                                                     Visibility="{Binding IsLocked, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}">
                                                 <icon:PackIconLucide x:Name="CloseIcon"
                                                                       Kind="X"

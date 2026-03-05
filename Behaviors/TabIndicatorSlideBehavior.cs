@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using ZenithFiler.Helpers;
+using ZenithFiler.Models;
 
 namespace ZenithFiler
 {
@@ -138,7 +139,7 @@ namespace ZenithFiler
             if (isFirstPosition)
                 _initialPositionSet.Add(tabControl);
 
-            if (animate && !isFirstPosition)
+            if (animate && !isFirstPosition && WindowSettings.MicroAnimationsEnabled)
             {
                 var currentMargin = indicator.Margin;
                 var targetMargin = new Thickness(left, 0, 0, 0);

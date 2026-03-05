@@ -50,6 +50,12 @@ namespace ZenithFiler
         private static readonly Lazy<Services.ThemeService> _themeService = new(() => new Services.ThemeService());
         public static Services.ThemeService ThemeService => _themeService.Value;
 
+        private static readonly Lazy<Services.LicenseService> _licenseService = new(() => new Services.LicenseService());
+        public static Services.LicenseService License => _licenseService.Value;
+
+        private static readonly Lazy<Services.KeyBindingService> _keyBindingService = new(() => new Services.KeyBindingService());
+        public static Services.KeyBindingService KeyBindings => _keyBindingService.Value;
+
         private static CancellationTokenSource? _gcCts;
         private const int GcDelaySeconds = 60;
         private const int LohCompactionDelaySeconds = 300;
@@ -62,6 +68,15 @@ namespace ZenithFiler
 
         /// <summary>バックグラウンドで実行中の起動時初期化タスク。Window_Loaded から await して完了を待機できる。</summary>
         internal static Task? StartupInitTask { get; private set; }
+
+        /// <summary>起動時に適用したテーマ名（トースト表示用）。</summary>
+        public static string? StartupAppliedThemeName { get; private set; }
+
+        /// <summary>起動時に読み取った SavedThemeName（ThemeName へのフォールバック済み）。LoadThemeSettings 初期化用。</summary>
+        public static string StartupSavedThemeName { get; private set; } = "standard";
+
+        /// <summary>起動時に読み取ったペインテーマ名（Pane モード復元用）。</summary>
+        public static (string Nav, string APane, string BPane) StartupPaneThemes { get; private set; }
 
         /// <summary>
         /// カスタムエントリーポイント。WPF フレームワーク初期化前にスプラッシュ表示と設定読み込みを開始する。
@@ -125,8 +140,27 @@ namespace ZenithFiler
             // リソース辞書は UI スレッドで読み込む必要がある（XAML パース）
             LoadHeavyResources();
             // テーマカラーを外部 JSON から適用（ファイルがなければデフォルトのまま）
-            var savedTheme = ReadThemeNameFromSettings(_settingsPath);
-            ThemeService.LoadAndApply(Current.Resources, savedTheme);
+            var ts = ReadThemeSettingsFromSettings(_settingsPath);
+            StartupSavedThemeName = ts.SavedTheme; // フォールバック済み SavedThemeName をキャッシュ
+            StartupPaneThemes = (ts.NavPane, ts.APane, ts.BPane);
+            string themeToApply = ts.SavedTheme;
+
+            if (ts.Mode == "Auto")
+            {
+                var allThemes = ThemeService.ScanThemes();
+                var pool = (ts.SubMode == "Category" && !string.IsNullOrEmpty(ts.Category)
+                    ? allThemes.Where(t => t.CategoryDisplayName == ts.Category)
+                    : allThemes).ToList();
+                var picked = PickRandomTheme(pool, ts.LastApplied);
+                if (picked != null)
+                {
+                    themeToApply = picked.Name;
+                    _ = Task.Run(() => WindowSettings.SaveThemeOnly(themeToApply));
+                }
+            }
+
+            ThemeService.LoadAndApply(Current.Resources, themeToApply);
+            StartupAppliedThemeName = themeToApply;
 
             // マニュアルビューア用ログフック（共有プロジェクトから呼ばれる）
             DocViewerLogHelper.LogAsync = msg => _ = FileLogger.LogAsync(msg);
@@ -160,6 +194,14 @@ namespace ZenithFiler
 
             // 設定を取得（Main() で開始済み — 完了待機）
             WindowSettings preloadedSettings = _settingsTask!.GetAwaiter().GetResult();
+            // 行高リソースを起動時設定から初期化（ListViewItem の MinHeight に DynamicResource で使用）
+            Current.Resources["ListRowHeight"] = (double)preloadedSettings.ListRowHeight;
+            // 一覧アニメーション時間リソースを初期化（ホバーフェード・スケール）
+            Current.Resources["ListItemHoverDuration"] = new System.Windows.Duration(
+                preloadedSettings.EnableListAnimations ? TimeSpan.FromSeconds(0.15) : TimeSpan.Zero);
+            // カスタムキーバインドを起動時に適用
+            KeyBindings.ApplyCustomBindings(preloadedSettings.CustomKeyBindings);
+
             var mainWindow = new MainWindow(preloadedSettings);
 
             // レンダリング準備が整った段階で Visible に切り替え、完成済みの画面を一発表示
@@ -174,6 +216,7 @@ namespace ZenithFiler
             {
                 PathHelper.EnsureSpecialFoldersCached();
                 await Database.InitializeAsync();
+                await License.InitializeAsync();
             });
 
             // ShellNew レジストリスキャン（コンテキストメニューの「新規作成」サブメニュー用）
@@ -255,19 +298,48 @@ namespace ZenithFiler
             }
         }
 
-        /// <summary>settings.json から ThemeName だけを高速に取得する。フル Load を避けて起動を高速化。</summary>
-        private static string ReadThemeNameFromSettings(string settingsPath)
+        private record ThemeStartupSettings(
+            string Mode, string SubMode, string? Category,
+            string SavedTheme, string LastApplied,
+            string NavPane, string APane, string BPane);
+
+        /// <summary>settings.json からテーマ関連フィールドを高速に取得する。フル Load を避けて起動を高速化。</summary>
+        private static ThemeStartupSettings ReadThemeSettingsFromSettings(string settingsPath)
         {
+            string mode = "Personalize", sub = "All", last = "standard";
+            string? cat = null;
+            string navPane = string.Empty, aPane = string.Empty, bPane = string.Empty;
             try
             {
-                if (!File.Exists(settingsPath)) return "standard";
-                using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(settingsPath),
-                    new System.Text.Json.JsonDocumentOptions { CommentHandling = System.Text.Json.JsonCommentHandling.Skip });
-                if (doc.RootElement.TryGetProperty("ThemeName", out var prop))
-                    return prop.GetString() ?? "standard";
+                if (File.Exists(settingsPath))
+                {
+                    using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(settingsPath),
+                        new System.Text.Json.JsonDocumentOptions { CommentHandling = System.Text.Json.JsonCommentHandling.Skip });
+                    var r = doc.RootElement;
+                    // ThemeName を先読みし、SavedThemeName 未記録時のフォールバックとして使用（マイグレーション互換）
+                    if (r.TryGetProperty("ThemeName",         out var p)) last  = p.GetString() ?? last;
+                    string saved = last; // SavedThemeName がなければ ThemeName で代替
+                    if (r.TryGetProperty("CurrentThemeMode", out     p)) mode  = p.GetString() ?? mode;
+                    if (r.TryGetProperty("AutoSelectSubMode", out     p)) sub   = p.GetString() ?? sub;
+                    if (r.TryGetProperty("SelectedCategory",  out     p)) cat   = p.GetString();
+                    if (r.TryGetProperty("SavedThemeName",    out     p)) saved = p.GetString() ?? saved;
+                    if (r.TryGetProperty("NavPaneThemeName",  out     p)) navPane = p.GetString() ?? navPane;
+                    if (r.TryGetProperty("APaneThemeName",    out     p)) aPane   = p.GetString() ?? aPane;
+                    if (r.TryGetProperty("BPaneThemeName",    out     p)) bPane   = p.GetString() ?? bPane;
+                    return new(mode, sub, cat, saved, last, navPane, aPane, bPane);
+                }
             }
             catch { }
-            return "standard";
+            return new(mode, sub, cat, last, last, navPane, aPane, bPane);
+        }
+
+        /// <summary>プール内からランダムにテーマを選ぶ。前回と重複しないものを優先する。</summary>
+        private static Models.ThemeInfo? PickRandomTheme(System.Collections.Generic.IList<Models.ThemeInfo> pool, string? lastThemeName)
+        {
+            if (pool.Count == 0) return null;
+            var preferred = pool.Where(t => t.Name != lastThemeName).ToList();
+            var candidates = preferred.Count > 0 ? preferred : (System.Collections.Generic.IList<Models.ThemeInfo>)pool;
+            return candidates[Random.Shared.Next(candidates.Count)];
         }
 
         /// <summary>MainWindow 用の重いリソース（WPF-UI テーマ等）を遅延読み込みする。スプラッシュ表示中に呼ぶ。</summary>

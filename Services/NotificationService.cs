@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace ZenithFiler
@@ -34,14 +35,37 @@ namespace ZenithFiler
         [ObservableProperty]
         private string _indexingStatusMessage = string.Empty;
 
+        [ObservableProperty]
+        private string _themeToastLabel = "Applied Theme";
+
+        [ObservableProperty]
+        private string _themeToastName = string.Empty;
+
+        [ObservableProperty]
+        private bool _isThemeToastVisible = false;
+
+        /// <summary>起動時テーマ適用をトーストで通知する。label はヘッダー文字列、holdMs 後にフェードアウト。</summary>
+        public void ShowThemeToast(string themeName, string label = "Applied Theme", int holdMs = 2500)
+        {
+            ThemeToastLabel = label;
+            ThemeToastName = themeName;
+            IsThemeToastVisible = true;
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(holdMs);
+                await Application.Current.Dispatcher.InvokeAsync(() => IsThemeToastVisible = false);
+            });
+        }
+
         /// <summary>
         /// ステータスバーにメッセージを表示します。ログには同じメッセージが記録されます。
         /// </summary>
         /// <param name="message">表示および記録するメッセージ</param>
-        /// <param name="displayTimeMs">表示時間（ミリ秒）</param>
-        public void Notify(string message, int displayTimeMs = 3000)
+        /// <param name="displayTimeMs">表示時間（ミリ秒）。-1 の場合は設定値を使用。</param>
+        public void Notify(string message, int displayTimeMs = -1)
         {
-            Notify(message, null, displayTimeMs);
+            int ms = displayTimeMs < 0 ? WindowSettings.NotificationDurationMsValue : displayTimeMs;
+            Notify(message, null, ms);
         }
 
         /// <summary>

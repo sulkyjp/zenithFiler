@@ -28,20 +28,7 @@
         <local:MainViewModel/>
     </ui:FluentWindow.DataContext>
 
-    <ui:FluentWindow.InputBindings>
-        <KeyBinding Modifiers="Control" Key="Z" Command="{Binding UndoCommand}"/>
-        <KeyBinding Modifiers="Control+Shift" Key="E" Command="{Binding FocusActivePaneCommand}"/>
-        <KeyBinding Modifiers="Control+Shift" Key="O" Command="{Binding OpenControlDeckCommand}"/>
-        <KeyBinding Modifiers="Control+Shift" Key="D5" Command="{Binding SetSidebarModeCommand}" CommandParameter="{x:Static local:SidebarViewMode.WorkingSet}"/>
-        <KeyBinding Modifiers="Control+Shift" Key="D4" Command="{Binding SetSidebarModeCommand}" CommandParameter="{x:Static local:SidebarViewMode.IndexSearch}"/>
-        <KeyBinding Modifiers="Control+Shift" Key="D3" Command="{Binding SetSidebarModeCommand}" CommandParameter="{x:Static local:SidebarViewMode.History}"/>
-        <KeyBinding Modifiers="Control+Shift" Key="D2" Command="{Binding SetSidebarModeCommand}" CommandParameter="{x:Static local:SidebarViewMode.Tree}"/>
-        <KeyBinding Modifiers="Control+Shift" Key="D1" Command="{Binding SetSidebarModeCommand}" CommandParameter="{x:Static local:SidebarViewMode.Favorites}"/>
-        <KeyBinding Modifiers="Control" Key="F" Command="{Binding FocusActiveSearchCommand}"/>
-        <KeyBinding Modifiers="Control+Shift" Key="F" Command="{Binding FocusIndexSearchCommand}"/>
-        <KeyBinding Modifiers="Control+Shift" Key="Q" Command="{Binding SetPaneCountCommand}" CommandParameter="1"/>
-        <KeyBinding Modifiers="Control+Shift" Key="W" Command="{Binding SetPaneCountCommand}" CommandParameter="2"/>
-    </ui:FluentWindow.InputBindings>
+    <!-- InputBindings はコードビハインドで動的に構築（KeyBindingService 連携） -->
     
     <ui:FluentWindow.Resources>
         <local:BooleanToVisibilityConverter x:Key="BoolToVis"/>
@@ -112,39 +99,39 @@
                     <Border DockPanel.Dock="Top" Height="32" Padding="8,0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
                         <Grid>
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <RadioButton Style="{StaticResource IconRadioButton}" 
+                                <RadioButton x:Name="SidebarFavoritesBtn" Style="{StaticResource IconRadioButton}"
                                              IsChecked="{Binding SidebarMode, Converter={StaticResource EqualityToBool}, ConverterParameter={x:Static local:SidebarViewMode.Favorites}, Mode=OneWay}"
                                              Command="{Binding SetSidebarModeCommand}"
                                              CommandParameter="{x:Static local:SidebarViewMode.Favorites}"
-                                             ToolTip="お気に入り (Ctrl+Shift+1)">
+                                             ToolTip="お気に入り">
                                     <icon:PackIconLucide Kind="Star" Width="12" Height="12"/>
                                 </RadioButton>
-                                <RadioButton Style="{StaticResource IconRadioButton}" 
+                                <RadioButton x:Name="SidebarTreeBtn" Style="{StaticResource IconRadioButton}"
                                              IsChecked="{Binding SidebarMode, Converter={StaticResource EqualityToBool}, ConverterParameter={x:Static local:SidebarViewMode.Tree}, Mode=OneWay}"
                                              Command="{Binding SetSidebarModeCommand}"
                                              CommandParameter="{x:Static local:SidebarViewMode.Tree}"
-                                             ToolTip="ツリービュー (Ctrl+Shift+2)" Margin="4,0,0,0">
+                                             ToolTip="ツリービュー" Margin="4,0,0,0">
                                     <icon:PackIconLucide Kind="FolderTree" Width="12" Height="12"/>
                                 </RadioButton>
-                                <RadioButton Style="{StaticResource IconRadioButton}" 
+                                <RadioButton x:Name="SidebarHistoryBtn" Style="{StaticResource IconRadioButton}"
                                              IsChecked="{Binding SidebarMode, Converter={StaticResource EqualityToBool}, ConverterParameter={x:Static local:SidebarViewMode.History}, Mode=OneWay}"
                                              Command="{Binding SetSidebarModeCommand}"
                                              CommandParameter="{x:Static local:SidebarViewMode.History}"
-                                             ToolTip="参照履歴 (Ctrl+Shift+3)" Margin="4,0,0,0">
+                                             ToolTip="参照履歴" Margin="4,0,0,0">
                                     <icon:PackIconLucide Kind="History" Width="12" Height="12"/>
                                 </RadioButton>
-                                <RadioButton Style="{StaticResource IconRadioButton}"
+                                <RadioButton x:Name="SidebarIndexSearchBtn" Style="{StaticResource IconRadioButton}"
                                              IsChecked="{Binding SidebarMode, Converter={StaticResource EqualityToBool}, ConverterParameter={x:Static local:SidebarViewMode.IndexSearch}, Mode=OneWay}"
                                              Command="{Binding SetSidebarModeCommand}"
                                              CommandParameter="{x:Static local:SidebarViewMode.IndexSearch}"
-                                             ToolTip="インデックス検索設定 (Ctrl+Shift+4)" Margin="4,0,0,0">
+                                             ToolTip="インデックス検索設定" Margin="4,0,0,0">
                                     <icon:PackIconLucide Kind="FolderSearch" Width="12" Height="12"/>
                                 </RadioButton>
-                                <RadioButton Style="{StaticResource IconRadioButton}"
+                                <RadioButton x:Name="SidebarWorkingSetBtn" Style="{StaticResource IconRadioButton}"
                                              IsChecked="{Binding SidebarMode, Converter={StaticResource EqualityToBool}, ConverterParameter={x:Static local:SidebarViewMode.WorkingSet}, Mode=OneWay}"
                                              Command="{Binding SetSidebarModeCommand}"
                                              CommandParameter="{x:Static local:SidebarViewMode.WorkingSet}"
-                                             ToolTip="ワーキングセット (Ctrl+Shift+5)" Margin="4,0,0,0"
+                                             ToolTip="ワーキングセット" Margin="4,0,0,0"
                                              IsTabStop="False">
                                     <icon:PackIconLucide Kind="Briefcase" Width="12" Height="12"/>
                                 </RadioButton>
@@ -153,9 +140,9 @@
                             <!-- 右側ボタン群 -->
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                                 <!-- アプリ設定ボタン -->
-                                <Button Style="{StaticResource IconButton}"
+                                <Button x:Name="OpenSettingsBtn" Style="{StaticResource IconButton}"
                                         Command="{Binding OpenControlDeckCommand}"
-                                        ToolTip="アプリ設定を開く (Ctrl+Shift+O)"
+                                        ToolTip="アプリ設定を開く"
                                         Margin="0,0,8,0"
                                         IsTabStop="False">
                                     <icon:PackIconLucide Kind="Settings" Width="12" Height="12" Foreground="{DynamicResource SubTextBrush}"/>
@@ -2277,6 +2264,13 @@
             </Grid><!-- /2行アウターGrid -->
         </Border>
 
+        <!-- ════ テーマ切り替えトランジション（ZIndex=850: ControlDeckの下・コンテンツの上） ════ -->
+        <Border x:Name="ThemeTransitionOverlay"
+                Grid.RowSpan="3" Panel.ZIndex="850"
+                Background="{DynamicResource BackgroundBrush}"
+                Visibility="Collapsed" Opacity="0"
+                IsHitTestVisible="False"/>
+
         <!-- ════ Control Deck オーバーレイ ════ -->
         <Grid x:Name="ControlDeckOverlay" Grid.RowSpan="3" Panel.ZIndex="900"
               Visibility="Collapsed" Opacity="0">
@@ -2468,7 +2462,38 @@
             </Border>
         </Grid>
 
-
+        <!-- 起動時テーマ通知トースト（右下コーナー・スライドイン） -->
+        <Border x:Name="ThemeToastBorder" Grid.Row="1"
+                HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                MaxWidth="300"
+                Margin="0,0,20,16"
+                CornerRadius="10" Padding="16,12"
+                IsHitTestVisible="False" Opacity="0"
+                Visibility="Collapsed"
+                Background="{DynamicResource BackgroundBrush}"
+                BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1.5">
+            <Border.RenderTransform>
+                <TranslateTransform Y="14"/>
+            </Border.RenderTransform>
+            <Border.Effect>
+                <DropShadowEffect ShadowDepth="0" BlurRadius="16" Color="#000000" Opacity="0.30"/>
+            </Border.Effect>
+            <StackPanel Orientation="Horizontal">
+                <icon:PackIconLucide Kind="Palette" Width="14" Height="14"
+                                     Foreground="{DynamicResource AccentBrush}"
+                                     VerticalAlignment="Center" Margin="0,0,10,0"/>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Notification.ThemeToastLabel}"
+                               FontSize="9" FontWeight="Medium"
+                               Foreground="{DynamicResource AccentBrush}" Opacity="0.75"
+                               Margin="0,0,0,2"/>
+                    <TextBlock Text="{Binding Notification.ThemeToastName}"
+                               FontSize="13" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextBrush}"
+                               TextWrapping="NoWrap"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
 
     </Grid>
 </ui:FluentWindow>

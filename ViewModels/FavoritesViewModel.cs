@@ -285,9 +285,9 @@ namespace ZenithFiler
         }
 
         [RelayCommand]
-        private void NavigateToFavorite(FavoriteItem item)
+        private async Task NavigateToFavorite(FavoriteItem item)
         {
-            if (!EnsurePathExists(item)) return;
+            if (!await EnsurePathExistsAsync(item)) return;
 
             // ショートカット（.lnk）の場合はリンク先を解析し、フォルダならアクティブペインの新しいタブで開く
             if (item.IsFile && !string.IsNullOrEmpty(item.Path) &&
@@ -332,9 +332,9 @@ namespace ZenithFiler
         }
 
         [RelayCommand]
-        private void OpenInAPane(FavoriteItem item)
+        private async Task OpenInAPane(FavoriteItem item)
         {
-            if (!EnsurePathExists(item)) return;
+            if (!await EnsurePathExistsAsync(item)) return;
 
             if (item.IsFile)
             {
@@ -353,9 +353,9 @@ namespace ZenithFiler
         }
 
         [RelayCommand]
-        private void OpenInBPane(FavoriteItem item)
+        private async Task OpenInBPane(FavoriteItem item)
         {
-            if (!EnsurePathExists(item)) return;
+            if (!await EnsurePathExistsAsync(item)) return;
 
             if (item.IsFile)
             {
@@ -377,9 +377,9 @@ namespace ZenithFiler
         /// お気に入りを新しいタブで開く。フォルダはそのフォルダを、ファイルは親フォルダを新規タブで表示する。
         /// </summary>
         [RelayCommand]
-        private void OpenInNewTab(FavoriteItem item)
+        private async Task OpenInNewTab(FavoriteItem item)
         {
-            if (!EnsurePathExists(item)) return;
+            if (!await EnsurePathExistsAsync(item)) return;
             if (string.IsNullOrEmpty(item.Path)) return; // 仮想フォルダは対象外
 
             var pane = _mainViewModel.ActivePane;
@@ -403,14 +403,41 @@ namespace ZenithFiler
 
         /// <summary>
         /// パスの存在確認を行い、見つからない場合は削除するかユーザーに確認する。
+        /// クラウドパス（Box / SPO）の場合は親ディレクトリへのアクセスでハイドレーションをトリガーし、リトライする。
         /// ユーザーが削除を選択した場合は、ロック状態に関わらず削除を実行する。
         /// </summary>
-        public bool EnsurePathExists(FavoriteItem item)
+        public async Task<bool> EnsurePathExistsAsync(FavoriteItem item)
         {
             if (item == null) return false;
             if (string.IsNullOrEmpty(item.Path)) return true; // 仮想フォルダなどは常に true
 
             if (Directory.Exists(item.Path) || File.Exists(item.Path)) return true;
+
+            // クラウドパスの場合はハイドレーションをトリガーしてリトライ
+            var sourceType = item.SourceType != SourceType.Local
+                ? item.SourceType
+                : PathHelper.DetermineSourceType(item.Path);
+
+            if (sourceType is SourceType.Box or SourceType.SPO)
+            {
+                App.Notification.Notify("クラウドパスにアクセスしています...", item.Path);
+
+                for (int i = 0; i < 2; i++)
+                {
+                    await Task.Run(() =>
+                    {
+                        try
+                        {
+                            var parent = Path.GetDirectoryName(item.Path);
+                            if (!string.IsNullOrEmpty(parent))
+                                _ = Directory.Exists(parent);
+                        }
+                        catch { /* ignore */ }
+                    });
+                    await Task.Delay(500);
+                    if (Directory.Exists(item.Path) || File.Exists(item.Path)) return true;
+                }
+            }
 
             var result = ZenithDialog.Show(
                 $"パスが見つかりません:\n{item.Path}\n\nこの項目をお気に入りから削除しますか？",

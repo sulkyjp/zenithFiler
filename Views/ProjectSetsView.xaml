@@ -6,6 +6,7 @@
 
     <UserControl.Resources>
         <local:BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <local:WorkingSetToTooltipConverter x:Key="WorkingSetToTooltip"/>
 
         <!-- フッター内ボタン共通スタイル（チャコール背景に馴染む白文字・アイコン） -->
         <Style x:Key="FooterButton" TargetType="Button">
@@ -112,6 +113,14 @@
                         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                         <Setter Property="Padding" Value="8,6"/>
                         <Setter Property="Cursor" Value="Hand"/>
+                        <Setter Property="ToolTip">
+                            <Setter.Value>
+                                <ToolTip MaxWidth="800">
+                                    <TextBlock Text="{Binding Converter={StaticResource WorkingSetToTooltip}}"
+                                               TextWrapping="NoWrap" FontSize="12"/>
+                                </ToolTip>
+                            </Setter.Value>
+                        </Setter>
                         <Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListView}}"/>
                         <EventSetter Event="MouseLeftButtonUp" Handler="ListViewItem_MouseLeftButtonUp"/>
                         <Setter Property="Template">

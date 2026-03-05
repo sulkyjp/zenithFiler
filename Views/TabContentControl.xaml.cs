@@ -131,20 +131,43 @@ namespace ZenithFiler
         {
             InitializeComponent();
             DataContextChanged += OnDataContextChanged;
-            
+
             // ListViewのサイズ変更イベントでカラム幅を調整
             FileListView.SizeChanged += FileListView_SizeChanged;
             FileListBox.SizeChanged += FileListBox_SizeChanged;
-            
+
             // レイアウト調整用トリガーを追加
             Loaded += TabContentControl_Loaded;
             Unloaded += TabContentControl_Unloaded;
             IsVisibleChanged += TabContentControl_IsVisibleChanged;
             LayoutUpdated += TabContentControl_LayoutUpdated;
-            
+
             // カラムヘッダーの手動リサイズ検知用
             FileListView.AddHandler(Thumb.DragCompletedEvent, new DragCompletedEventHandler(OnColumnHeaderDragCompleted));
             FileListView.AddHandler(Control.MouseDoubleClickEvent, new MouseButtonEventHandler(OnColumnHeaderGripperDoubleClicked), true);
+
+            // ショートカットツールチップ初期化 + 変更追従
+            UpdateShortcutTooltips();
+            App.KeyBindings.BindingsChanged += (_, _) =>
+                Dispatcher.Invoke(UpdateShortcutTooltips);
+        }
+
+        /// <summary>ツールチップのショートカット表示を KeyBindingService から動的に設定する。</summary>
+        private void UpdateShortcutTooltips()
+        {
+            var kb = App.KeyBindings;
+            void SetTip(FrameworkElement? el, string label, string actionId)
+            {
+                if (el == null) return;
+                var shortcut = kb.GetShortcutText(actionId);
+                el.ToolTip = string.IsNullOrEmpty(shortcut) ? label : $"{label} ({shortcut})";
+            }
+
+            SetTip(BackBtn, "戻る", "FileList.Back");
+            SetTip(ForwardBtn, "進む", "FileList.Forward");
+            SetTip(GoUpBtn, "上へ", "FileList.GoUp");
+            SetTip(RefreshBtn, "更新", "FileList.Refresh");
+            SetTip(NewFolderBtn, "フォルダを作成", "FileList.NewFolder");
         }
 
         private void OnColumnHeaderDragCompleted(object sender, DragCompletedEventArgs e)
@@ -1093,8 +1116,27 @@ namespace ZenithFiler
                 {
                     if (_mouseDownItem.Content is FileItem fileItem && DataContext is TabItemViewModel vm)
                     {
+                        // シングルクリックモード時、フォルダはシングルクリックで処理済みのためスキップ
+                        if (WindowSettings.SingleClickOpenFolderEnabled && fileItem.IsDirectory)
+                        {
+                            e.Handled = true;
+                            return;
+                        }
                         // Enter キーと同様に、フォルダ移動／ファイル実行（フォルダショートカット含む）を即座に実行
                         vm.OpenItemCommand.Execute(fileItem);
+                        e.Handled = true;
+                        return;
+                    }
+                }
+
+                // シングルクリックでフォルダを開くモード（修飾キーなし・フォルダのみ）
+                if (e.ClickCount == 1 && WindowSettings.SingleClickOpenFolderEnabled
+                    && Keyboard.Modifiers == ModifierKeys.None && _mouseDownItem != null)
+                {
+                    if (_mouseDownItem.Content is FileItem folderItem && folderItem.IsDirectory
+                        && DataContext is TabItemViewModel vmSingle)
+                    {
+                        vmSingle.OpenItemCommand.Execute(folderItem);
                         e.Handled = true;
                         return;
                     }
@@ -2061,7 +2103,7 @@ namespace ZenithFiler
             e.Handled = true;
         }
 
-        private void ListView_Drop(object sender, DragEventArgs e)
+        private async void ListView_Drop(object sender, DragEventArgs e)
         {
             if (DataContext is not TabItemViewModel vm)
                 return;
@@ -2075,7 +2117,7 @@ namespace ZenithFiler
                     var window = Window.GetWindow(this);
                     if (window?.DataContext is MainViewModel mainVm)
                     {
-                        if (mainVm.Favorites.EnsurePathExists(favItem))
+                        if (await mainVm.Favorites.EnsurePathExistsAsync(favItem))
                         {
                             ApplySearchClearAndNavigate(vm, favItem.Path!);
                         }
@@ -2427,9 +2469,13 @@ namespace ZenithFiler
         private void ListView_KeyDown(object sender, KeyEventArgs e)
         {
             // アイコンビュー安定化：レイアウト競合防止のため、修飾キーなしのキー（F5・矢印等）を無効化。ツールバーの更新ボタンは有効。Ctrl+C/V/Xなどは許可。
+            var actualKey = e.Key == Key.System ? e.SystemKey : e.Key;
+            var mods = Keyboard.Modifiers;
             if (DataContext is TabItemViewModel vm && vm.FileViewMode != FileViewMode.Details)
             {
-                if (e.Key != Key.Space && (Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Alt | ModifierKeys.Shift)) == ModifierKeys.None)
+                var qpDef = App.KeyBindings.Get("Window.QuickPreview");
+                bool isQuickPreviewKey = qpDef != null && actualKey == qpDef.ActiveKey && mods == qpDef.ActiveModifiers;
+                if (!isQuickPreviewKey && (mods & (ModifierKeys.Control | ModifierKeys.Alt | ModifierKeys.Shift)) == ModifierKeys.None)
                 {
                     e.Handled = true;
                     return;
@@ -2437,43 +2483,43 @@ namespace ZenithFiler
             }
             if (sender is ListBox listBox && DataContext is TabItemViewModel vm2)
             {
-                // Ctrl + A (Select All)
-                if (e.Key == Key.A && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+                // Select All
+                if (App.KeyBindings.Matches("FileList.SelectAll", actualKey, mods))
                 {
                     listBox.SelectAll();
                     e.Handled = true;
                 }
-                // Ctrl + C (Copy) — コピーした項目にフォーカスを維持（リストは変わらないので遅延復元は行わずちらつきを防ぐ）
-                else if (e.Key == Key.C && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+                // Copy
+                else if (App.KeyBindings.Matches("FileList.Copy", actualKey, mods))
                 {
                     vm2.CopyItemsCommand.Execute(listBox.SelectedItems);
                     listBox.Focus();
                     FocusFirstSelectedItem();
                     e.Handled = true;
                 }
-                // Ctrl + V (Paste)
-                else if (e.Key == Key.V && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+                // Paste
+                else if (App.KeyBindings.Matches("FileList.Paste", actualKey, mods))
                 {
                     vm2.PasteItemsCommand.Execute(null);
                     listBox.Focus();
                     e.Handled = true;
                 }
-                // Ctrl + X (Cut) — 切り取った項目にフォーカスを維持（リストは変わらないので遅延復元は行わずちらつきを防ぐ）
-                else if (e.Key == Key.X && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+                // Cut
+                else if (App.KeyBindings.Matches("FileList.Cut", actualKey, mods))
                 {
                     vm2.CutItemsCommand.Execute(listBox.SelectedItems);
                     listBox.Focus();
                     FocusFirstSelectedItem();
                     e.Handled = true;
                 }
-                // Ctrl+Shift+N (New Folder)
-                else if (e.Key == Key.N && (Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Shift)) == (ModifierKeys.Control | ModifierKeys.Shift))
+                // New Folder
+                else if (App.KeyBindings.Matches("FileList.NewFolder", actualKey, mods))
                 {
                     vm2.CreateNewFolderCommand.Execute(null);
                     e.Handled = true;
                 }
-                // F2 (Rename)
-                else if (e.Key == Key.F2)
+                // Rename
+                else if (App.KeyBindings.Matches("FileList.Rename", actualKey, mods))
                 {
                     if (listBox.SelectedItem is FileItem item)
                     {
@@ -2482,7 +2528,7 @@ namespace ZenithFiler
                     }
                 }
                 // Delete
-                else if (e.Key == Key.Delete)
+                else if (App.KeyBindings.Matches("FileList.Delete", actualKey, mods))
                 {
                     int selectedIndex = listBox.SelectedIndex;
                     vm2.DeleteItemsCommand.Execute(listBox.SelectedItems);
@@ -2512,8 +2558,8 @@ namespace ZenithFiler
                         }
                     }), System.Windows.Threading.DispatcherPriority.Loaded);
                 }
-                // Enter
-                else if (e.Key == Key.Enter)
+                // Open
+                else if (App.KeyBindings.Matches("FileList.Open", actualKey, mods))
                 {
                     if (listBox.SelectedItem is FileItem item)
                     {
@@ -2521,26 +2567,26 @@ namespace ZenithFiler
                     }
                     e.Handled = true;
                 }
-                // Backspace
-                else if (e.Key == Key.Back)
+                // Go Up
+                else if (App.KeyBindings.Matches("FileList.GoUp", actualKey, mods))
                 {
                     vm2.UpCommand.Execute(null);
                     e.Handled = true;
                 }
-                // F5 (Refresh) — 詳細ビュー用（アイコンビューは手前で握りつぶし済み）
-                else if (e.Key == Key.F5)
+                // Refresh
+                else if (App.KeyBindings.Matches("FileList.Refresh", actualKey, mods))
                 {
                     vm2.RefreshCommand.Execute(null);
                     e.Handled = true;
                 }
-                // Alt + Left (Back)
-                else if (e.Key == Key.Left && (Keyboard.Modifiers & ModifierKeys.Alt) == ModifierKeys.Alt)
+                // Back
+                else if (App.KeyBindings.Matches("FileList.Back", actualKey, mods))
                 {
                     vm2.BackCommand.Execute(null);
                     e.Handled = true;
                 }
-                // Alt + Right (Forward)
-                else if (e.Key == Key.Right && (Keyboard.Modifiers & ModifierKeys.Alt) == ModifierKeys.Alt)
+                // Forward
+                else if (App.KeyBindings.Matches("FileList.Forward", actualKey, mods))
                 {
                     vm2.ForwardCommand.Execute(null);
                     e.Handled = true;
@@ -2555,27 +2601,27 @@ namespace ZenithFiler
             else if (sender is ListView listView && DataContext is TabItemViewModel vmDetail)
             {
                 // 詳細ビュー（FileListView）用のキー処理
-                if (e.Key == Key.F5)
+                if (App.KeyBindings.Matches("FileList.Refresh", actualKey, mods))
                 {
                     vmDetail.RefreshCommand.Execute(null);
                     e.Handled = true;
                 }
-                else if (e.Key == Key.Enter && listView.SelectedItem is FileItem enterItem)
+                else if (App.KeyBindings.Matches("FileList.Open", actualKey, mods) && listView.SelectedItem is FileItem enterItem)
                 {
                     vmDetail.OpenItemCommand.Execute(enterItem);
                     e.Handled = true;
                 }
-                else if (e.Key == Key.Back)
+                else if (App.KeyBindings.Matches("FileList.GoUp", actualKey, mods))
                 {
                     vmDetail.UpCommand.Execute(null);
                     e.Handled = true;
                 }
-                else if (e.Key == Key.Left && (Keyboard.Modifiers & ModifierKeys.Alt) == ModifierKeys.Alt)
+                else if (App.KeyBindings.Matches("FileList.Back", actualKey, mods))
                 {
                     vmDetail.BackCommand.Execute(null);
                     e.Handled = true;
                 }
-                else if (e.Key == Key.Right && (Keyboard.Modifiers & ModifierKeys.Alt) == ModifierKeys.Alt)
+                else if (App.KeyBindings.Matches("FileList.Forward", actualKey, mods))
                 {
                     vmDetail.ForwardCommand.Execute(null);
                     e.Handled = true;

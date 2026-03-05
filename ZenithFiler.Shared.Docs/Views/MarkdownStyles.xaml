@@ -2,18 +2,7 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:md="clr-namespace:Markdig.Wpf;assembly=Markdig.Wpf">
 
-    <SolidColorBrush x:Key="MarkdownTableBorderBrush" Color="#D0E0F0" />
-    <SolidColorBrush x:Key="MarkdownTableHeaderBackgroundBrush" Color="#F8FAFF" />
-    <SolidColorBrush x:Key="MarkdownTableHeaderForegroundBrush" Color="#222222" />
-    <SolidColorBrush x:Key="MarkdownTableZebraRowBrush" Color="#FBFCFF" />
-    <LinearGradientBrush x:Key="MarkdownQuoteGradientBrush" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#F0F6FC" Offset="0" />
-        <GradientStop Color="#F8FAFF" Offset="1" />
-    </LinearGradientBrush>
-    <LinearGradientBrush x:Key="MarkdownHeading2GradientBrush" StartPoint="0,0" EndPoint="1,0">
-        <GradientStop Color="#F3F7FF" Offset="0" />
-        <GradientStop Color="#FFFFFF" Offset="1" />
-    </LinearGradientBrush>
+    <!-- テーマ対応: ハードコードから DynamicResource 参照に変更。テーマ切替で即時更新される -->
 
     <Style x:Key="{x:Static md:Styles.DocumentStyleKey}"
            TargetType="{x:Type FlowDocument}">
@@ -47,7 +36,7 @@
         <Setter Property="Margin" Value="0,30,0,14" />
         <Setter Property="BorderThickness" Value="6,0,0,0" />
         <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-        <Setter Property="Background" Value="{StaticResource MarkdownHeading2GradientBrush}" />
+        <Setter Property="Background" Value="{DynamicResource ListHoverBrush}" />
         <Setter Property="Padding" Value="14,8,12,10" />
     </Style>
 
@@ -84,8 +73,8 @@
 
     <Style x:Key="{x:Static md:Styles.CodeStyleKey}"
            TargetType="{x:Type Run}">
-        <Setter Property="Foreground" Value="#222222" />
-        <Setter Property="Background" Value="#EBF2FA" />
+        <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+        <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}" />
         <Setter Property="FontFamily" Value="Cascadia Code, Consolas, monospace" />
         <Setter Property="FontSize" Value="12.5" />
     </Style>
@@ -96,7 +85,7 @@
         <Setter Property="Padding" Value="18,10,14,10" />
         <Setter Property="BorderThickness" Value="3,0,0,0" />
         <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-        <Setter Property="Background" Value="{DynamicResource MarkdownQuoteGradientBrush}" />
+        <Setter Property="Background" Value="{DynamicResource ListHoverBrush}" />
     </Style>
 
     <Style x:Key="{x:Static md:Styles.TableStyleKey}"
@@ -111,7 +100,7 @@
     <Style x:Key="{x:Static md:Styles.TableCellStyleKey}"
            TargetType="{x:Type TableCell}">
         <Setter Property="Padding" Value="12,8" />
-        <Setter Property="BorderBrush" Value="{DynamicResource MarkdownTableBorderBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
         <Setter Property="BorderThickness" Value="0,0,0,1" />
         <Setter Property="TextAlignment" Value="Left" />
     </Style>
@@ -119,8 +108,8 @@
     <Style x:Key="{x:Static md:Styles.TableHeaderStyleKey}"
            TargetType="{x:Type TableRow}">
         <Setter Property="FontWeight" Value="SemiBold" />
-        <Setter Property="Background" Value="{DynamicResource MarkdownTableHeaderBackgroundBrush}" />
-        <Setter Property="Foreground" Value="{DynamicResource MarkdownTableHeaderForegroundBrush}" />
+        <Setter Property="Background" Value="{DynamicResource SelectionBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
     </Style>
 
 </ResourceDictionary>

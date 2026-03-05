@@ -709,7 +709,7 @@ namespace ZenithFiler
     /// ListBoxItem.IsSelected への依存を排除し、SelectedThemeName との文字列比較で確実に動作する。
     /// values[0]: ThemeInfo.Name (string)
     /// values[1]: AppSettings.SelectedThemeName (string) — 現在適用中のテーマ名
-    /// values[2]: AppSettings.IsAssignmentModeActive (bool) — プリセット以外のモード中は true
+    /// values[2]: AppSettings.ActiveThemeMode (ThemeApplyMode) — Pane モード時のみグロー非表示
     /// </summary>
     public class IsCurrentPresetThemeConverter : IMultiValueConverter
     {
@@ -718,12 +718,53 @@ namespace ZenithFiler
             if (values.Length < 3) return false;
             var themeName     = values[0] as string;
             var selectedName  = values[1] as string;
-            var isAssignment  = values[2] is bool b && b;
-            return !isAssignment &&
+            var mode          = values[2] is ThemeApplyMode m ? m : ThemeApplyMode.Preset;
+            return mode != ThemeApplyMode.Pane &&
                    !string.IsNullOrWhiteSpace(themeName) &&
                    string.Equals(themeName, selectedName, StringComparison.OrdinalIgnoreCase);
         }
         public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+            => throw new NotImplementedException();
+    }
+
+    /// <summary>
+    /// WorkingSetDto → ツールチップ文字列。Aペイン・Bペインのタブパスを列挙します。
+    /// </summary>
+    public class WorkingSetToTooltipConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is not WorkingSetDto dto) return string.Empty;
+            var sb = new System.Text.StringBuilder();
+            var leftCount = dto.LeftPane?.Tabs?.Count ?? 0;
+            sb.AppendLine($"Aペイン（{leftCount}件）");
+            if (dto.LeftPane?.Tabs is { Count: > 0 } leftTabs)
+            {
+                foreach (var tab in leftTabs)
+                    sb.AppendLine(tab.Path);
+            }
+            else
+            {
+                sb.AppendLine("(なし)");
+            }
+            if (dto.PaneCount >= 2)
+            {
+                sb.AppendLine();
+                var rightCount = dto.RightPane?.Tabs?.Count ?? 0;
+                sb.AppendLine($"Bペイン（{rightCount}件）");
+                if (dto.RightPane?.Tabs is { Count: > 0 } rightTabs)
+                {
+                    foreach (var tab in rightTabs)
+                        sb.AppendLine(tab.Path);
+                }
+                else
+                {
+                    sb.AppendLine("(なし)");
+                }
+            }
+            return sb.ToString().TrimEnd();
+        }
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
             => throw new NotImplementedException();
     }
 }
