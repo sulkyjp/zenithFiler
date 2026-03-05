@@ -966,6 +966,10 @@ namespace ZenithFiler
             if (string.IsNullOrEmpty(actionId)) return;
             App.KeyBindings.ResetToDefault(actionId);
             SaveKeyBindings();
+
+            // グループを再ロードして UI を更新
+            _keyBindingsLoaded = false;
+            LoadKeyBindings();
         }
 
         /// <summary>現在のカスタムバインドを保存する。</summary>

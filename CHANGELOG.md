@@ -3,10 +3,11 @@
 
 # Zenith Filer - Version History
 
-## [0.19.1] - 2026-03-05 : ショートカットキー画面クラッシュ修正
+## [0.19.1] - 2026-03-05 : ショートカットキー画面修正
 
 ### Fixed
 - **ショートカットキー設定画面を開くとアプリが異常終了する問題を修正**: `NonEmptyStringToVisibilityConverter` が `MainWindow.xaml` のローカルリソースにのみ定義されており、`ControlDeckView.xaml` からは参照スコープ外だったため `StaticResource` 解決に失敗していた。`ControlDeckView.xaml` の `UserControl.Resources` にコンバーターを追加
+- **個別キーバインドのリセットボタンが機能しない問題を修正**: `ResetKeyBinding` コマンド実行後に UI の再ロード（`LoadKeyBindings`）が呼ばれておらず、表示が更新されなかった
 
 ## [0.19.0] - 2026-03-05 : ショートカットキーカスタマイズ
 
