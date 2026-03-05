@@ -18,6 +18,7 @@ namespace ZenithFiler.Models
     {
         public string ActionId { get; init; } = string.Empty;
         public string DisplayName { get; init; } = string.Empty;
+        public string Description { get; init; } = string.Empty;
         public string GroupName { get; init; } = string.Empty;
 
         // デフォルト値（変更不可）

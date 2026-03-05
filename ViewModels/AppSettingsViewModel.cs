@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -11,6 +12,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ZenithFiler.Models;
 using ZenithFiler.Services;
+using ZenithFiler.Helpers;
+using ZenithFiler.Views;
 
 namespace ZenithFiler
 {
@@ -441,19 +444,150 @@ namespace ZenithFiler
             App.Notification.Notify("Bペインのホームを設定しました", $"ホーム: {Path.GetFileName(physical)}");
         }
 
+        // ─── Backup ───
+
+        private List<BackupEntryViewModel> _allBackupEntries = new();
+        private const int BackupPageSize = 20;
+
+        /// <summary>バックアップ一覧（現在ページ分）。Backup カテゴリにインライン表示。</summary>
+        public ObservableCollection<BackupEntryViewModel> BackupEntries { get; } = new();
+
+        /// <summary>現在のページ番号（1-based）。</summary>
+        [ObservableProperty]
+        private int _backupCurrentPage = 1;
+
+        /// <summary>総ページ数。</summary>
+        public int BackupTotalPages => _allBackupEntries.Count == 0 ? 1 : (int)Math.Ceiling((double)_allBackupEntries.Count / BackupPageSize);
+
+        /// <summary>ページネーションバーに表示するページ番号アイテム一覧。</summary>
+        public ObservableCollection<BackupPageItem> BackupPageItems { get; } = new();
+
+        /// <summary>バックアップ一覧を非同期で再読み込みする。</summary>
+        public async Task LoadBackupEntriesAsync()
+        {
+            var entries = await Task.Run(() =>
+                SettingsBackupService.GetBackups()
+                    .Select(e => new BackupEntryViewModel(e))
+                    .ToList());
+            _allBackupEntries = entries;
+            BackupCurrentPage = 1;
+            ApplyBackupPage();
+        }
+
+        private void ApplyBackupPage()
+        {
+            BackupEntries.Clear();
+            foreach (var entry in _allBackupEntries.Skip((BackupCurrentPage - 1) * BackupPageSize).Take(BackupPageSize))
+                BackupEntries.Add(entry);
+            RebuildBackupPageItems();
+            OnPropertyChanged(nameof(BackupTotalPages));
+            BackupPrevPageCommand.NotifyCanExecuteChanged();
+            BackupNextPageCommand.NotifyCanExecuteChanged();
+        }
+
+        /// <summary>ページ番号リストを再構築する（省略記号付き）。</summary>
+        private void RebuildBackupPageItems()
+        {
+            BackupPageItems.Clear();
+            int total = BackupTotalPages;
+            int current = BackupCurrentPage;
+            if (total <= 1) return;
+
+            // 表示するページ番号を決定: 先頭2 + 末尾2 + 現在ページ周辺2
+            var pages = new SortedSet<int>();
+            for (int i = 1; i <= Math.Min(2, total); i++) pages.Add(i);
+            for (int i = Math.Max(1, total - 1); i <= total; i++) pages.Add(i);
+            for (int i = Math.Max(1, current - 1); i <= Math.Min(total, current + 1); i++) pages.Add(i);
+
+            int prev = 0;
+            foreach (var p in pages)
+            {
+                if (prev > 0 && p - prev > 1)
+                    BackupPageItems.Add(new BackupPageItem { PageNumber = -1, IsCurrent = false }); // ellipsis
+                BackupPageItems.Add(new BackupPageItem { PageNumber = p, IsCurrent = p == current });
+                prev = p;
+            }
+        }
+
+        [RelayCommand(CanExecute = nameof(CanBackupNextPage))]
+        private void BackupNextPage() => GoToBackupPage(BackupCurrentPage + 1);
+
+        private bool CanBackupNextPage() => BackupCurrentPage < BackupTotalPages;
+
+        [RelayCommand(CanExecute = nameof(CanBackupPrevPage))]
+        private void BackupPrevPage() => GoToBackupPage(BackupCurrentPage - 1);
+
+        private bool CanBackupPrevPage() => BackupCurrentPage > 1;
+
+        [RelayCommand]
+        private void GoToBackupPage(object? pageObj)
+        {
+            int page = pageObj switch
+            {
+                int i => i,
+                string s when int.TryParse(s, out var p) => p,
+                _ => 1
+            };
+            int clamped = Math.Clamp(page, 1, Math.Max(1, BackupTotalPages));
+            BackupCurrentPage = clamped;
+            ApplyBackupPage();
+        }
+
         [RelayCommand]
         private async Task BackupNowAsync()
         {
             await Services.SettingsBackupService.CreateBackupAsync("手動バックアップ");
             App.Notification.Notify("設定をバックアップしました", "[Settings] Backup: 手動");
+            await LoadBackupEntriesAsync();
         }
 
         [RelayCommand]
-        private void Restore()
+        private void RestoreEntry(BackupEntryViewModel? vm)
         {
-            var dialog = new BackupListDialog();
-            dialog.Owner = System.Windows.Application.Current.MainWindow;
-            dialog.ShowDialog();
+            if (vm == null) return;
+
+            var confirm = ZenithDialog.Show(
+                $"この設定（{vm.Timestamp:yyyy/MM/dd HH:mm:ss}）で復元しますか？\n現在の設定は上書きされます。",
+                "設定の復元",
+                ZenithDialogButton.OKCancel,
+                ZenithDialogIcon.Warning);
+            if (confirm != ZenithDialogResult.OK) return;
+
+            try
+            {
+                SettingsBackupService.Restore(vm.JsonPath);
+                _ = App.FileLogger.LogAsync($"[Settings] Recovery: restored from '{Path.GetFileName(vm.JsonPath)}'");
+            }
+            catch (Exception ex)
+            {
+                ZenithDialog.Show($"復元に失敗しました。\n{ex.Message}", "エラー",
+                    ZenithDialogButton.OK, ZenithDialogIcon.Error);
+                return;
+            }
+
+            var restart = ZenithDialog.Show(
+                "設定を復元しました。変更を有効にするにはアプリの再起動が必要です。\n今すぐ再起動しますか？",
+                "再起動の確認",
+                ZenithDialogButton.YesNo,
+                ZenithDialogIcon.Question);
+            if (restart == ZenithDialogResult.Yes)
+            {
+                var exePath = Environment.ProcessPath;
+                if (!string.IsNullOrEmpty(exePath))
+                {
+                    Process.Start(new ProcessStartInfo { FileName = exePath, UseShellExecute = true });
+                    Application.Current.Shutdown();
+                }
+            }
+        }
+
+        [RelayCommand]
+        private void ToggleLock(BackupEntryViewModel? vm)
+        {
+            if (vm == null) return;
+            var newLocked = !vm.IsLocked;
+            SettingsBackupService.SetLock(vm.JsonPath, newLocked);
+            vm.IsLocked = newLocked;
         }
 
         [RelayCommand]
@@ -806,7 +940,7 @@ namespace ZenithFiler
             if (string.IsNullOrWhiteSpace(value)) return;
 
             // fire-and-forget でアニメーション付き適用（保存は同期で即実行）
-            _ = ApplyThemeAnimatedAsync(value, Application.Current.Resources);
+            ApplyThemeAnimatedAsync(value, Application.Current.Resources).FireAndForget("ApplyThemeAnimatedAsync");
             // 永続化
             WindowSettings.SaveThemeOnly(value);
             // プリセットモード時は SavedThemeName にも保存し、キャッシュを更新
@@ -983,9 +1117,11 @@ namespace ZenithFiler
         partial void OnActiveCategoryChanged(SettingsCategory value)
         {
             if (value == SettingsCategory.License)
-                _ = LoadLicenseStatusAsync();
+                LoadLicenseStatusAsync().FireAndForget("LoadLicenseStatusAsync");
             else if (value == SettingsCategory.Shortcut)
                 LoadKeyBindings();
+            else if (value == SettingsCategory.Backup)
+                LoadBackupEntriesAsync().FireAndForget("LoadBackupEntriesAsync");
         }
 
         /// <summary>ライセンス状態と各機能の使用状況を読み込みます。</summary>

@@ -21,7 +21,12 @@
       "Bash(where:*)",
       "Bash(dotnet build:*)",
       "Bash(git:*)",
-      "Bash(cd /c/work/myfolder && git:*)"
+      "Bash(cd /c/work/myfolder && git:*)",
+      "Bash(sed:*)",
+      "Bash(timeout 15 dotnet run:*)",
+      "Bash(python3:*)",
+      "Bash(taskkill:*)",
+      "Bash(timeout 10 dotnet run:*)"
     ]
   }
 }

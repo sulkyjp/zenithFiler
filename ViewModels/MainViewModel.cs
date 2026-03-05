@@ -13,6 +13,7 @@ using CommunityToolkit.Mvvm.Input;
 using ZenithFiler.Services;
 using ZenithFiler.Services.Commands;
 using ZenithFiler.ViewModels;
+using ZenithFiler.Helpers;
 using ZenithFiler.Views;
 
 namespace ZenithFiler
@@ -496,12 +497,12 @@ namespace ZenithFiler
             if (value == SidebarViewMode.History)
             {
                 // 履歴ビューは初回表示時のみロード（起動時は読まない）
-                _ = RefreshHistoryAsync();
+                RefreshHistoryAsync().FireAndForget("RefreshHistoryAsync");
             }
             else if (value == SidebarViewMode.Tree)
             {
                 // ツリービューは初回表示時に非同期でドライブ一覧をロードしてから展開
-                _ = InitializeTreeViewAsync();
+                InitializeTreeViewAsync().FireAndForget("InitializeTreeViewAsync");
             }
             else if (value == SidebarViewMode.IndexSearch)
             {
@@ -692,7 +693,7 @@ namespace ZenithFiler
             App.Database.HistoryChanged += (s, e) =>
             {
                 if (SidebarMode == SidebarViewMode.History)
-                    _ = RefreshHistoryAsync();
+                    RefreshHistoryAsync().FireAndForget("RefreshHistoryAsync");
             };
 
             _ = App.FileLogger.CleanupOldLogsAsync();
@@ -725,7 +726,7 @@ namespace ZenithFiler
             // ツリーも fire-and-forget（ドライブ列挙のタイムアウト待ちでUIを止めない）
             if (SidebarMode == SidebarViewMode.Tree)
             {
-                _ = InitializeTreeViewAsync();
+                InitializeTreeViewAsync().FireAndForget("InitializeTreeViewAsync");
             }
         }
 

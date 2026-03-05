@@ -732,11 +732,7 @@ namespace ZenithFiler
                             try
                             {
                                 if (App.IndexService.IsPathIndexed(p))
-                                    _ = App.IndexService.UpdateDirectoryDiffAsync(p, null).ContinueWith(t =>
-                                    {
-                                        if (t.Exception != null)
-                                            _ = App.FileLogger.LogAsync($"[IndexService] UpdateDirectoryDiffAsync failed: {t.Exception.InnerException?.Message ?? t.Exception.Message}");
-                                    }, TaskContinuationOptions.OnlyOnFaulted);
+                                    App.IndexService.UpdateDirectoryDiffAsync(p, null).FireAndForget("IndexService.UpdateDirectoryDiffAsync");
                                 else
                                     App.IndexService.TriggerUpdateNow(new[] { p }, null);
                             }
@@ -1702,20 +1698,27 @@ namespace ZenithFiler
                         throttleMs = 500;
                     _watcherCts = new System.Threading.CancellationTokenSource();
                     var token = _watcherCts.Token;
-                    Task.Delay(throttleMs, token).ContinueWith(t =>
-                    {
-                        if (t.IsCompletedSuccessfully && !token.IsCancellationRequested)
-                        {
-                            Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
-                            {
-                                _watcherCts?.Dispose();
-                                _watcherCts = null;
-                                Refresh();
-                            }), DispatcherPriority.Background);
-                        }
-                    }, TaskScheduler.Default);
+                    _ = DelayedRefreshAsync(throttleMs, token);
                 }
             }), DispatcherPriority.Background);
+        }
+
+        private async Task DelayedRefreshAsync(int delayMs, CancellationToken token)
+        {
+            try
+            {
+                await Task.Delay(delayMs, token);
+                if (!token.IsCancellationRequested)
+                {
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        _watcherCts?.Dispose();
+                        _watcherCts = null;
+                        Refresh();
+                    }, DispatcherPriority.Background);
+                }
+            }
+            catch (OperationCanceledException) { }
         }
 
         /// <summary>

@@ -371,9 +371,9 @@ namespace ZenithFiler
 
                 if (deleteTargets.Count == 0) return;
 
-                var keysToDelete = deleteTargets.ConvertAll(r => r.Key);
-                var placeholders = string.Join(",", keysToDelete.Select(k => "?"));
-                await _db.ExecuteAsync($"DELETE FROM SearchHistoryRecord WHERE Key IN ({placeholders})", keysToDelete.Cast<object>().ToArray()).ConfigureAwait(false);
+                var keysToDelete = deleteTargets.Select(r => (object)r.Key).ToArray();
+                var placeholders = string.Join(",", keysToDelete.Select(_ => "?"));
+                await _db.ExecuteAsync($"DELETE FROM SearchHistoryRecord WHERE Key IN ({placeholders})", keysToDelete).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -473,9 +473,9 @@ namespace ZenithFiler
 
                 if (deleteTargets.Count == 0) return;
 
-                var namesToDelete = deleteTargets.ConvertAll(r => r.Name);
-                var placeholders = string.Join(",", namesToDelete.Select(k => "?"));
-                await _db.ExecuteAsync($"DELETE FROM RenameHistory WHERE Name IN ({placeholders})", namesToDelete.Cast<object>().ToArray()).ConfigureAwait(false);
+                var namesToDelete = deleteTargets.Select(r => (object)r.Name).ToArray();
+                var placeholders = string.Join(",", namesToDelete.Select(_ => "?"));
+                await _db.ExecuteAsync($"DELETE FROM RenameHistory WHERE Name IN ({placeholders})", namesToDelete).ConfigureAwait(false);
             }
             catch (Exception ex)
             {

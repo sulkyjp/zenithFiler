@@ -395,12 +395,12 @@ namespace ZenithFiler
         /// </summary>
         public async Task LoadDrivesAsync()
         {
-            var readyDrives = await Task.Run(() =>
+            var readyDrives = await Task.Run(async () =>
             {
                 var result = new List<string>();
                 try
                 {
-                    foreach (var drive in DriveInfo.GetDrives())
+                    var driveTasks = DriveInfo.GetDrives().Select(async drive =>
                     {
                         try
                         {
@@ -409,10 +409,17 @@ namespace ZenithFiler
                                 try { return drive.IsReady; }
                                 catch { return false; }
                             });
-                            if (isReadyTask.Wait(500) && isReadyTask.Result)
-                                result.Add(drive.RootDirectory.FullName);
+                            var completed = await Task.WhenAny(isReadyTask, Task.Delay(500));
+                            if (completed == isReadyTask && isReadyTask.Result)
+                                return drive.RootDirectory.FullName;
                         }
                         catch { }
+                        return null;
+                    });
+                    var paths = await Task.WhenAll(driveTasks);
+                    foreach (var p in paths)
+                    {
+                        if (p != null) result.Add(p);
                     }
                 }
                 catch { }

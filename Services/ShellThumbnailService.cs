@@ -25,7 +25,8 @@ namespace ZenithFiler.Services
 
         private readonly object _cacheLock = new();
         private readonly Dictionary<string, (ImageSource Source, DateTime Added)> _cache = new(StringComparer.OrdinalIgnoreCase);
-        private readonly List<string> _cacheOrder = new();
+        private readonly LinkedList<string> _cacheOrder = new();
+        private readonly Dictionary<string, LinkedListNode<string>> _cacheNodeMap = new(StringComparer.OrdinalIgnoreCase);
 
         private readonly BlockingCollection<(string Path, int Size, TaskCompletionSource<ImageSource?> Tcs, string? CacheKey)> _queue = new();
         private readonly Thread _staThread;
@@ -66,35 +67,51 @@ namespace ZenithFiler.Services
         }
 
         /// <summary>
-        /// サムネイルを同期で取得します。キャッシュにあれば即返し、なければ STA スレッドで取得するまでブロックします。
-        /// UIスレッドやバインディングから呼ぶとフリーズの原因になるため、一覧表示などでは必ず <see cref="GetThumbnailAsync"/> を使用してください。
+        /// パスのバリデーションとキャッシュ参照を共通化するヘルパー。
+        /// キャッシュヒット時は source に値が入り true を返す。バリデーション失敗時は source=null で true を返す（呼び出し元は即 return）。
+        /// false の場合は STA スレッドへのキュー投入が必要。
         /// </summary>
-        public ImageSource? GetThumbnail(string path, int size = 256)
+        private bool TryGetCachedOrValidate(string path, int size, out string cacheKey, out ImageSource? source)
         {
-            if (string.IsNullOrEmpty(path) || !File.Exists(path)) return null;
-            if (!ShellIconHelper.IsImageFile(path)) return null;
+            source = null;
+            cacheKey = string.Empty;
 
-            if (PathHelper.DetermineSourceType(path) == SourceType.Box) return null;
+            if (string.IsNullOrEmpty(path) || !File.Exists(path)) return true;
+            if (!ShellIconHelper.IsImageFile(path)) return true;
+            if (PathHelper.DetermineSourceType(path) == SourceType.Box) return true;
             try
             {
                 var attrs = File.GetAttributes(path);
                 if ((attrs & FileAttributes.Offline) != 0 || (attrs & FileAttributes.ReparsePoint) != 0)
-                    return null;
+                    return true;
             }
             catch
             {
-                return null;
+                return true;
             }
 
-            string cacheKey = $"{path}|{size}";
+            cacheKey = $"{path}|{size}";
             lock (_cacheLock)
             {
                 if (_cache.TryGetValue(cacheKey, out var cached))
                 {
                     PromoteInCache(cacheKey);
-                    return cached.Source;
+                    source = cached.Source;
+                    return true;
                 }
             }
+
+            return false;
+        }
+
+        /// <summary>
+        /// サムネイルを同期で取得します。キャッシュにあれば即返し、なければ STA スレッドで取得するまでブロックします。
+        /// UIスレッドやバインディングから呼ぶとフリーズの原因になるため、一覧表示などでは必ず <see cref="GetThumbnailAsync"/> を使用してください。
+        /// </summary>
+        public ImageSource? GetThumbnail(string path, int size = 256)
+        {
+            if (TryGetCachedOrValidate(path, size, out var cacheKey, out var cached))
+                return cached;
 
             var tcs = new TaskCompletionSource<ImageSource?>();
             _queue.Add((path, size, tcs, CacheKey: (string?)null));
@@ -123,34 +140,8 @@ namespace ZenithFiler.Services
         /// </summary>
         public Task<ImageSource?> GetThumbnailAsync(string path, int size = 256, CancellationToken cancellationToken = default)
         {
-            if (string.IsNullOrEmpty(path))
-                return Task.FromResult<ImageSource?>(null);
-            if (!File.Exists(path))
-                return Task.FromResult<ImageSource?>(null);
-            if (!ShellIconHelper.IsImageFile(path))
-                return Task.FromResult<ImageSource?>(null);
-            if (PathHelper.DetermineSourceType(path) == SourceType.Box)
-                return Task.FromResult<ImageSource?>(null);
-            try
-            {
-                var attrs = File.GetAttributes(path);
-                if ((attrs & FileAttributes.Offline) != 0 || (attrs & FileAttributes.ReparsePoint) != 0)
-                    return Task.FromResult<ImageSource?>(null);
-            }
-            catch
-            {
-                return Task.FromResult<ImageSource?>(null);
-            }
-
-            string cacheKey = $"{path}|{size}";
-            lock (_cacheLock)
-            {
-                if (_cache.TryGetValue(cacheKey, out var cached))
-                {
-                    PromoteInCache(cacheKey);
-                    return Task.FromResult<ImageSource?>(cached.Source);
-                }
-            }
+            if (TryGetCachedOrValidate(path, size, out var cacheKey, out var cached))
+                return Task.FromResult(cached);
 
             var tcs = new TaskCompletionSource<ImageSource?>();
             _queue.Add((path, size, tcs, cacheKey));
@@ -203,20 +194,29 @@ namespace ZenithFiler.Services
 
         private void AddToCache(string key, ImageSource source)
         {
-            while (_cache.Count >= MaxCacheSize && _cacheOrder.Count > 0)
+            while (_cache.Count >= MaxCacheSize && _cacheOrder.First != null)
             {
-                var oldest = _cacheOrder[0];
-                _cacheOrder.RemoveAt(0);
+                var oldest = _cacheOrder.First.Value;
+                _cacheOrder.RemoveFirst();
+                _cacheNodeMap.Remove(oldest);
                 _cache.Remove(oldest);
             }
             _cache[key] = (source, DateTime.UtcNow);
-            _cacheOrder.Add(key);
+            if (_cacheNodeMap.TryGetValue(key, out var existingNode))
+            {
+                _cacheOrder.Remove(existingNode);
+            }
+            var node = _cacheOrder.AddLast(key);
+            _cacheNodeMap[key] = node;
         }
 
         private void PromoteInCache(string key)
         {
-            _cacheOrder.Remove(key);
-            _cacheOrder.Add(key);
+            if (_cacheNodeMap.TryGetValue(key, out var node))
+            {
+                _cacheOrder.Remove(node);
+                _cacheOrder.AddLast(node);
+            }
         }
 
         /// <summary>

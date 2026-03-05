@@ -3,6 +3,38 @@
 
 # Zenith Filer - Version History
 
+## [0.19.5] - 2026-03-05 : 内部リファクタリング・パフォーマンス改善
+
+### Changed
+- **ShellThumbnailService**: LRU キャッシュを `List<string>` から `LinkedList` + `Dictionary` に変更し、キャッシュ操作を O(n) → O(1) に改善。バリデーション・キャッシュ参照の重複コードを `TryGetCachedOrValidate` に抽出
+- **ThemeService**: `MergeCategory()` のリフレクション結果を `ConcurrentDictionary` でキャッシュし、テーマ切替時の重複リフレクションを排除
+- **DirectoryTreeViewModel**: `LoadDrivesAsync()` の `isReadyTask.Wait(500)` ブロッキングを `Task.WhenAny` + `Task.Delay` パターンに変更し、全ドライブを並列チェック
+- **DatabaseService**: `CleanupSearchHistoryAsync` / `CleanupRenameHistoryAsync` の `.ConvertAll().Cast<object>().ToArray()` 3段階アロケーションを `.Select(r => (object)r.Key).ToArray()` にインライン化
+- **Fire-and-forget**: `TaskHelper.FireAndForget` 拡張メソッドを導入し、`_ = SomeAsync()` パターン（AppSettingsViewModel 3箇所・MainViewModel 4箇所）を例外ログ付きに置換
+- **TabItemViewModel**: `ContinueWith(OnlyOnFaulted)` パターン2箇所を async/await + `FireAndForget` にモダン化
+
+## [0.19.4] - 2026-03-05 : バックアップ一覧ページネーション
+
+### Added
+- **バックアップ一覧にページネーション機能**: バックアップ件数が20件を超える場合、20件ごとのページ分割で表示。`< 1, 2, …, 46, 47 >` 形式のページ番号バーで任意ページにジャンプ可能。左右ボタンで前後ページ移動。20件以下の場合はバー非表示
+
+### Fixed
+- **起動時のUIフリーズを軽減**: テーマスキャン・テーマJSON読み込みをバックグラウンドスレッドで並列実行し、リソース辞書のXAMLパースと同時進行するよう最適化。バックアップ一覧の読み込みも非同期化
+
+## [0.19.3] - 2026-03-05 : バックアップ一覧インライン表示・概要編集
+
+### Added
+- **設定 › リカバリにバックアップ一覧をインライン表示**: BackupListDialog を廃止し、設定画面内でバックアップの一覧表示・復元・ロック切替を完結。各行に日時・ロック状態・変更概要・編集/復元ボタンを配置
+- **変更概要の編集機能**: バックアップの変更概要をインラインで編集可能に。鉛筆ボタンクリック → テキスト入力 → Enter で確定、Escape でキャンセル。ロック中は編集不可
+
+### Changed
+- **BackupListDialog を削除**: 別ウィンドウでのバックアップ一覧表示を廃止し、設定画面の Backup カテゴリ内にインライン統合
+
+## [0.19.2] - 2026-03-05 : ショートカットキー説明追加
+
+### Added
+- **ショートカットキー設定画面に概要説明を追加**: 各アクションの下に機能説明とおすすめキー設定の情報を表示。KeyBindingDefinition に Description プロパティを追加し、全25アクションに日本語の説明文を設定
+
 ## [0.19.1] - 2026-03-05 : ショートカットキー画面修正
 
 ### Fixed
@@ -288,7 +320,7 @@
 - **`StackPanel Background="Transparent"`**: カテゴリコンテナ内の StackPanel に `Background="Transparent"` を追加し、余白部分でのマウスイベントを確実に受け取るよう修正
 - **カテゴリ説明文 深度向上**: `ThemeCategoryDescriptionConverter` の説明文を全カテゴリ刷新。各カテゴリの世界観・用途・雰囲気を具体的かつ文学的に表現した日本語テキストに変更
 - **クリエイター署名のデザイン刷新**: テーマカードの著者表示を `{Binding Author, StringFormat='Design by {0}'}` 形式に変更。フォントサイズを `10` → `9` に縮小し、`Opacity="0.5"` + `Margin="0,3,0,0"` でミニマルかつ高品質な署名スタイルを実現
-- **全テーマ JSON の Author フィールド更新**: `"赤阪和彦"` → `"K.AKASAKA"` に変更（20 テーマ）
+- **全テーマ JSON の Author フィールド更新**: 旧著者名 → `"K.AKASAKA"` に変更（20 テーマ）
 
 ## [0.14.6] - 2026-03-03 : テーマ適用モード 排他制御 & カテゴリ選択 UI
 

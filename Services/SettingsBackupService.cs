@@ -7,7 +7,7 @@ using System.Text.Json;
 
 namespace ZenithFiler.Services
 {
-    /// <summary>バックアップ一覧の1エントリ。BackupListDialog の ItemsSource として使用。</summary>
+    /// <summary>バックアップ一覧の1エントリ。</summary>
     public record BackupEntry(
         string JsonPath,
         string DescPath,
@@ -148,6 +148,12 @@ namespace ZenithFiler.Services
                 _ = App.FileLogger.LogAsync($"[SettingsBackupService] Restore failed: {ex.Message}");
                 throw;
             }
+        }
+
+        /// <summary>バックアップの変更概要を更新する。</summary>
+        public static void UpdateSummary(string descPath, string newSummary)
+        {
+            File.WriteAllText(descPath, newSummary, Encoding.UTF8);
         }
 
         /// <summary>バックアップのロック状態を切り替える。</summary>

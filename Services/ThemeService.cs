@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.IO;
 using System.Reflection;
 using System.Text;
@@ -11,7 +12,7 @@ namespace ZenithFiler.Services;
 public class ThemeService
 {
     private string _currentDescription = "Zenith Filer 標準の落ち着いたベージュ基調のテーマ";
-    private string _currentAuthor = "赤阪和彦";
+    private string _currentAuthor = "K.AKASAKA";
     private ThemeCategory _currentCategory = ThemeCategory.Standard;
 
     /// <summary>テーマ名 → ThemeCategory のフォールバックマッピング（JSON に Category がない場合に使用）。</summary>
@@ -198,6 +199,8 @@ public class ThemeService
         ["TelemetryValueColor"] = "テレメトリーパネルの値テキスト色",
     };
 
+    private static readonly ConcurrentDictionary<Type, PropertyInfo[]> _propCache = new();
+
     private static readonly JsonSerializerOptions _readOptions = new()
     {
         ReadCommentHandling = JsonCommentHandling.Skip,
@@ -238,7 +241,7 @@ public class ThemeService
         }
 
         // standard がなければハードコードデフォルト
-        standardInfo ??= new ThemeInfo("standard", "Zenith Filer 標準の落ち着いたベージュ基調のテーマ", "赤阪和彦",
+        standardInfo ??= new ThemeInfo("standard", "Zenith Filer 標準の落ち着いたベージュ基調のテーマ", "K.AKASAKA",
             backgroundColor: Defaults["BackgroundColor"], accentColor: Defaults["AccentColor"],
             primaryTextColor: Defaults["PrimaryTextColor"], sidebarColor: Defaults["SidebarColor"],
             category: ThemeCategory.Standard);
@@ -333,12 +336,30 @@ public class ThemeService
 
     // ─── Private: Theme Loading ───
 
+    /// <summary>事前に読み込んだテーマ JSON テキストのキャッシュ。次回の LoadThemeColors で消費される。</summary>
+    private string? _preloadedThemeJson;
+
+    /// <summary>テーマ JSON ファイルを事前に読み込む（バックグラウンドスレッドから呼び出し可能）。</summary>
+    public void PreloadThemeJson(string themeName)
+    {
+        var path = GetThemePath(themeName);
+        try
+        {
+            if (File.Exists(path))
+                _preloadedThemeJson = File.ReadAllText(path);
+        }
+        catch
+        {
+            _preloadedThemeJson = null;
+        }
+    }
+
     /// <summary>テーマの色をロードして _resolvedColors にマージする。成功時 true。</summary>
     private bool LoadThemeColors(string themeName)
     {
         _resolvedColors = new Dictionary<string, string>(Defaults);
         _currentDescription = "Zenith Filer 標準の落ち着いたベージュ基調のテーマ";
-        _currentAuthor = "赤阪和彦";
+        _currentAuthor = "K.AKASAKA";
         _currentCategory = ResolveCategory(themeName, null);
 
         if (string.Equals(themeName, "standard", StringComparison.OrdinalIgnoreCase))
@@ -367,7 +388,9 @@ public class ThemeService
     {
         try
         {
-            var json = File.ReadAllText(path);
+            // 事前読み込み済みキャッシュがあれば使い、なければ同期読み取り
+            var json = System.Threading.Interlocked.Exchange(ref _preloadedThemeJson, null)
+                       ?? File.ReadAllText(path);
             var model = JsonSerializer.Deserialize<ThemeModel>(json, _readOptions);
             if (model != null)
             {
@@ -402,7 +425,8 @@ public class ThemeService
 
     private void MergeCategory(object category)
     {
-        foreach (var prop in category.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance))
+        var props = _propCache.GetOrAdd(category.GetType(), t => t.GetProperties(BindingFlags.Public | BindingFlags.Instance));
+        foreach (var prop in props)
         {
             var value = prop.GetValue(category) as string;
             if (string.IsNullOrWhiteSpace(value)) continue;

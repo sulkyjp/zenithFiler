@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:icon="http://metro.mahapps.com/winfx/xaml/iconpacks"
              xmlns:local="clr-namespace:ZenithFiler"
+             xmlns:models="clr-namespace:ZenithFiler.Models"
              xmlns:ComponentModel="clr-namespace:System.ComponentModel;assembly=System"
              IsTabStop="False">
 
@@ -18,6 +19,7 @@
         <local:IsCategorySelectedConverter x:Key="IsCategorySelected"/>
         <local:IsCurrentPresetThemeConverter x:Key="IsCurrentPresetTheme"/>
         <local:NonEmptyStringToVisibilityConverter x:Key="NonEmptyStringToVis"/>
+        <local:InverseBooleanConverter x:Key="InverseBool"/>
     </UserControl.Resources>
 
     <Grid>
@@ -539,29 +541,203 @@
                     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                                   Padding="0"
                                   Visibility="{Binding AppSettings.ActiveCategory, Converter={StaticResource EnumEqualityToVis}, ConverterParameter={x:Static local:SettingsCategory.Backup}}">
-                        <WrapPanel Margin="24,20" Orientation="Horizontal">
-                            <Border Width="400" Margin="0,0,20,20" Padding="16,14" CornerRadius="6"
+                        <StackPanel Margin="24,20">
+                            <!-- 説明 + バックアップボタン -->
+                            <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}"
+                                       TextWrapping="Wrap" Margin="0,0,0,12">
+                                アプリ終了時に自動でバックアップを作成します。ロックしたバックアップは 30 日が経過しても自動削除されません
+                            </TextBlock>
+                            <Button Content="今すぐバックアップ"
+                                    Style="{StaticResource TextButton}"
+                                    Command="{Binding AppSettings.BackupNowCommand}"
+                                    HorizontalAlignment="Left"
+                                    Padding="12,6" Margin="0,0,0,16"/>
+
+                            <!-- 一覧エリア -->
+                            <Border CornerRadius="6" Padding="0"
                                     Background="{DynamicResource InputBackgroundBrush}"
                                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
-                                <StackPanel>
-                                    <TextBlock Text="設定ファイルリカバリ" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,10"/>
-                                    <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}"
-                                               TextWrapping="Wrap" Margin="0,0,0,12">
-                                        アプリ終了時に自動でバックアップを作成します。設定を以前の状態に戻したい場合は「復元...」から選択してください。ロックしたバックアップは 30 日が経過しても自動削除されません。
+                                <Grid>
+                                    <!-- 空一覧メッセージ -->
+                                    <TextBlock Text="バックアップがありません"
+                                               FontSize="11" Foreground="{DynamicResource SubTextBrush}"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               Margin="0,24">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding AppSettings.BackupEntries.Count}" Value="0">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
                                     </TextBlock>
-                                    <StackPanel Orientation="Horizontal">
-                                        <Button Content="今すぐバックアップ"
-                                                Style="{StaticResource TextButton}"
-                                                Command="{Binding AppSettings.BackupNowCommand}"
-                                                Padding="12,6" Margin="0,0,8,0"/>
-                                        <Button Content="復元..."
-                                                Style="{StaticResource TextButton}"
-                                                Command="{Binding AppSettings.RestoreCommand}"
-                                                Padding="12,6"/>
-                                    </StackPanel>
-                                </StackPanel>
+
+                                    <!-- バックアップ一覧 -->
+                                    <ItemsControl ItemsSource="{Binding AppSettings.BackupEntries}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Padding="10,7" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="150"/>
+                                                            <ColumnDefinition Width="36"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <!-- 日時 -->
+                                                        <TextBlock Grid.Column="0" Text="{Binding Timestamp, StringFormat=yyyy/MM/dd HH:mm}"
+                                                                   FontSize="11" VerticalAlignment="Center" Opacity="0.8"/>
+
+                                                        <!-- ロックボタン -->
+                                                        <Button Grid.Column="1" Padding="4" IsTabStop="False" Cursor="Hand"
+                                                                Style="{StaticResource IconButton}"
+                                                                Command="{Binding DataContext.AppSettings.ToggleLockCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                CommandParameter="{Binding}">
+                                                            <icon:PackIconLucide Width="14" Height="14">
+                                                                <icon:PackIconLucide.Style>
+                                                                    <Style TargetType="icon:PackIconLucide">
+                                                                        <Setter Property="Kind" Value="LockOpen"/>
+                                                                        <Setter Property="ToolTip" Value="ロックする"/>
+                                                                        <Setter Property="Opacity" Value="0.4"/>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding IsLocked}" Value="True">
+                                                                                <Setter Property="Kind" Value="Lock"/>
+                                                                                <Setter Property="ToolTip" Value="ロックを解除する"/>
+                                                                                <Setter Property="Opacity" Value="1.0"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </icon:PackIconLucide.Style>
+                                                            </icon:PackIconLucide>
+                                                        </Button>
+
+                                                        <!-- 概要セル -->
+                                                        <Grid Grid.Column="2" Margin="4,0">
+                                                            <!-- 通常表示（非編集中） -->
+                                                            <TextBlock Text="{Binding Summary}" FontSize="11"
+                                                                       TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                                                                       Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}"/>
+
+                                                            <!-- 編集中 -->
+                                                            <DockPanel Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}">
+                                                                <Button DockPanel.Dock="Right" Padding="4" Margin="2,0,0,0"
+                                                                        IsTabStop="False" Cursor="Hand"
+                                                                        Style="{StaticResource IconButton}"
+                                                                        Command="{Binding CancelEditCommand}">
+                                                                    <icon:PackIconLucide Kind="X" Width="13" Height="13"/>
+                                                                </Button>
+                                                                <Button DockPanel.Dock="Right" Padding="4" Margin="2,0,0,0"
+                                                                        IsTabStop="False" Cursor="Hand"
+                                                                        Style="{StaticResource IconButton}"
+                                                                        Command="{Binding CommitEditCommand}">
+                                                                    <icon:PackIconLucide Kind="Check" Width="13" Height="13"/>
+                                                                </Button>
+                                                                <TextBox Text="{Binding EditBuffer, UpdateSourceTrigger=PropertyChanged}"
+                                                                         FontSize="11" VerticalAlignment="Center"
+                                                                         Padding="4,2"
+                                                                         Background="{DynamicResource BackgroundBrush}"
+                                                                         Foreground="{DynamicResource TextBrush}"
+                                                                         BorderBrush="{DynamicResource BorderBrush}"
+                                                                         BorderThickness="1">
+                                                                    <TextBox.InputBindings>
+                                                                        <KeyBinding Key="Return" Command="{Binding CommitEditCommand}"/>
+                                                                        <KeyBinding Key="Escape" Command="{Binding CancelEditCommand}"/>
+                                                                    </TextBox.InputBindings>
+                                                                </TextBox>
+                                                            </DockPanel>
+                                                        </Grid>
+
+                                                        <!-- 編集ボタン（非編集中のみ） -->
+                                                        <Button Grid.Column="3" Padding="4" IsTabStop="False" Cursor="Hand"
+                                                                Style="{StaticResource IconButton}"
+                                                                Command="{Binding BeginEditCommand}"
+                                                                IsEnabled="{Binding IsLocked, Converter={StaticResource InverseBool}}"
+                                                                ToolTip="概要を編集"
+                                                                Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}">
+                                                            <icon:PackIconLucide Kind="Pencil" Width="13" Height="13" Opacity="0.6"/>
+                                                        </Button>
+
+                                                        <!-- 復元ボタン -->
+                                                        <Button Grid.Column="4" Padding="4" Margin="2,0,0,0" IsTabStop="False" Cursor="Hand"
+                                                                Style="{StaticResource IconButton}"
+                                                                Command="{Binding DataContext.AppSettings.RestoreEntryCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                CommandParameter="{Binding}"
+                                                                ToolTip="この設定で復元する">
+                                                            <icon:PackIconLucide Kind="RotateCcw" Width="13" Height="13" Opacity="0.6"/>
+                                                        </Button>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Grid>
                             </Border>
-                        </WrapPanel>
+
+                            <!-- ページネーションバー -->
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">
+                                <StackPanel.Style>
+                                    <Style TargetType="StackPanel">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding AppSettings.BackupTotalPages}" Value="1">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </StackPanel.Style>
+                                <!-- 前ページ -->
+                                <Button Style="{StaticResource IconButton}" Padding="6" IsTabStop="False" Cursor="Hand"
+                                        Command="{Binding AppSettings.BackupPrevPageCommand}" ToolTip="前のページ">
+                                    <icon:PackIconLucide Kind="ChevronLeft" Width="14" Height="14"/>
+                                </Button>
+                                <!-- ページ番号 -->
+                                <ItemsControl ItemsSource="{Binding AppSettings.BackupPageItems}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Horizontal"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type models:BackupPageItem}">
+                                            <Grid Margin="1,0">
+                                                <!-- 省略記号 -->
+                                                <TextBlock Text="…" FontSize="11" VerticalAlignment="Center"
+                                                           Foreground="{DynamicResource SubTextBrush}" Margin="4,0"
+                                                           Visibility="{Binding IsEllipsis, Converter={StaticResource BoolToVis}}"/>
+                                                <!-- ページ番号ボタン -->
+                                                <Button Content="{Binding Display}" FontSize="11" Padding="6,3" MinWidth="28"
+                                                        IsTabStop="False" Cursor="Hand"
+                                                        Command="{Binding DataContext.AppSettings.GoToBackupPageCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding PageNumber}"
+                                                        Visibility="{Binding IsEllipsis, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}">
+                                                    <Button.Style>
+                                                        <Style TargetType="Button" BasedOn="{StaticResource TextButton}">
+                                                            <Setter Property="Opacity" Value="0.7"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                                                                    <Setter Property="FontWeight" Value="Bold"/>
+                                                                    <Setter Property="Opacity" Value="1.0"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Button.Style>
+                                                </Button>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <!-- 次ページ -->
+                                <Button Style="{StaticResource IconButton}" Padding="6" IsTabStop="False" Cursor="Hand"
+                                        Command="{Binding AppSettings.BackupNextPageCommand}" ToolTip="次のページ">
+                                    <icon:PackIconLucide Kind="ChevronRight" Width="14" Height="14"/>
+                                </Button>
+                            </StackPanel>
+                        </StackPanel>
                     </ScrollViewer>
 
                     <!-- ══ Theme ══ -->
@@ -1392,35 +1568,42 @@
                                                             <Border Padding="12,8"
                                                                     BorderBrush="{DynamicResource BorderBrush}"
                                                                     BorderThickness="0,0,0,1">
-                                                                <Grid>
-                                                                    <Grid.ColumnDefinitions>
-                                                                        <ColumnDefinition Width="*"/>
-                                                                        <ColumnDefinition Width="Auto"/>
-                                                                        <ColumnDefinition Width="Auto"/>
-                                                                    </Grid.ColumnDefinitions>
+                                                                <StackPanel>
+                                                                    <Grid>
+                                                                        <Grid.ColumnDefinitions>
+                                                                            <ColumnDefinition Width="*"/>
+                                                                            <ColumnDefinition Width="Auto"/>
+                                                                            <ColumnDefinition Width="Auto"/>
+                                                                        </Grid.ColumnDefinitions>
 
-                                                                    <!-- アクション名 -->
-                                                                    <TextBlock Grid.Column="0" Text="{Binding DisplayName}"
-                                                                               FontSize="12" VerticalAlignment="Center"
-                                                                               Foreground="{DynamicResource TextBrush}"/>
+                                                                        <!-- アクション名 -->
+                                                                        <TextBlock Grid.Column="0" Text="{Binding DisplayName}"
+                                                                                   FontSize="12" VerticalAlignment="Center"
+                                                                                   Foreground="{DynamicResource TextBrush}"/>
 
-                                                                    <!-- キーバインド表示（HotkeyRecorderControl） -->
-                                                                    <controls:HotkeyRecorderControl Grid.Column="1"
-                                                                        BindingDefinition="{Binding}"
-                                                                        Margin="8,0"
-                                                                        KeyChanged="HotkeyRecorder_KeyChanged"/>
+                                                                        <!-- キーバインド表示（HotkeyRecorderControl） -->
+                                                                        <controls:HotkeyRecorderControl Grid.Column="1"
+                                                                            BindingDefinition="{Binding}"
+                                                                            Margin="8,0"
+                                                                            KeyChanged="HotkeyRecorder_KeyChanged"/>
 
-                                                                    <!-- 個別リセットボタン（カスタマイズ済みの行のみ表示） -->
-                                                                    <Button Grid.Column="2" Style="{StaticResource IconButton}"
-                                                                            Command="{Binding DataContext.AppSettings.ResetKeyBindingCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                                            CommandParameter="{Binding ActionId}"
-                                                                            ToolTip="デフォルトに戻す"
-                                                                            Visibility="{Binding IsCustomized, Converter={StaticResource BoolToVis}}"
-                                                                            Padding="4">
-                                                                        <icon:PackIconLucide Kind="RotateCcw" Width="10" Height="10"
-                                                                                             Foreground="{DynamicResource SubTextBrush}"/>
-                                                                    </Button>
-                                                                </Grid>
+                                                                        <!-- 個別リセットボタン（カスタマイズ済みの行のみ表示） -->
+                                                                        <Button Grid.Column="2" Style="{StaticResource IconButton}"
+                                                                                Command="{Binding DataContext.AppSettings.ResetKeyBindingCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                                CommandParameter="{Binding ActionId}"
+                                                                                ToolTip="デフォルトに戻す"
+                                                                                Visibility="{Binding IsCustomized, Converter={StaticResource BoolToVis}}"
+                                                                                Padding="4">
+                                                                            <icon:PackIconLucide Kind="RotateCcw" Width="10" Height="10"
+                                                                                                 Foreground="{DynamicResource SubTextBrush}"/>
+                                                                        </Button>
+                                                                    </Grid>
+
+                                                                    <!-- 概要説明 -->
+                                                                    <TextBlock Text="{Binding Description}" FontSize="11"
+                                                                               Foreground="{DynamicResource SubTextBrush}"
+                                                                               Margin="0,3,0,0" TextWrapping="Wrap"/>
+                                                                </StackPanel>
 
                                                                 <!-- 競合警告 -->
                                                                 <Border.Style>

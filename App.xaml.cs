@@ -137,26 +137,51 @@ namespace ZenithFiler
             // 基盤フォルダの準備はバックグラウンドへ（UI スレッドの I/O を排除）
             _ = Task.Run(EnsureAppFolders);
             _ = Services.SettingsBackupService.CleanupOldBackupsAsync(30);
-            // リソース辞書は UI スレッドで読み込む必要がある（XAML パース）
-            LoadHeavyResources();
-            // テーマカラーを外部 JSON から適用（ファイルがなければデフォルトのまま）
+            // テーマ設定のパース（ファイルI/O なし — JSON は設定 Task で読み込み済み）
             var ts = ReadThemeSettingsFromSettings(_settingsPath);
-            StartupSavedThemeName = ts.SavedTheme; // フォールバック済み SavedThemeName をキャッシュ
+            StartupSavedThemeName = ts.SavedTheme;
             StartupPaneThemes = (ts.NavPane, ts.APane, ts.BPane);
             string themeToApply = ts.SavedTheme;
 
+            // テーマ関連のファイルI/Oをバックグラウンドで並列実行（UIスレッドのブロック削減）
+            Task<string>? autoThemeTask = null;
             if (ts.Mode == "Auto")
             {
-                var allThemes = ThemeService.ScanThemes();
-                var pool = (ts.SubMode == "Category" && !string.IsNullOrEmpty(ts.Category)
-                    ? allThemes.Where(t => t.CategoryDisplayName == ts.Category)
-                    : allThemes).ToList();
-                var picked = PickRandomTheme(pool, ts.LastApplied);
-                if (picked != null)
+                // Auto モード: テーマスキャン + ランダム選択 + JSON事前読み込み を一括で実行
+                var tsCopy = ts;
+                autoThemeTask = Task.Run(() =>
                 {
-                    themeToApply = picked.Name;
+                    var allThemes = ThemeService.ScanThemes();
+                    var pool = (tsCopy.SubMode == "Category" && !string.IsNullOrEmpty(tsCopy.Category)
+                        ? allThemes.Where(t => t.CategoryDisplayName == tsCopy.Category)
+                        : allThemes).ToList();
+                    var picked = PickRandomTheme(pool, tsCopy.LastApplied);
+                    var name = picked?.Name ?? tsCopy.SavedTheme;
+                    ThemeService.PreloadThemeJson(name);
+                    return name;
+                });
+            }
+            else
+            {
+                // 非Auto: テーマ JSON の事前読み込みをバックグラウンドで実行
+                var nameToPreload = themeToApply;
+                autoThemeTask = Task.Run(() =>
+                {
+                    ThemeService.PreloadThemeJson(nameToPreload);
+                    return nameToPreload;
+                });
+            }
+
+            // リソース辞書は UI スレッドで読み込む必要がある（XAML パース）
+            // テーマ JSON のバックグラウンド読み込みと並列実行
+            LoadHeavyResources();
+
+            // バックグラウンド テーマ I/O の完了を待機
+            if (autoThemeTask != null)
+            {
+                themeToApply = autoThemeTask.GetAwaiter().GetResult();
+                if (themeToApply != ts.SavedTheme)
                     _ = Task.Run(() => WindowSettings.SaveThemeOnly(themeToApply));
-                }
             }
 
             ThemeService.LoadAndApply(Current.Resources, themeToApply);
