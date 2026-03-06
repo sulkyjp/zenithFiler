@@ -139,6 +139,7 @@ namespace ZenithFiler
         private void Apply()
         {
             if (!IsPreviewActive || PreviewingSet == null) return;
+            _ = App.Stats.RecordAsync("WorkingSet.Apply");
             string name = PreviewingSet.Name;
             _rollbackLeft   = _rollbackRight = null;
             IsPreviewActive = false;

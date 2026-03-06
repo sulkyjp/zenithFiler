@@ -9,6 +9,19 @@ namespace ZenithFiler
         [ObservableProperty]
         private string _name = string.Empty;
 
+        partial void OnNameChanged(string value)
+        {
+            OnPropertyChanged(nameof(DisplayName));
+        }
+
+        /// <summary>表示用ファイル名。ShowFileExtensions=false の場合、ファイルの拡張子を隠す。</summary>
+        public string DisplayName => IsDirectory || WindowSettings.ShowFileExtensionsEnabled
+            ? Name
+            : System.IO.Path.GetFileNameWithoutExtension(Name);
+
+        /// <summary>DisplayName の変更を外部から通知する（拡張子表示切替用）。</summary>
+        public void NotifyDisplayNameChanged() => OnPropertyChanged(nameof(DisplayName));
+
         [ObservableProperty]
         private string _fullPath = string.Empty;
 

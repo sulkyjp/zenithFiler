@@ -80,6 +80,7 @@ namespace ZenithFiler
                 await _db.CreateTableAsync<RenameHistory>().ConfigureAwait(false);
                 await _db.CreateTableAsync<CustomRenameButton>().ConfigureAwait(false);
                 await _db.CreateTableAsync<UsageRecord>().ConfigureAwait(false);
+                await _db.CreateTableAsync<ActionStat>().ConfigureAwait(false);
                 await MigrateSearchHistoryTableIfNeededAsync().ConfigureAwait(false);
                 await MigrateSearchHistoryV2Async().ConfigureAwait(false);
                 _ = Task.Run(CleanupHistoryAsync);
@@ -216,6 +217,26 @@ namespace ZenithFiler
             catch (Exception ex)
             {
                 _ = App.FileLogger.LogAsync($"[DatabaseService] GetHistoryAsync failed: {ex.Message}");
+                return new List<HistoryRecord>();
+            }
+        }
+
+        /// <summary>
+        /// フォルダ参照履歴をアクセス回数降順で取得します。
+        /// </summary>
+        public async Task<List<HistoryRecord>> GetTopFoldersAsync(int limit = 50)
+        {
+            await EnsureInitializedAsync().ConfigureAwait(false);
+            try
+            {
+                return await _db.Table<HistoryRecord>()
+                    .OrderByDescending(r => r.AccessCount)
+                    .Take(limit)
+                    .ToListAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _ = App.FileLogger.LogAsync($"[DatabaseService] GetTopFoldersAsync failed: {ex.Message}");
                 return new List<HistoryRecord>();
             }
         }

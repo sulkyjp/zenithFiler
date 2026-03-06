@@ -226,7 +226,8 @@ namespace ZenithFiler.Services
         /// </summary>
         /// <param name="settings">インデックス設定（null の場合は Interval 2時間でデフォルト適用）</param>
         /// <param name="getTargetPaths">対象パス一覧を返すデリゲート。Interval 実行時に UI から取得するため。</param>
-        public void ConfigureIndexUpdate(IndexSettings? settings, Func<IReadOnlyList<string>> getTargetPaths)
+        /// <param name="itemSettings">アイテム別詳細設定。null の場合は全パスがグローバル設定に従う。</param>
+        public void ConfigureIndexUpdate(IndexSettings? settings, Func<IReadOnlyList<string>> getTargetPaths, IReadOnlyList<IndexItemSettingsDto>? itemSettings = null)
         {
             var s = settings ?? IndexSettings.CreateDefaults();
             CurrentUpdateMode = s.UpdateMode;
@@ -256,23 +257,72 @@ namespace ZenithFiler.Services
                         if (token.IsCancellationRequested) break;
                         if (CurrentUpdateMode != IndexUpdateMode.Interval || _isPaused) continue;
 
+                        // アイドル時実行: CPU 使用率が閾値以下になるまで待機
+                        if (s.IdleOnlyExecution && App.CpuIdleService != null)
+                        {
+                            await App.CpuIdleService.WaitForIdleAsync(s.IdleCpuThreshold, token);
+                            if (token.IsCancellationRequested) break;
+                        }
+
                         var paths = getTargetPaths();
                         if (paths == null || paths.Count == 0) continue;
 
+                        var eligiblePaths = new System.Collections.Generic.List<string>();
                         foreach (var p in paths)
                         {
                             if (string.IsNullOrEmpty(p) || !System.IO.Directory.Exists(p)) continue;
                             // ロック済みパスは定期更新の対象外
                             if (IsRootLocked(p)) continue;
-                            UnmarkAsIndexed(p);
-                            DeleteDocumentsUnderRoot(p);
+                            // アイテム別スケジュール判定
+                            if (itemSettings != null)
+                            {
+                                var itemSetting = itemSettings.FirstOrDefault(sc =>
+                                    string.Equals(sc.Path, p, StringComparison.OrdinalIgnoreCase));
+                                if (itemSetting != null)
+                                {
+                                    if (itemSetting.ScheduleDays != null && !itemSetting.ScheduleDays.Contains(DateTime.Now.DayOfWeek))
+                                        continue;
+                                    if (itemSetting.ScheduleHour.HasValue && DateTime.Now.Hour != itemSetting.ScheduleHour.Value)
+                                        continue;
+                                }
+                            }
+                            // Per-Item 更新方式のルーティング
+                            var updateMode = GetItemUpdateMode(p, itemSettings);
+                            if (updateMode == IndexItemUpdateMode.FullRebuild)
+                            {
+                                UnmarkAsIndexed(p);
+                                DeleteDocumentsUnderRoot(p);
+                            }
+                            else
+                            {
+                                // Incremental: 差分更新（既存を削除せず再スキャン）
+                                UnmarkAsIndexed(p);
+                            }
+                            eligiblePaths.Add(p);
                         }
-                        // ロック済みを除外してから更新実行
-                        var unlockedPaths = paths.Where(p => !string.IsNullOrEmpty(p) && !IsRootLocked(p)).ToArray();
-                        TriggerUpdateNow(unlockedPaths, progress);
+                        if (eligiblePaths.Count > 0)
+                            TriggerUpdateNow(eligiblePaths.ToArray(), progress);
                     }
                 }, token);
             }
+        }
+
+        /// <summary>指定パスの Per-Item 更新方式を返す。null の場合はグローバルのデフォルト（Incremental 相当）。</summary>
+        private static IndexItemUpdateMode GetItemUpdateMode(string path, IReadOnlyList<IndexItemSettingsDto>? itemSettings)
+        {
+            if (itemSettings == null) return IndexItemUpdateMode.Incremental;
+            var setting = itemSettings.FirstOrDefault(s =>
+                string.Equals(s.Path, path, StringComparison.OrdinalIgnoreCase));
+            return setting?.UpdateMode ?? IndexItemUpdateMode.Incremental;
+        }
+
+        /// <summary>指定パスのアイテム別設定を返す。設定がなければ null。</summary>
+        public IndexItemSettingsDto? GetItemSettings(string rootPath)
+        {
+            // 設定は WindowSettings から直接取得（IndexService はステートレス）
+            var settings = WindowSettings.Load();
+            return settings.IndexItemSettings?.FirstOrDefault(s =>
+                string.Equals(s.Path, rootPath, StringComparison.OrdinalIgnoreCase));
         }
 
         /// <summary>指定ルート配下のドキュメントをインデックスから削除します。Interval 再スキャン前に呼び出し。</summary>
@@ -1756,6 +1806,8 @@ namespace ZenithFiler.Services
             _intervalCts?.Cancel();
             _intervalCts?.Dispose();
             _intervalCts = null;
+            _globalIndexingCts.Cancel();
+            _globalIndexingCts.Dispose();
             _indexingSemaphore.Dispose();
             lock (_lockObj)
             {

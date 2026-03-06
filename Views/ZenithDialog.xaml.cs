@@ -13,18 +13,22 @@ namespace ZenithFiler.Views
 
     public partial class ZenithDialog : Window
     {
-        // ── 静的 Frozen ブラシ（GC 圧力ゼロ・スレッドセーフ） ──
-        private static readonly SolidColorBrush BrushBlue = Freeze(new SolidColorBrush(Color.FromRgb(0x26, 0x8B, 0xD2)));
-        private static readonly SolidColorBrush BrushGold = Freeze(new SolidColorBrush(Color.FromRgb(0xD4, 0xA0, 0x17)));
-        private static readonly SolidColorBrush BrushRed = Freeze(new SolidColorBrush(Color.FromRgb(0xC2, 0x3B, 0x22)));
-
-        // ── アイコン種別→(Kind, Brush) マッピング ──
-        private static readonly (PackIconLucideKind Kind, SolidColorBrush Brush)[] IconMap =
+        // ── アイコン種別→Kind マッピング ──
+        private static readonly PackIconLucideKind[] IconKinds =
         [
-            (PackIconLucideKind.Info, BrushBlue),           // Info = 0
-            (PackIconLucideKind.TriangleAlert, BrushGold),  // Warning = 1
-            (PackIconLucideKind.CircleX, BrushRed),         // Error = 2
-            (PackIconLucideKind.CircleHelp, BrushBlue),     // Question = 3
+            PackIconLucideKind.Info,           // Info = 0
+            PackIconLucideKind.TriangleAlert,  // Warning = 1
+            PackIconLucideKind.CircleX,        // Error = 2
+            PackIconLucideKind.CircleHelp,     // Question = 3
+        ];
+
+        // ── アイコン種別→リソースキー マッピング ──
+        private static readonly string[] IconBrushKeys =
+        [
+            "AccentBrush",            // Info = 0
+            "IndexSearchIconBrush",   // Warning = 1
+            "ErrorTextBrush",         // Error = 2
+            "AccentBrush",            // Question = 3
         ];
 
         // ── ボタン定義テーブル（毎回 new Button しない） ──
@@ -98,10 +102,10 @@ namespace ZenithFiler.Views
             TitleText.Text = title;
             MessageText.Text = message;
 
-            // アイコン: 配列インデックスで O(1) ルックアップ
-            var (kind, brush) = IconMap[(int)icon];
-            DialogIcon.Kind = kind;
-            DialogIcon.Foreground = brush;
+            // アイコン: 配列インデックスで O(1) ルックアップ + テーマ対応ブラシ
+            DialogIcon.Kind = IconKinds[(int)icon];
+            DialogIcon.Foreground = Application.Current.Resources[IconBrushKeys[(int)icon]] as Brush
+                                    ?? Brushes.Gray;
 
             // カスタムコンテンツ
             if (customContent != null)
@@ -187,6 +191,5 @@ namespace ZenithFiler.Views
             CloseWithResult(_result == ZenithDialogResult.None ? ZenithDialogResult.Cancel : _result);
         }
 
-        private static SolidColorBrush Freeze(SolidColorBrush brush) { brush.Freeze(); return brush; }
     }
 }

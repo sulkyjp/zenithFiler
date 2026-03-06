@@ -49,7 +49,7 @@ try {
     Compress-Archive -Path "$publishDir\*" -DestinationPath $zipPath -Force
 
     $size = (Get-Item $zipPath).Length / 1MB
-    Write-Host "Done: $zipPath ({0:N1} MB)" -f $size -ForegroundColor Green
+    Write-Host ("Done: $zipPath ({0:N1} MB)" -f $size) -ForegroundColor Green
     Write-Host "Upload this file to GitHub Releases." -ForegroundColor Yellow
 }
 finally {

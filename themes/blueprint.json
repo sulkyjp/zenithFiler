@@ -14,6 +14,7 @@
     "SidebarColor": "#142D52",                         // サイドバー背景：深い紺
     "HeaderColor": "#081830",                          // アドレスバー・タブ周辺背景
     "TitleBarColor": "#051021",                        // タイトルバー背景：最も深い紺
+    "TitleBarTextColor": "#A8D0F0",                    // タイトルバーの文字・ボタン色
     "BorderColor": "#5C85BB",                          // ★境界線：入力フォームの輪郭をはっきりさせるため明度を向上
     "PrimaryTextColor": "#E6F1FF",                     // メインテキスト色：極淡シアン
     "SecondaryTextColor": "#A0C4FF",                   // サブテキスト色：淡い水色
@@ -25,7 +26,10 @@
     "TabSeparatorColor": "#5C85BB",                    // タブ区切り
     "TabHoverColor": "#335C99",                        // タブホバー背景
     "ToolbarSeparatorColor": "#A0C4FF",                // ツールバーセパレーター
-    "TreeLineColor": "#6096BA"                         // ツリー階層線
+    "TreeLineColor": "#6096BA",                         // ツリー階層線
+    "PopupBackgroundColor": "#0A1A33",                 // フローティングポップアップの背景色
+    "PopupTextColor": "#E6F1FF",                       // ポップアップ内のテキスト色
+    "PopupHoverBackgroundColor": "#244A85"            // ポップアップリスト項目のホバー背景色
   },
 
   // ── リスト・選択・ボタン ──
@@ -37,7 +41,11 @@
     "OptionSelectedColor": "#4A6FA5",                  // 選択ボタン背景：シアン系の文字が映えるブルー
     "OptionSelectedHoverColor": "#6089C4",             // 選択中ホバー
     "CheckboxHoverColor": "#244A85",                   // チェックボックスホバー
-    "CheckedHoverAccentColor": "#A0C4FF"               // チェック済み強調
+    "CheckedHoverAccentColor": "#A0C4FF",               // チェック済み強調
+    "FilterActiveIndicatorColor": "#A0C4FF",           // アクティブフィルターのインジケーター色
+    "FilterChipBackgroundColor": "#142D52",            // フィルターチップのデフォルト背景色
+    "FilterChipBorderColor": "#5C85BB",                // フィルターチップの枠線色
+    "FilterToggleCheckedBackgroundColor": "#244A85"   // フィルタートグルのチェック済み背景色
   },
 
   // ── 検索機能 ──
@@ -52,7 +60,8 @@
     "AccentColor": "#142D52",                          // 仮想フォルダ背景：深い紺
     "ErrorTextColor": "#FFB3B3",                       // エラーテキスト
     "DestructiveHoverBackgroundColor": "#660000",      // 破壊的ホバー
-    "DestructiveIconColor": "#FF4D4D"                  // 破壊的アイコン
+    "DestructiveIconColor": "#FF4D4D",                  // 破壊的アイコン
+    "SuccessColor": "#66CC88"                         // 成功・有効状態のアイコン色
   },
 
   // ── 右クリックメニュー ──
@@ -78,6 +87,10 @@
     "TelemetryBackgroundColor": "#081830",             // 統計・マニュアルパネル背景
     "TelemetryBorderColor": "#4A6FA5",                 // パネル枠線
     "TelemetryTitleColor": "#A0C4FF",                  // マニュアルタイトル
-    "TelemetryValueColor": "#E6F1FF"                   // マニュアル本文・数値
+    "TelemetryValueColor": "#E6F1FF",                   // マニュアル本文・数値
+    "PreviewPanelBorderColor": "#5C85BB",              // クイックプレビューパネルの枠線色
+    "PreviewPdfBackgroundColor": "#0A1A33",            // PDFプレビューのキャンバス背景色
+    "IndexStatusNormalColor": "#E6F1FF",               // インデックス状態テキストの通常色
+    "IndexStatusWarmColor": "#FFB366"                 // インデックスの日時・件数バッジ色
   }
 }

@@ -1,0 +1,84 @@
+<Window x:Class="ZenithFiler.Views.EulaDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="ソフトウェア使用許諾契約"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen"
+        Width="620"
+        Height="520"
+        Background="Transparent"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        FontSize="13"
+        MouseLeftButtonDown="Window_MouseLeftButtonDown">
+
+    <Border Margin="20"
+            CornerRadius="8"
+            Background="{DynamicResource BackgroundBrush}">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.25" Direction="315" Color="Black"/>
+        </Border.Effect>
+
+        <Grid Margin="24,20,24,20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- タイトル -->
+            <TextBlock Grid.Row="0"
+                       Text="ソフトウェア使用許諾契約"
+                       FontSize="16"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextBrush}"
+                       Margin="0,0,0,12"/>
+
+            <!-- EULA テキスト -->
+            <Border Grid.Row="1"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Background="{DynamicResource InputBackgroundBrush}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              Padding="16,12">
+                    <TextBlock x:Name="EulaTextBlock"
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextBrush}"
+                               FontSize="12"
+                               LineHeight="20"/>
+                </ScrollViewer>
+            </Border>
+
+            <!-- 同意チェックボックス -->
+            <CheckBox x:Name="AgreeCheckBox"
+                      Grid.Row="2"
+                      Content="上記の使用許諾契約に同意します"
+                      Foreground="{DynamicResource TextBrush}"
+                      Margin="0,14,0,0"
+                      VerticalContentAlignment="Center"/>
+
+            <!-- ボタン -->
+            <StackPanel Grid.Row="3"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Center"
+                        Margin="0,16,0,0">
+                <Button Content="同意して開始"
+                        Click="AcceptButton_Click"
+                        IsEnabled="{Binding IsChecked, ElementName=AgreeCheckBox}"
+                        MinWidth="120"
+                        MinHeight="30"
+                        Padding="14,4"
+                        Margin="0,0,12,0"/>
+                <Button Content="同意しない"
+                        Click="DeclineButton_Click"
+                        MinWidth="120"
+                        MinHeight="30"
+                        Padding="14,4"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

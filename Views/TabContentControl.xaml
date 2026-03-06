@@ -140,7 +140,7 @@
                             ToolTip="{Binding Name}"
                             ToolTipService.InitialShowDelay="2000">
                         <StackPanel>
-                            <TextBlock x:Name="CardName" Text="{Binding Name}" TextTrimming="CharacterEllipsis"
+                            <TextBlock x:Name="CardName" Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis"
                                        Foreground="White" FontSize="12" FontWeight="SemiBold"/>
                             <TextBlock x:Name="CardSub" Text="{Binding IconViewSubText}" FontSize="10"
                                        Foreground="#E0E0E0" Margin="0,1,0,0"/>
@@ -239,7 +239,7 @@
                             </MultiBinding>
                         </Image.Source>
                     </Image>
-                    <TextBlock x:Name="CardName" Grid.Row="1" Text="{Binding Name}"
+                    <TextBlock x:Name="CardName" Grid.Row="1" Text="{Binding DisplayName}"
                                Style="{StaticResource ActivePaneToolbarTextStyle}" FontSize="12"
                                TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center"
                                VerticalAlignment="Top" Margin="2,2,2,0" MaxHeight="60"
@@ -279,7 +279,7 @@
 
         <!-- 検索フィルターバー用トグルボタンスタイル（モダン・ピル型） -->
         <Style x:Key="FilterToggleButtonStyle" TargetType="ToggleButton">
-            <Setter Property="Background" Value="#FFFFFF"/>
+            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
@@ -295,12 +295,12 @@
                                 <Setter TargetName="BtnBorder" Property="Background" Value="{DynamicResource ListHoverBrush}"/>
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="BtnBorder" Property="Background" Value="#E3F2FD"/>
+                                <Setter TargetName="BtnBorder" Property="Background" Value="{DynamicResource FilterToggleCheckedBackgroundBrush}"/>
                                 <Setter TargetName="BtnBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                                 <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
                             </Trigger>
                             <Trigger Property="IsChecked" Value="False">
-                                <Setter TargetName="BtnBorder" Property="Background" Value="#FFFFFF"/>
+                                <Setter TargetName="BtnBorder" Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
                                 <Setter TargetName="BtnBorder" Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
                                 <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
                             </Trigger>
@@ -404,7 +404,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Grid Background="Transparent">
-                            <Ellipse x:Name="HoverCircle" Width="20" Height="20" Fill="#E0DDD0" Opacity="0"
+                            <Ellipse x:Name="HoverCircle" Width="20" Height="20" Fill="{DynamicResource ButtonHoverBrush}" Opacity="0"
                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Grid>
@@ -531,7 +531,7 @@
                         <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0" Padding="16,4" Margin="-6,0,-8,0" SnapsToDevicePixels="True">
                             <StackPanel Orientation="Horizontal">
                                 <Image Source="{Binding Icon}" Width="16" Height="16" Margin="0,0,10,0" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                <TextBlock Text="{Binding Name}"
+                                <TextBlock Text="{Binding DisplayName}"
                                            VerticalAlignment="Center"
                                            TextTrimming="CharacterEllipsis"
                                            Style="{StaticResource ActivePaneCellTextStyle}"/>
@@ -630,7 +630,7 @@
                         <DataTemplate.Triggers>
                             <DataTrigger Binding="{Binding IsDirectory}" Value="True">
                                 <Setter TargetName="SizeText" Property="FontStyle" Value="Italic"/>
-                                <Setter TargetName="SizeText" Property="Foreground" Value="#999999"/>
+                                <Setter TargetName="SizeText" Property="Foreground" Value="{DynamicResource SubTextBrush}"/>
                             </DataTrigger>
                         </DataTemplate.Triggers>
                     </DataTemplate>
@@ -795,7 +795,7 @@
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*" MinWidth="100"/>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
@@ -920,7 +920,7 @@
                                    Opened="ScopeFilterPopup_Opened">
                                 <Border x:Name="ScopePopupBorder"
                                         Background="{DynamicResource BackgroundBrush}"
-                                        BorderBrush="#B8B3A4" BorderThickness="1"
+                                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                                         CornerRadius="8" Padding="0,4,0,4"
                                         MinWidth="320" MaxWidth="500" MaxHeight="440"
                                         RenderTransformOrigin="0.5,0" Opacity="0">
@@ -950,14 +950,14 @@
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Grid.Column="0" Text="検索スコープ" FontSize="11" FontWeight="Medium"
-                                                           Foreground="#000000" VerticalAlignment="Center"/>
+                                                           Foreground="{DynamicResource PopupTextBrush}" VerticalAlignment="Center"/>
                                                 <StackPanel Grid.Column="1" Orientation="Horizontal">
                                                     <Button Command="{Binding DataContext.IndexSearchSettings.SelectAllScopeCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                             Cursor="Hand" IsTabStop="False" Focusable="False">
                                                         <Button.Template>
                                                             <ControlTemplate TargetType="Button">
                                                                 <TextBlock x:Name="Lbl" Text="すべて選択" FontSize="11"
-                                                                           Foreground="#000000" Opacity="0.55" Padding="5,2"/>
+                                                                           Foreground="{DynamicResource PopupTextBrush}" Opacity="0.55" Padding="5,2"/>
                                                                 <ControlTemplate.Triggers>
                                                                     <Trigger Property="IsMouseOver" Value="True">
                                                                         <Setter TargetName="Lbl" Property="Opacity" Value="1"/>
@@ -967,14 +967,14 @@
                                                             </ControlTemplate>
                                                         </Button.Template>
                                                     </Button>
-                                                    <TextBlock Text="|" FontSize="10" Foreground="#000000" Opacity="0.25"
+                                                    <TextBlock Text="|" FontSize="10" Foreground="{DynamicResource PopupTextBrush}" Opacity="0.25"
                                                                VerticalAlignment="Center"/>
                                                     <Button Command="{Binding DataContext.IndexSearchSettings.DeselectAllScopeCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                             Cursor="Hand" IsTabStop="False" Focusable="False">
                                                         <Button.Template>
                                                             <ControlTemplate TargetType="Button">
                                                                 <TextBlock x:Name="Lbl" Text="すべて解除" FontSize="11"
-                                                                           Foreground="#000000" Opacity="0.55" Padding="5,2"/>
+                                                                           Foreground="{DynamicResource PopupTextBrush}" Opacity="0.55" Padding="5,2"/>
                                                                 <ControlTemplate.Triggers>
                                                                     <Trigger Property="IsMouseOver" Value="True">
                                                                         <Setter TargetName="Lbl" Property="Opacity" Value="1"/>
@@ -1117,10 +1117,10 @@
                                                         <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,8,0">
                                                             <TextBlock x:Name="FolderName" Text="{Binding DisplayName}"
                                                                        FontSize="12" FontWeight="SemiBold"
-                                                                       Foreground="#000000"
+                                                                       Foreground="{DynamicResource PopupTextBrush}"
                                                                        TextTrimming="CharacterEllipsis"/>
                                                             <TextBlock x:Name="FolderPath" Text="{Binding Path}"
-                                                                       FontSize="9" Foreground="#666666"
+                                                                       FontSize="9" Foreground="{DynamicResource SubTextBrush}"
                                                                        TextTrimming="CharacterEllipsis"/>
                                                         </StackPanel>
 
@@ -1128,11 +1128,11 @@
                                                         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,2,0">
                                                             <icon:PackIconLucide x:Name="LockIcon" Kind="Lock" Width="9" Height="9"
                                                                                  VerticalAlignment="Center" Margin="0,0,4,0"
-                                                                                 Foreground="#888888"
+                                                                                 Foreground="{DynamicResource SubTextBrush}"
                                                                                  Visibility="{Binding IsLocked, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                                                             <TextBlock x:Name="CountText" VerticalAlignment="Center"
                                                                        FontSize="10" FontFamily="Consolas"
-                                                                       Foreground="#555555"
+                                                                       Foreground="{DynamicResource SubTextBrush}"
                                                                        Text="{Binding DocumentCount, StringFormat='{}{0:N0}件'}">
                                                                 <TextBlock.Style>
                                                                     <Style TargetType="TextBlock">
@@ -1183,7 +1183,7 @@
                                                                                 <Storyboard>
                                                                                     <ColorAnimation Storyboard.TargetName="HoverBg"
                                                                                         Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                                                                        To="#48505A" Duration="0:0:0.10"/>
+                                                                                        To="{DynamicResource PopupHoverBackgroundColor}" Duration="0:0:0.10"/>
                                                                                 </Storyboard>
                                                                             </BeginStoryboard>
                                                                         </Trigger.EnterActions>
@@ -1232,7 +1232,7 @@
                                         </icon:PackIconLucide.Style>
                                     </icon:PackIconLucide>
                                     <!-- アクティブ・アンダーライン (1px charcoal gray) -->
-                                    <Border Height="1" Background="#333333" Margin="1,2,1,0"
+                                    <Border Height="1" Background="{DynamicResource FilterActiveIndicatorBrush}" Margin="1,2,1,0"
                                             HorizontalAlignment="Stretch" CornerRadius="0.5">
                                         <Border.Style>
                                             <Style TargetType="Border">
@@ -1271,7 +1271,7 @@
                                    Opened="SizeFilterPopup_Opened">
                                 <Border x:Name="SizePopupBorder"
                                         Background="{DynamicResource BackgroundBrush}"
-                                        BorderBrush="#B8B3A4" BorderThickness="1"
+                                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                                         CornerRadius="8" Padding="0,4,0,4"
                                         MinWidth="240" MaxWidth="320"
                                         RenderTransformOrigin="0.5,0" Opacity="0">
@@ -1296,14 +1296,14 @@
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Grid.Column="0" Text="サイズ指定" FontSize="11" FontWeight="Medium"
-                                                           Foreground="#000000" VerticalAlignment="Center"/>
+                                                           Foreground="{DynamicResource PopupTextBrush}" VerticalAlignment="Center"/>
                                                 <Button Grid.Column="1"
                                                         Command="{Binding DataContext.SearchFilter.ResetSizeFilterCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                         Cursor="Hand" IsTabStop="False" Focusable="False">
                                                     <Button.Template>
                                                         <ControlTemplate TargetType="Button">
                                                             <TextBlock x:Name="Lbl" Text="リセット" FontSize="11"
-                                                                       Foreground="#000000" Opacity="0.55" Padding="5,2"/>
+                                                                       Foreground="{DynamicResource PopupTextBrush}" Opacity="0.55" Padding="5,2"/>
                                                             <ControlTemplate.Triggers>
                                                                 <Trigger Property="IsMouseOver" Value="True">
                                                                     <Setter TargetName="Lbl" Property="Opacity" Value="1"/>
@@ -1319,7 +1319,7 @@
                                         <StackPanel Margin="10,6,10,2">
                                             <!-- ガイドテキスト -->
                                             <TextBlock Text="単位: k=KB  m=MB  g=GB (未指定=MB)   例: 500k, 2.5g"
-                                                       FontSize="10" Foreground="#000000"
+                                                       FontSize="10" Foreground="{DynamicResource PopupTextBrush}"
                                                        Opacity="0.5" Margin="0,0,0,6" TextWrapping="Wrap"/>
                                             <!-- 最小サイズ -->
                                             <Grid Margin="0,0,0,4">
@@ -1329,9 +1329,9 @@
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Grid.Column="0" Text="Min" FontSize="11"
-                                                           Foreground="#000000" VerticalAlignment="Center"/>
+                                                           Foreground="{DynamicResource PopupTextBrush}" VerticalAlignment="Center"/>
                                                 <TextBox x:Name="SizeMinTextBox" Grid.Column="1" FontSize="11" Padding="5,3"
-                                                         Foreground="#000000" VerticalContentAlignment="Center"
+                                                         Foreground="{DynamicResource PopupTextBrush}" VerticalContentAlignment="Center"
                                                          Text="{Binding DataContext.SearchFilter.MinSizeText,
                                                              RelativeSource={RelativeSource AncestorType=Window},
                                                              UpdateSourceTrigger=PropertyChanged}"
@@ -1348,7 +1348,7 @@
                                                     </TextBox.Style>
                                                 </TextBox>
                                                 <TextBlock Grid.Column="2" FontSize="10" Margin="6,0,0,0"
-                                                           Foreground="#000000" Opacity="0.6" VerticalAlignment="Center"
+                                                           Foreground="{DynamicResource PopupTextBrush}" Opacity="0.6" VerticalAlignment="Center"
                                                            Text="{Binding DataContext.SearchFilter.MinSizePreview,
                                                                RelativeSource={RelativeSource AncestorType=Window}}"/>
                                             </Grid>
@@ -1360,9 +1360,9 @@
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Grid.Column="0" Text="Max" FontSize="11"
-                                                           Foreground="#000000" VerticalAlignment="Center"/>
+                                                           Foreground="{DynamicResource PopupTextBrush}" VerticalAlignment="Center"/>
                                                 <TextBox x:Name="SizeMaxTextBox" Grid.Column="1" FontSize="11" Padding="5,3"
-                                                         Foreground="#000000" VerticalContentAlignment="Center"
+                                                         Foreground="{DynamicResource PopupTextBrush}" VerticalContentAlignment="Center"
                                                          Text="{Binding DataContext.SearchFilter.MaxSizeText,
                                                              RelativeSource={RelativeSource AncestorType=Window},
                                                              UpdateSourceTrigger=PropertyChanged}"
@@ -1379,7 +1379,7 @@
                                                     </TextBox.Style>
                                                 </TextBox>
                                                 <TextBlock Grid.Column="2" FontSize="10" Margin="6,0,0,0"
-                                                           Foreground="#000000" Opacity="0.6" VerticalAlignment="Center"
+                                                           Foreground="{DynamicResource PopupTextBrush}" Opacity="0.6" VerticalAlignment="Center"
                                                            Text="{Binding DataContext.SearchFilter.MaxSizePreview,
                                                                RelativeSource={RelativeSource AncestorType=Window}}"/>
                                             </Grid>
@@ -1402,7 +1402,7 @@
                                         <!-- セパレータ -->
                                         <Border Margin="10,4,10,2" Height="1">
                                             <Border.Background>
-                                                <SolidColorBrush Color="#000000" Opacity="0.1"/>
+                                                <SolidColorBrush Color="{StaticResource BorderColor}" Opacity="0.4"/>
                                             </Border.Background>
                                         </Border>
                                         <!-- クイックチップ -->
@@ -1416,15 +1416,15 @@
                                                         <Setter.Value>
                                                             <ControlTemplate TargetType="Button">
                                                                 <Border x:Name="ChipBorder" CornerRadius="2" Padding="8,3" Margin="0,0,4,4"
-                                                                        Background="#FFFFFF" BorderBrush="#000000" BorderThickness="1">
+                                                                        Background="{DynamicResource FilterChipBackgroundBrush}" BorderBrush="{DynamicResource FilterChipBorderBrush}" BorderThickness="1">
                                                                     <TextBlock x:Name="ChipText" Text="{TemplateBinding Content}"
-                                                                               FontSize="11" Foreground="#000000"/>
+                                                                               FontSize="11" Foreground="{DynamicResource PopupTextBrush}"/>
                                                                 </Border>
                                                                 <ControlTemplate.Triggers>
                                                                     <Trigger Property="IsMouseOver" Value="True">
                                                                         <Setter TargetName="ChipBorder" Property="Background" Value="{DynamicResource TextBrush}"/>
                                                                         <Setter TargetName="ChipBorder" Property="BorderBrush" Value="{DynamicResource TextBrush}"/>
-                                                                        <Setter TargetName="ChipText" Property="Foreground" Value="#FFFFFF"/>
+                                                                        <Setter TargetName="ChipText" Property="Foreground" Value="{DynamicResource FilterChipBackgroundBrush}"/>
                                                                     </Trigger>
                                                                 </ControlTemplate.Triggers>
                                                             </ControlTemplate>
@@ -1472,7 +1472,7 @@
                                             </Style>
                                         </icon:PackIconLucide.Style>
                                     </icon:PackIconLucide>
-                                    <Border Height="1" Background="#333333" Margin="1,2,1,0"
+                                    <Border Height="1" Background="{DynamicResource FilterActiveIndicatorBrush}" Margin="1,2,1,0"
                                             HorizontalAlignment="Stretch" CornerRadius="0.5">
                                         <Border.Style>
                                             <Style TargetType="Border">
@@ -1511,7 +1511,7 @@
                                    Opened="DateFilterPopup_Opened">
                                 <Border x:Name="DatePopupBorder"
                                         Background="{DynamicResource BackgroundBrush}"
-                                        BorderBrush="#B8B3A4" BorderThickness="1"
+                                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                                         CornerRadius="8" Padding="0,4,0,4"
                                         MinWidth="280" MaxWidth="320"
                                         RenderTransformOrigin="0.5,0" Opacity="0">
@@ -1536,14 +1536,14 @@
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Grid.Column="0" Text="日付指定" FontSize="11" FontWeight="Medium"
-                                                           Foreground="#000000" VerticalAlignment="Center"/>
+                                                           Foreground="{DynamicResource PopupTextBrush}" VerticalAlignment="Center"/>
                                                 <Button Grid.Column="1"
                                                         Command="{Binding DataContext.SearchFilter.ResetDateFilterCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                         Cursor="Hand" IsTabStop="False" Focusable="False">
                                                     <Button.Template>
                                                         <ControlTemplate TargetType="Button">
                                                             <TextBlock x:Name="Lbl" Text="リセット" FontSize="11"
-                                                                       Foreground="#000000" Opacity="0.55" Padding="5,2"/>
+                                                                       Foreground="{DynamicResource PopupTextBrush}" Opacity="0.55" Padding="5,2"/>
                                                             <ControlTemplate.Triggers>
                                                                 <Trigger Property="IsMouseOver" Value="True">
                                                                     <Setter TargetName="Lbl" Property="Opacity" Value="1"/>
@@ -1559,7 +1559,7 @@
                                         <StackPanel Margin="10,6,10,2">
                                             <!-- ガイドテキスト -->
                                             <TextBlock Text="形式: 20260228 / 0228 / 2026/2/28"
-                                                       FontSize="10" Foreground="#000000"
+                                                       FontSize="10" Foreground="{DynamicResource PopupTextBrush}"
                                                        Opacity="0.5" Margin="0,0,0,6" TextWrapping="Wrap"/>
                                             <!-- 開始日 -->
                                             <Grid Margin="0,0,0,4">
@@ -1569,9 +1569,9 @@
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Grid.Column="0" Text="開始" FontSize="11"
-                                                           Foreground="#000000" VerticalAlignment="Center"/>
+                                                           Foreground="{DynamicResource PopupTextBrush}" VerticalAlignment="Center"/>
                                                 <TextBox x:Name="DateStartTextBox" Grid.Column="1" FontSize="11" Padding="5,3"
-                                                         Foreground="#000000" VerticalContentAlignment="Center"
+                                                         Foreground="{DynamicResource PopupTextBrush}" VerticalContentAlignment="Center"
                                                          Text="{Binding DataContext.SearchFilter.StartDateText,
                                                              RelativeSource={RelativeSource AncestorType=Window},
                                                              UpdateSourceTrigger=PropertyChanged}"
@@ -1589,7 +1589,7 @@
                                                     </TextBox.Style>
                                                 </TextBox>
                                                 <TextBlock Grid.Column="2" FontSize="10" Margin="6,0,0,0"
-                                                           Foreground="#000000" Opacity="0.6" VerticalAlignment="Center"
+                                                           Foreground="{DynamicResource PopupTextBrush}" Opacity="0.6" VerticalAlignment="Center"
                                                            Text="{Binding DataContext.SearchFilter.StartDatePreview,
                                                                RelativeSource={RelativeSource AncestorType=Window}}"/>
                                             </Grid>
@@ -1601,9 +1601,9 @@
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Grid.Column="0" Text="終了" FontSize="11"
-                                                           Foreground="#000000" VerticalAlignment="Center"/>
+                                                           Foreground="{DynamicResource PopupTextBrush}" VerticalAlignment="Center"/>
                                                 <TextBox x:Name="DateEndTextBox" Grid.Column="1" FontSize="11" Padding="5,3"
-                                                         Foreground="#000000" VerticalContentAlignment="Center"
+                                                         Foreground="{DynamicResource PopupTextBrush}" VerticalContentAlignment="Center"
                                                          Text="{Binding DataContext.SearchFilter.EndDateText,
                                                              RelativeSource={RelativeSource AncestorType=Window},
                                                              UpdateSourceTrigger=PropertyChanged}"
@@ -1621,7 +1621,7 @@
                                                     </TextBox.Style>
                                                 </TextBox>
                                                 <TextBlock Grid.Column="2" FontSize="10" Margin="6,0,0,0"
-                                                           Foreground="#000000" Opacity="0.6" VerticalAlignment="Center"
+                                                           Foreground="{DynamicResource PopupTextBrush}" Opacity="0.6" VerticalAlignment="Center"
                                                            Text="{Binding DataContext.SearchFilter.EndDatePreview,
                                                                RelativeSource={RelativeSource AncestorType=Window}}"/>
                                             </Grid>
@@ -1644,7 +1644,7 @@
                                         <!-- セパレータ -->
                                         <Border Margin="10,4,10,2" Height="1">
                                             <Border.Background>
-                                                <SolidColorBrush Color="#000000" Opacity="0.1"/>
+                                                <SolidColorBrush Color="{StaticResource BorderColor}" Opacity="0.4"/>
                                             </Border.Background>
                                         </Border>
                                         <!-- クイックチップ (9 プリセット: 短期・中期・期間) -->
@@ -1658,15 +1658,15 @@
                                                         <Setter.Value>
                                                             <ControlTemplate TargetType="Button">
                                                                 <Border x:Name="ChipBorder" CornerRadius="2" Padding="8,3" Margin="0,0,4,4"
-                                                                        Background="#FFFFFF" BorderBrush="#000000" BorderThickness="1">
+                                                                        Background="{DynamicResource FilterChipBackgroundBrush}" BorderBrush="{DynamicResource FilterChipBorderBrush}" BorderThickness="1">
                                                                     <TextBlock x:Name="ChipText" Text="{TemplateBinding Content}"
-                                                                               FontSize="11" Foreground="#000000"/>
+                                                                               FontSize="11" Foreground="{DynamicResource PopupTextBrush}"/>
                                                                 </Border>
                                                                 <ControlTemplate.Triggers>
                                                                     <Trigger Property="IsMouseOver" Value="True">
                                                                         <Setter TargetName="ChipBorder" Property="Background" Value="{DynamicResource TextBrush}"/>
                                                                         <Setter TargetName="ChipBorder" Property="BorderBrush" Value="{DynamicResource TextBrush}"/>
-                                                                        <Setter TargetName="ChipText" Property="Foreground" Value="#FFFFFF"/>
+                                                                        <Setter TargetName="ChipText" Property="Foreground" Value="{DynamicResource FilterChipBackgroundBrush}"/>
                                                                     </Trigger>
                                                                 </ControlTemplate.Triggers>
                                                             </ControlTemplate>
@@ -1714,7 +1714,7 @@
                                         <!-- セパレータ -->
                                         <Border Margin="10,2,10,2" Height="1">
                                             <Border.Background>
-                                                <SolidColorBrush Color="#000000" Opacity="0.1"/>
+                                                <SolidColorBrush Color="{StaticResource BorderColor}" Opacity="0.4"/>
                                             </Border.Background>
                                         </Border>
                                         <!-- Calendar (常時表示 / Zenith Style) -->
@@ -1723,12 +1723,12 @@
                                                   Margin="4,2,4,6"
                                                   Background="Transparent"
                                                   BorderThickness="0"
-                                                  Foreground="#000000"
+                                                  Foreground="{DynamicResource PopupTextBrush}"
                                                   SelectedDatesChanged="DateCalendar_SelectedDatesChanged">
                                             <Calendar.Resources>
                                                 <!-- CalendarDayButton: 選択色を黒系に -->
                                                 <Style TargetType="CalendarDayButton">
-                                                    <Setter Property="Foreground" Value="#000000"/>
+                                                    <Setter Property="Foreground" Value="{DynamicResource PopupTextBrush}"/>
                                                     <Setter Property="FontSize" Value="11"/>
                                                     <Style.Triggers>
                                                         <Trigger Property="IsSelected" Value="True">
@@ -1737,15 +1737,11 @@
                                                                     <SolidColorBrush Color="{StaticResource PrimaryTextColor}"/>
                                                                 </Setter.Value>
                                                             </Setter>
-                                                            <Setter Property="Foreground" Value="#FFFFFF"/>
+                                                            <Setter Property="Foreground" Value="{DynamicResource FilterChipBackgroundBrush}"/>
                                                         </Trigger>
                                                         <Trigger Property="IsToday" Value="True">
-                                                            <Setter Property="Background">
-                                                                <Setter.Value>
-                                                                    <SolidColorBrush Color="#E8E6E0"/>
-                                                                </Setter.Value>
-                                                            </Setter>
-                                                            <Setter Property="Foreground" Value="#000000"/>
+                                                            <Setter Property="Background" Value="{DynamicResource CheckboxHoverBrush}"/>
+                                                            <Setter Property="Foreground" Value="{DynamicResource PopupTextBrush}"/>
                                                         </Trigger>
                                                         <MultiTrigger>
                                                             <MultiTrigger.Conditions>
@@ -1757,7 +1753,7 @@
                                                                     <SolidColorBrush Color="{StaticResource PrimaryTextColor}"/>
                                                                 </Setter.Value>
                                                             </Setter>
-                                                            <Setter Property="Foreground" Value="#FFFFFF"/>
+                                                            <Setter Property="Foreground" Value="{DynamicResource FilterChipBackgroundBrush}"/>
                                                         </MultiTrigger>
                                                         <Trigger Property="IsInactive" Value="True">
                                                             <Setter Property="Foreground">
@@ -1770,7 +1766,7 @@
                                                 </Style>
                                                 <!-- CalendarButton (月/年選択ボタン) -->
                                                 <Style TargetType="CalendarButton">
-                                                    <Setter Property="Foreground" Value="#000000"/>
+                                                    <Setter Property="Foreground" Value="{DynamicResource PopupTextBrush}"/>
                                                     <Setter Property="FontSize" Value="11"/>
                                                     <Style.Triggers>
                                                         <Trigger Property="IsInactive" Value="True">
@@ -1812,7 +1808,7 @@
                                         </icon:PackIconLucide.Style>
                                     </icon:PackIconLucide>
                                     <!-- アクティブ・アンダーライン (1px charcoal gray) -->
-                                    <Border Height="1" Background="#333333" Margin="1,2,1,0"
+                                    <Border Height="1" Background="{DynamicResource FilterActiveIndicatorBrush}" Margin="1,2,1,0"
                                             HorizontalAlignment="Stretch" CornerRadius="0.5">
                                         <Border.Style>
                                             <Style TargetType="Border">
@@ -1851,7 +1847,7 @@
                                    Opened="SearchPresetPopup_Opened">
                                 <Border x:Name="PresetPopupBorder"
                                         Background="{DynamicResource BackgroundBrush}"
-                                        BorderBrush="#B8B3A4" BorderThickness="1"
+                                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                                         CornerRadius="8" Padding="0,4,0,4"
                                         MinWidth="260" MaxWidth="400" MaxHeight="400"
                                         RenderTransformOrigin="0.5,0" Opacity="0">
@@ -1871,7 +1867,7 @@
                                                 <Thickness>0,0,0,1</Thickness>
                                             </Border.BorderThickness>
                                             <TextBlock Text="検索プリセット" FontSize="11" FontWeight="Medium"
-                                                       Foreground="#000000" VerticalAlignment="Center"/>
+                                                       Foreground="{DynamicResource PopupTextBrush}" VerticalAlignment="Center"/>
                                         </Border>
                                         <!-- プリセットリスト -->
                                         <ListBox x:Name="PresetListBox"
@@ -1962,7 +1958,7 @@
                                                                     </Style>
                                                                 </ToolTip.Style>
                                                                 <Border Background="{DynamicResource BackgroundBrush}"
-                                                                        BorderBrush="#B8B3A4" BorderThickness="1"
+                                                                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                                                                         CornerRadius="6" Padding="10,7,10,7"
                                                                         MinWidth="180" MaxWidth="320">
                                                                     <Border.Effect>
@@ -1971,7 +1967,7 @@
                                                                     <StackPanel>
                                                                         <!-- プリセット名 -->
                                                                         <TextBlock Text="{Binding Name}" FontSize="11" FontWeight="SemiBold"
-                                                                                   Foreground="#000000" Margin="0,0,0,4" TextWrapping="Wrap"/>
+                                                                                   Foreground="{DynamicResource PopupTextBrush}" Margin="0,0,0,4" TextWrapping="Wrap"/>
                                                                         <!-- キーワード -->
                                                                         <Grid Margin="0,0,0,2">
                                                                             <Grid.Style>
@@ -1988,9 +1984,9 @@
                                                                                 <ColumnDefinition Width="*"/>
                                                                             </Grid.ColumnDefinitions>
                                                                             <TextBlock Grid.Column="0" Text="キーワード" FontSize="10"
-                                                                                       Foreground="#000000" Opacity="0.5"/>
+                                                                                       Foreground="{DynamicResource PopupTextBrush}" Opacity="0.5"/>
                                                                             <TextBlock Grid.Column="1" Text="{Binding SearchText}" FontSize="10"
-                                                                                       Foreground="#000000" TextTrimming="CharacterEllipsis"/>
+                                                                                       Foreground="{DynamicResource PopupTextBrush}" TextTrimming="CharacterEllipsis"/>
                                                                         </Grid>
                                                                         <!-- サイズ -->
                                                                         <Grid Margin="0,0,0,2">
@@ -2008,9 +2004,9 @@
                                                                                 <ColumnDefinition Width="*"/>
                                                                             </Grid.ColumnDefinitions>
                                                                             <TextBlock Grid.Column="0" Text="サイズ" FontSize="10"
-                                                                                       Foreground="#000000" Opacity="0.5"/>
+                                                                                       Foreground="{DynamicResource PopupTextBrush}" Opacity="0.5"/>
                                                                             <TextBlock Grid.Column="1" Text="{Binding DisplaySize}" FontSize="10"
-                                                                                       Foreground="#000000" TextTrimming="CharacterEllipsis"/>
+                                                                                       Foreground="{DynamicResource PopupTextBrush}" TextTrimming="CharacterEllipsis"/>
                                                                         </Grid>
                                                                         <!-- 日付 -->
                                                                         <Grid Margin="0,0,0,2">
@@ -2028,9 +2024,9 @@
                                                                                 <ColumnDefinition Width="*"/>
                                                                             </Grid.ColumnDefinitions>
                                                                             <TextBlock Grid.Column="0" Text="日付" FontSize="10"
-                                                                                       Foreground="#000000" Opacity="0.5"/>
+                                                                                       Foreground="{DynamicResource PopupTextBrush}" Opacity="0.5"/>
                                                                             <TextBlock Grid.Column="1" Text="{Binding DisplayDate}" FontSize="10"
-                                                                                       Foreground="#000000" TextTrimming="CharacterEllipsis"/>
+                                                                                       Foreground="{DynamicResource PopupTextBrush}" TextTrimming="CharacterEllipsis"/>
                                                                         </Grid>
                                                                         <!-- フィルタ -->
                                                                         <Grid Margin="0,0,0,2">
@@ -2048,9 +2044,9 @@
                                                                                 <ColumnDefinition Width="*"/>
                                                                             </Grid.ColumnDefinitions>
                                                                             <TextBlock Grid.Column="0" Text="フィルタ" FontSize="10"
-                                                                                       Foreground="#000000" Opacity="0.5"/>
+                                                                                       Foreground="{DynamicResource PopupTextBrush}" Opacity="0.5"/>
                                                                             <TextBlock Grid.Column="1" Text="{Binding DisplayFilters}" FontSize="10"
-                                                                                       Foreground="#000000" TextWrapping="Wrap"/>
+                                                                                       Foreground="{DynamicResource PopupTextBrush}" TextWrapping="Wrap"/>
                                                                         </Grid>
                                                                         <!-- スコープ -->
                                                                         <Grid Margin="0,0,0,2">
@@ -2068,9 +2064,9 @@
                                                                                 <ColumnDefinition Width="*"/>
                                                                             </Grid.ColumnDefinitions>
                                                                             <TextBlock Grid.Column="0" Text="スコープ" FontSize="10"
-                                                                                       Foreground="#000000" Opacity="0.5"/>
+                                                                                       Foreground="{DynamicResource PopupTextBrush}" Opacity="0.5"/>
                                                                             <TextBlock Grid.Column="1" Text="{Binding DisplayScope}" FontSize="10"
-                                                                                       Foreground="#000000" TextWrapping="Wrap"/>
+                                                                                       Foreground="{DynamicResource PopupTextBrush}" TextWrapping="Wrap"/>
                                                                         </Grid>
                                                                         <!-- ソート -->
                                                                         <Grid>
@@ -2079,9 +2075,9 @@
                                                                                 <ColumnDefinition Width="*"/>
                                                                             </Grid.ColumnDefinitions>
                                                                             <TextBlock Grid.Column="0" Text="ソート" FontSize="10"
-                                                                                       Foreground="#000000" Opacity="0.5"/>
+                                                                                       Foreground="{DynamicResource PopupTextBrush}" Opacity="0.5"/>
                                                                             <TextBlock Grid.Column="1" Text="{Binding DisplaySort}" FontSize="10"
-                                                                                       Foreground="#000000"/>
+                                                                                       Foreground="{DynamicResource PopupTextBrush}"/>
                                                                         </Grid>
                                                                     </StackPanel>
                                                                 </Border>
@@ -2099,7 +2095,7 @@
                                                                             <ColumnDefinition Width="Auto"/>
                                                                         </Grid.ColumnDefinitions>
                                                                         <TextBlock x:Name="PresetName" Grid.Column="0" Text="{Binding Name}"
-                                                                                   FontSize="11" Foreground="#000000"
+                                                                                   FontSize="11" Foreground="{DynamicResource PopupTextBrush}"
                                                                                    VerticalAlignment="Center"
                                                                                    TextTrimming="CharacterEllipsis"
                                                                                    Margin="0,0,6,0"/>
@@ -2132,8 +2128,8 @@
                                                                 </Border>
                                                                 <ControlTemplate.Triggers>
                                                                     <Trigger Property="IsMouseOver" Value="True">
-                                                                        <Setter TargetName="Bd" Property="Background" Value="#48505A"/>
-                                                                        <Setter TargetName="PresetName" Property="Foreground" Value="#FFFFFF"/>
+                                                                        <Setter TargetName="Bd" Property="Background" Value="{DynamicResource PopupHoverBackgroundBrush}"/>
+                                                                        <Setter TargetName="PresetName" Property="Foreground" Value="{DynamicResource FilterChipBackgroundBrush}"/>
                                                                         <Setter TargetName="DeleteBorder" Property="Opacity" Value="1"/>
                                                                     </Trigger>
                                                                 </ControlTemplate.Triggers>
@@ -2145,7 +2141,7 @@
                                         </ListBox>
                                         <!-- 空状態テキスト -->
                                         <TextBlock Text="(プリセットがありません)" FontSize="11"
-                                                   Foreground="#000000" Opacity="0.4"
+                                                   Foreground="{DynamicResource PopupTextBrush}" Opacity="0.4"
                                                    HorizontalAlignment="Center" Margin="10,6,10,6">
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
@@ -2162,7 +2158,7 @@
                                         <!-- セパレータ -->
                                         <Border Margin="10,2,10,2" Height="1">
                                             <Border.Background>
-                                                <SolidColorBrush Color="#000000" Opacity="0.1"/>
+                                                <SolidColorBrush Color="{StaticResource BorderColor}" Opacity="0.4"/>
                                             </Border.Background>
                                         </Border>
                                         <!-- リセット + 保存ボタン -->
@@ -2173,14 +2169,14 @@
                                                 <Button.Template>
                                                     <ControlTemplate TargetType="Button">
                                                         <Border x:Name="ResetBorder" CornerRadius="4" Padding="10,4"
-                                                                Background="Transparent" BorderBrush="#000000" BorderThickness="1"
+                                                                Background="Transparent" BorderBrush="{DynamicResource FilterChipBorderBrush}" BorderThickness="1"
                                                                 Opacity="0.45">
                                                             <StackPanel Orientation="Horizontal">
                                                                 <icon:PackIconLucide x:Name="ResetIcon" Kind="RotateCcw" Width="11" Height="11"
-                                                                                     Foreground="#000000" VerticalAlignment="Center"
+                                                                                     Foreground="{DynamicResource PopupTextBrush}" VerticalAlignment="Center"
                                                                                      Margin="0,0,5,0"/>
                                                                 <TextBlock x:Name="ResetText" Text="条件をリセット"
-                                                                           FontSize="11" Foreground="#000000"
+                                                                           FontSize="11" Foreground="{DynamicResource PopupTextBrush}"
                                                                            VerticalAlignment="Center"/>
                                                             </StackPanel>
                                                         </Border>
@@ -2189,8 +2185,8 @@
                                                                 <Setter TargetName="ResetBorder" Property="Opacity" Value="1"/>
                                                                 <Setter TargetName="ResetBorder" Property="Background" Value="{DynamicResource TextBrush}"/>
                                                                 <Setter TargetName="ResetBorder" Property="BorderBrush" Value="{DynamicResource TextBrush}"/>
-                                                                <Setter TargetName="ResetText" Property="Foreground" Value="#FFFFFF"/>
-                                                                <Setter TargetName="ResetIcon" Property="Foreground" Value="#FFFFFF"/>
+                                                                <Setter TargetName="ResetText" Property="Foreground" Value="{DynamicResource FilterChipBackgroundBrush}"/>
+                                                                <Setter TargetName="ResetIcon" Property="Foreground" Value="{DynamicResource FilterChipBackgroundBrush}"/>
                                                             </Trigger>
                                                         </ControlTemplate.Triggers>
                                                     </ControlTemplate>
@@ -2202,13 +2198,13 @@
                                                 <Button.Template>
                                                     <ControlTemplate TargetType="Button">
                                                         <Border x:Name="SaveBorder" CornerRadius="4" Padding="10,4"
-                                                                Background="#FFFFFF" BorderBrush="#000000" BorderThickness="1">
+                                                                Background="{DynamicResource FilterChipBackgroundBrush}" BorderBrush="{DynamicResource FilterChipBorderBrush}" BorderThickness="1">
                                                             <StackPanel Orientation="Horizontal">
                                                                 <icon:PackIconLucide x:Name="SaveIcon" Kind="Plus" Width="11" Height="11"
-                                                                                     Foreground="#000000" VerticalAlignment="Center"
+                                                                                     Foreground="{DynamicResource PopupTextBrush}" VerticalAlignment="Center"
                                                                                      Margin="0,0,5,0"/>
                                                                 <TextBlock x:Name="SaveText" Text="現在の条件を保存"
-                                                                           FontSize="11" Foreground="#000000"
+                                                                           FontSize="11" Foreground="{DynamicResource PopupTextBrush}"
                                                                            VerticalAlignment="Center"/>
                                                             </StackPanel>
                                                         </Border>
@@ -2216,8 +2212,8 @@
                                                             <Trigger Property="IsMouseOver" Value="True">
                                                                 <Setter TargetName="SaveBorder" Property="Background" Value="{DynamicResource TextBrush}"/>
                                                                 <Setter TargetName="SaveBorder" Property="BorderBrush" Value="{DynamicResource TextBrush}"/>
-                                                                <Setter TargetName="SaveText" Property="Foreground" Value="#FFFFFF"/>
-                                                                <Setter TargetName="SaveIcon" Property="Foreground" Value="#FFFFFF"/>
+                                                                <Setter TargetName="SaveText" Property="Foreground" Value="{DynamicResource FilterChipBackgroundBrush}"/>
+                                                                <Setter TargetName="SaveIcon" Property="Foreground" Value="{DynamicResource FilterChipBackgroundBrush}"/>
                                                             </Trigger>
                                                         </ControlTemplate.Triggers>
                                                     </ControlTemplate>
@@ -2320,10 +2316,10 @@
                                                                     <Grid>
                                                                         <Grid.ColumnDefinitions>
                                                                             <ColumnDefinition Width="Auto"/>
-                                                                            <ColumnDefinition Width="*"/>
-                                                                            <ColumnDefinition Width="Auto" SharedSizeGroup="HistPreset"/>
-                                                                            <ColumnDefinition Width="Auto" SharedSizeGroup="HistSize"/>
-                                                                            <ColumnDefinition Width="Auto" SharedSizeGroup="HistDate"/>
+                                                                            <ColumnDefinition Width="*" MinWidth="60"/>
+                                                                            <ColumnDefinition Width="Auto" MaxWidth="120" SharedSizeGroup="HistPreset"/>
+                                                                            <ColumnDefinition Width="Auto" MaxWidth="100" SharedSizeGroup="HistSize"/>
+                                                                            <ColumnDefinition Width="Auto" MaxWidth="100" SharedSizeGroup="HistDate"/>
                                                                         </Grid.ColumnDefinitions>
                                                                         <!-- Col 0: 検索モードアイコン -->
                                                                         <icon:PackIconLucide Kind="{Binding IsIndexSearch, Converter={StaticResource SearchHistoryIconKindConverter}}" Width="12" Height="12" Margin="0,0,6,0" VerticalAlignment="Center">
@@ -2344,26 +2340,26 @@
                                                                             </icon:PackIconLucide.Style>
                                                                         </icon:PackIconLucide>
                                                                         <!-- Col 1: キーワード (主役・左詰め) -->
-                                                                        <TextBlock Grid.Column="1" Text="{Binding Keyword}" Foreground="#000000"
+                                                                        <TextBlock Grid.Column="1" Text="{Binding Keyword}" Foreground="{DynamicResource PopupTextBrush}"
                                                                                    VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                                                                         <!-- Col 2: プリセット: [名前] -->
-                                                                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0"
-                                                                                    Visibility="{Binding HasPreset, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                                            <TextBlock Text="プリセット: " FontSize="10" Foreground="#AAAAAA"/>
-                                                                            <TextBlock Text="{Binding PresetName}" FontSize="10" Foreground="#888888"/>
-                                                                        </StackPanel>
+                                                                        <TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="12,0,0,0"
+                                                                                   FontSize="10" Foreground="{DynamicResource SubTextBrush}" TextTrimming="CharacterEllipsis"
+                                                                                   Visibility="{Binding HasPreset, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                                            <Run Text="プリセット: "/><Run Text="{Binding PresetName, Mode=OneWay}" Foreground="{DynamicResource SubTextBrush}"/>
+                                                                        </TextBlock>
                                                                         <!-- Col 3: サイズ: [略称] -->
-                                                                        <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0"
-                                                                                    Visibility="{Binding HasSize, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                                            <TextBlock Text="サイズ: " FontSize="10" Foreground="#AAAAAA"/>
-                                                                            <TextBlock Text="{Binding SizeSummary}" FontSize="10" Foreground="#888888"/>
-                                                                        </StackPanel>
+                                                                        <TextBlock Grid.Column="3" VerticalAlignment="Center" Margin="12,0,0,0"
+                                                                                   FontSize="10" Foreground="{DynamicResource SubTextBrush}" TextTrimming="CharacterEllipsis"
+                                                                                   Visibility="{Binding HasSize, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                                            <Run Text="サイズ: "/><Run Text="{Binding SizeSummary, Mode=OneWay}" Foreground="{DynamicResource SubTextBrush}"/>
+                                                                        </TextBlock>
                                                                         <!-- Col 4: 日付: [略称] -->
-                                                                        <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0"
-                                                                                    Visibility="{Binding HasDate, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                                            <TextBlock Text="日付: " FontSize="10" Foreground="#AAAAAA"/>
-                                                                            <TextBlock Text="{Binding DateSummary}" FontSize="10" Foreground="#888888"/>
-                                                                        </StackPanel>
+                                                                        <TextBlock Grid.Column="4" VerticalAlignment="Center" Margin="12,0,0,0"
+                                                                                   FontSize="10" Foreground="{DynamicResource SubTextBrush}" TextTrimming="CharacterEllipsis"
+                                                                                   Visibility="{Binding HasDate, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                                            <Run Text="日付: "/><Run Text="{Binding DateSummary, Mode=OneWay}" Foreground="{DynamicResource SubTextBrush}"/>
+                                                                        </TextBlock>
                                                                     </Grid>
                                                                 </Border>
                                                                 <ControlTemplate.Triggers>
@@ -2508,7 +2504,7 @@
                                             <Setter Property="Foreground" Value="White"/>
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding IsFavoriteActionActive}" Value="True">
-                                                    <Setter Property="Foreground" Value="#F1C40F"/>
+                                                    <Setter Property="Foreground" Value="{DynamicResource IndexSearchIconBrush}"/>
                                                     <DataTrigger.EnterActions>
                                                         <BeginStoryboard>
                                                             <Storyboard>
@@ -2519,7 +2515,7 @@
                                                     </DataTrigger.EnterActions>
                                                 </DataTrigger>
                                                 <DataTrigger Binding="{Binding IsFavoriteActionFailed}" Value="True">
-                                                    <Setter Property="Foreground" Value="#E74C3C"/>
+                                                    <Setter Property="Foreground" Value="{DynamicResource ErrorTextBrush}"/>
                                                     <DataTrigger.EnterActions>
                                                         <BeginStoryboard>
                                                             <Storyboard>
@@ -2545,7 +2541,7 @@
                             </Button>
                             
                             <!-- 特別なアクション用の「Saved!」テキスト -->
-                            <TextBlock x:Name="SavedText" Text="Saved!" FontSize="10" Foreground="#F1C40F" FontWeight="Bold" IsHitTestVisible="False"
+                            <TextBlock x:Name="SavedText" Text="Saved!" FontSize="10" Foreground="{DynamicResource IndexSearchIconBrush}" FontWeight="Bold" IsHitTestVisible="False"
                                        HorizontalAlignment="Left" VerticalAlignment="Center" Opacity="0" Margin="24,0,0,0" Visibility="Collapsed">
                                 <TextBlock.RenderTransform>
                                     <TranslateTransform X="0" Y="0"/>
@@ -2571,7 +2567,7 @@
                             </TextBlock>
 
                             <!-- お気に入り登録失敗テキスト -->
-                            <TextBlock x:Name="LockedText" Text="登録できませんでした" FontSize="10" Foreground="#E74C3C" FontWeight="Bold" IsHitTestVisible="False"
+                            <TextBlock x:Name="LockedText" Text="登録できませんでした" FontSize="10" Foreground="{DynamicResource ErrorTextBrush}" FontWeight="Bold" IsHitTestVisible="False"
                                        HorizontalAlignment="Left" VerticalAlignment="Center" Opacity="0" Margin="24,0,0,0" Visibility="Collapsed">
                                 <TextBlock.RenderTransform>
                                     <TranslateTransform X="0" Y="0"/>
@@ -2778,7 +2774,7 @@
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
             <!-- 検索結果の鮮度警告（インデックス検索時のみ） -->
-            <Border Grid.Row="0" Background="#FFF9E6" BorderBrush="#E6B800" BorderThickness="0,0,0,1" Padding="8,6" Margin="0"
+            <Border Grid.Row="0" Background="{DynamicResource IndexSearchBackgroundBrush}" BorderBrush="{DynamicResource IndexSearchIconBrush}" BorderThickness="0,0,0,1" Padding="8,6" Margin="0"
                     Visibility="{Binding ShowIndexFreshnessWarning, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -2786,13 +2782,13 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <icon:PackIconLucide Kind="TriangleAlert" Width="14" Height="14" Foreground="#B8860B" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <icon:PackIconLucide Kind="TriangleAlert" Width="14" Height="14" Foreground="{DynamicResource IndexSearchIconBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                         <TextBlock Text="{Binding IndexFreshnessWarningMessage}" FontSize="11" Style="{StaticResource ActivePaneToolbarTextStyle}" TextWrapping="Wrap" VerticalAlignment="Center"/>
                     </StackPanel>
                     <Button Grid.Column="1" Command="{Binding DismissIndexFreshnessWarningCommand}" ToolTip="警告を閉じる"
                             Style="{StaticResource MenuItemButtonStyle}" Padding="6,4" Margin="4,0,0,0" VerticalAlignment="Center"
                             Background="Transparent" BorderThickness="0" HorizontalContentAlignment="Center">
-                        <icon:PackIconLucide Kind="X" Width="12" Height="12" Foreground="#B8860B"/>
+                        <icon:PackIconLucide Kind="X" Width="12" Height="12" Foreground="{DynamicResource IndexSearchIconBrush}"/>
                     </Button>
                 </Grid>
             </Border>
@@ -2997,7 +2993,7 @@
                 <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0" Padding="16,2" Margin="-6,0,-8,0" SnapsToDevicePixels="True">
                     <StackPanel Orientation="Horizontal">
                         <Image Source="{Binding Icon}" Width="16" Height="16" Margin="0,0,10,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                        <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                                    Style="{StaticResource ActivePaneCellTextStyle}"/>
                     </StackPanel>
                 </Border>
@@ -3105,7 +3101,7 @@
                 <DataTemplate.Triggers>
                     <DataTrigger Binding="{Binding IsDirectory}" Value="True">
                         <Setter TargetName="SizeText" Property="FontStyle" Value="Italic"/>
-                        <Setter TargetName="SizeText" Property="Foreground" Value="#999999"/>
+                        <Setter TargetName="SizeText" Property="Foreground" Value="{DynamicResource SubTextBrush}"/>
                     </DataTrigger>
                 </DataTemplate.Triggers>
             </DataTemplate>
@@ -3240,7 +3236,7 @@
         </DockPanel>
 
         <!-- Box共有リンク整形成功時のグリーンフラッシュ演出 -->
-        <Border x:Name="SuccessFlashOverlay" Background="#4CAF50" Opacity="0" IsHitTestVisible="False"
+        <Border x:Name="SuccessFlashOverlay" Background="{DynamicResource SuccessBrush}" Opacity="0" IsHitTestVisible="False"
                 HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Panel.ZIndex="100">
             <Border.Style>
                 <Style TargetType="Border">

@@ -13,8 +13,7 @@ namespace ZenithFiler
     {
         private CancellationTokenSource? _cts;
         private readonly object _lock = new();
-        private string? _pendingMessage;
-        private int _pendingDisplayTimeMs;
+        private string? _lastShownMessage;
 
         /// <summary>ウェルカムアニメーション中は true。この間 Notify はログのみ記録し、ステータスバー表示を抑制する。</summary>
         public bool IsWelcomeActive { get; set; }
@@ -70,7 +69,7 @@ namespace ZenithFiler
 
         /// <summary>
         /// ステータスバーにメッセージを表示し、詳細なログを記録します。
-        /// 表示中のメッセージがある場合は最新1件のみ保持し、フェードアウト完了後に表示します。
+        /// 表示中のメッセージは即座に上書きされ、タイマーがリセットされます。同一メッセージは無視します。
         /// </summary>
         /// <param name="displayMessage">ステータスバーに表示する簡潔なメッセージ</param>
         /// <param name="logMessage">ログファイルに記録する詳細なメッセージ（nullの場合はdisplayMessageを使用）</param>
@@ -96,14 +95,19 @@ namespace ZenithFiler
 
             lock (_lock)
             {
-                if (IsStatusMessageVisible)
+                bool wasVisible = IsStatusMessageVisible;
+                string? lastMsg = _lastShownMessage;
+
+                if (wasVisible && string.Equals(lastMsg, displayMessage, StringComparison.Ordinal))
                 {
-                    // 表示中 → 最新メッセージのみ保持（上書き）
-                    _pendingMessage = displayMessage;
-                    _pendingDisplayTimeMs = displayTimeMs;
+                    // 同一メッセージ: テキストはそのまま、タイマーだけリセット（早期消失を防止）
+                    _cts?.Cancel();
+                    _cts = new CancellationTokenSource();
+                    _ = HideStatusAfterDelayAsync(displayTimeMs, _cts.Token);
                     return;
                 }
 
+                // 即座に上書き（タイマーリセット）
                 ShowMessageCore(displayMessage, displayTimeMs);
             }
         }
@@ -115,6 +119,7 @@ namespace ZenithFiler
             _cts = new CancellationTokenSource();
             var token = _cts.Token;
 
+            _lastShownMessage = message;
             StatusMessage = message;
             IsStatusMessageVisible = true;
 
@@ -134,6 +139,7 @@ namespace ZenithFiler
 
             await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
             {
+                if (token.IsCancellationRequested) return;
                 IsStatusMessageVisible = false;
             });
 
@@ -150,21 +156,7 @@ namespace ZenithFiler
             await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 if (token.IsCancellationRequested) return;
-
                 StatusMessage = string.Empty;
-
-                // pending があれば次を表示
-                lock (_lock)
-                {
-                    if (_pendingMessage != null)
-                    {
-                        string msg = _pendingMessage;
-                        int time = _pendingDisplayTimeMs;
-                        _pendingMessage = null;
-                        _pendingDisplayTimeMs = 0;
-                        ShowMessageCore(msg, time);
-                    }
-                }
             });
         }
     }

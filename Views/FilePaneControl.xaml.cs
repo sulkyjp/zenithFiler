@@ -296,7 +296,7 @@ namespace ZenithFiler
                 if (!string.IsNullOrEmpty(path) && System.IO.Directory.Exists(path))
                 {
                     var pathToOpen = path;
-                    Dispatcher.BeginInvoke(() =>
+                    _ = Dispatcher.BeginInvoke(() =>
                     {
                         if (DataContext is FilePaneViewModel paneVm)
                             paneVm.AddTabWithPathCommand.Execute(pathToOpen);

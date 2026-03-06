@@ -16,6 +16,7 @@
     "SidebarColor": "#FCEBED",                         // サイドバー（ナビペイン）背景色：落ち着いた淡いピンク
     "HeaderColor": "#FFFAFB",                          // カラムヘッダーの背景色
     "TitleBarColor": "#B57A88",                        // タイトルバー背景色：彩度を抑えた上品なローズボルドー
+    "TitleBarTextColor": "#FFFFFF",                    // タイトルバーの文字・ボタン色
     "BorderColor": "#EBD3D8",                          // 枠線・区切り線の色
     "PrimaryTextColor": "#3D2C2F",                     // メインテキスト色：薄すぎた色を深みのあるココアブラウンへ強化
     "SecondaryTextColor": "#7D6569",                   // サブテキスト・補足情報の文字色：視認性を確保した濃度へ引き上げ
@@ -27,7 +28,10 @@
     "TabSeparatorColor": "#EBD3D8",                    // タブ間の区切り線
     "TabHoverColor": "#FDF0F3",                        // タブホバー時の背景色
     "ToolbarSeparatorColor": "#7D6569",                // ツールバーセパレーター色
-    "TreeLineColor": "#D8B4BC"                         // ツリービュー接続線の色
+    "TreeLineColor": "#D8B4BC",                         // ツリービュー接続線の色
+    "PopupBackgroundColor": "#FFFDFA",                 // フローティングポップアップの背景色
+    "PopupTextColor": "#3D2C2F",                       // ポップアップ内のテキスト色
+    "PopupHoverBackgroundColor": "#B57A88"            // ポップアップリスト項目のホバー背景色
   },
 
   // ── リスト・選択・ホバー ──
@@ -39,7 +43,11 @@
     "OptionSelectedColor": "#FADADD",                  // ★選択ボタン背景：文字が最も美しく浮かび上がる淡いペールピンクへ改善
     "OptionSelectedHoverColor": "#F4C2C2",             // ラジオボタン等の選択＋ホバー時背景色
     "CheckboxHoverColor": "#F7E1E6",                   // チェックボックスホバー時の背景色
-    "CheckedHoverAccentColor": "#B57A88"               // チェック済みホバー時のアクセント色
+    "CheckedHoverAccentColor": "#B57A88",               // チェック済みホバー時のアクセント色
+    "FilterActiveIndicatorColor": "#B57A88",           // アクティブフィルターのインジケーター色
+    "FilterChipBackgroundColor": "#FFFFFF",            // フィルターチップのデフォルト背景色
+    "FilterChipBorderColor": "#7D6569",                // フィルターチップの枠線色
+    "FilterToggleCheckedBackgroundColor": "#F7E1E6"   // フィルタートグルのチェック済み背景色
   },
 
   // ── インデックス検索 ──
@@ -54,7 +62,8 @@
     "AccentColor": "#E5989B",                          // アクセントカラー：現代的なグレイッシュピンク
     "ErrorTextColor": "#D66868",                       // エラーテキスト色
     "DestructiveHoverBackgroundColor": "#4A1C1C",      // 破壊的操作ホバー時の背景色
-    "DestructiveIconColor": "#E08E8E"                  // 破壊的操作のアイコン色
+    "DestructiveIconColor": "#E08E8E",                  // 破壊的操作のアイコン色
+    "SuccessColor": "#7AAE7A"                         // 成功・有効状態のアイコン色
   },
 
   // ── 右クリックメニュー ──
@@ -80,6 +89,10 @@
     "TelemetryBackgroundColor": "#E63D2C2F",           // テレメトリーパネル背景色
     "TelemetryBorderColor": "#40D8B4BC",               // テレメトリーパネル枠線色
     "TelemetryTitleColor": "#D8B4BC",                  // テレメトリーパネルのタイトル色
-    "TelemetryValueColor": "#FFFAFB"                   // テレメトリーパネルの値テキスト色
+    "TelemetryValueColor": "#FFFAFB",                   // テレメトリーパネルの値テキスト色
+    "PreviewPanelBorderColor": "#EBD3D8",              // クイックプレビューパネルの枠線色
+    "PreviewPdfBackgroundColor": "#FFFAFB",            // PDFプレビューのキャンバス背景色
+    "IndexStatusNormalColor": "#D88E9E",               // インデックス状態テキストの通常色
+    "IndexStatusWarmColor": "#C08860"                 // インデックスの日時・件数バッジ色
   }
 }

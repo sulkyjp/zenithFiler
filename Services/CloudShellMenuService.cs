@@ -238,12 +238,6 @@ namespace ZenithFiler.Services
             return results;
         }
 
-        // Win32 MENUITEMINFO fMask 定数
-        private const uint MIIM_STRING = 0x00000040;
-        private const uint MIIM_BITMAP = 0x00000080;
-        private const uint MIIM_ID     = 0x00000002;
-        private const uint MIIM_SUBMENU = 0x00000004;
-
         private static void EnumerateMenuItems(HMENU hMenu, string[] filePaths, bool isBackground,
             List<CloudMenuItem> results, int depth)
         {
@@ -257,7 +251,7 @@ namespace ZenithFiler.Services
                 var mii = new MenuItemInfoNative
                 {
                     cbSize = (uint)Marshal.SizeOf<MenuItemInfoNative>(),
-                    fMask = MIIM_STRING | MIIM_BITMAP | MIIM_ID | MIIM_SUBMENU,
+                    fMask = NativeMethods.MIIM_STRING | NativeMethods.MIIM_BITMAP | NativeMethods.MIIM_ID | NativeMethods.MIIM_SUBMENU,
                 };
 
                 // まず文字列長を取得
@@ -278,7 +272,7 @@ namespace ZenithFiler.Services
                 mii.dwTypeData = Marshal.AllocHGlobal((int)(mii.cch * 2));
                 try
                 {
-                    mii.fMask = MIIM_STRING | MIIM_BITMAP | MIIM_ID | MIIM_SUBMENU;
+                    mii.fMask = NativeMethods.MIIM_STRING | NativeMethods.MIIM_BITMAP | NativeMethods.MIIM_ID | NativeMethods.MIIM_SUBMENU;
                     NativeMethods.GetMenuItemInfoW(hMenuPtr, (uint)i, true, ref mii);
                     string text = Marshal.PtrToStringUni(mii.dwTypeData) ?? "";
                     hSub = mii.hSubMenu;
@@ -331,7 +325,7 @@ namespace ZenithFiler.Services
                 var mii = new MenuItemInfoNative
                 {
                     cbSize = (uint)Marshal.SizeOf<MenuItemInfoNative>(),
-                    fMask = MIIM_STRING | MIIM_BITMAP | MIIM_ID | MIIM_SUBMENU,
+                    fMask = NativeMethods.MIIM_STRING | NativeMethods.MIIM_BITMAP | NativeMethods.MIIM_ID | NativeMethods.MIIM_SUBMENU,
                 };
 
                 NativeMethods.GetMenuItemInfoW(hMenuPtr, (uint)i, true, ref mii);
@@ -341,7 +335,7 @@ namespace ZenithFiler.Services
                 mii.dwTypeData = Marshal.AllocHGlobal((int)(mii.cch * 2));
                 try
                 {
-                    mii.fMask = MIIM_STRING | MIIM_BITMAP | MIIM_ID | MIIM_SUBMENU;
+                    mii.fMask = NativeMethods.MIIM_STRING | NativeMethods.MIIM_BITMAP | NativeMethods.MIIM_ID | NativeMethods.MIIM_SUBMENU;
                     NativeMethods.GetMenuItemInfoW(hMenuPtr, (uint)i, true, ref mii);
                     string text = Marshal.PtrToStringUni(mii.dwTypeData) ?? "";
                     if (string.IsNullOrWhiteSpace(text)) continue;
@@ -426,13 +420,14 @@ namespace ZenithFiler.Services
 
                 // InvokeCommand
                 int offset = item.CommandId - 1;
+                // Vanara の lpVerbW は String 型のため SafeResourceId が正しくマーシャリングされない。
+                // CMIC_MASK_UNICODE を外し、lpVerb（ResourceId 型）のみ使用する。
                 var ci = new CMINVOKECOMMANDINFOEX
                 {
                     cbSize = (uint)Marshal.SizeOf<CMINVOKECOMMANDINFOEX>(),
-                    fMask = CMIC.CMIC_MASK_UNICODE,
+                    fMask = CMIC.CMIC_MASK_PTINVOKE,
                     hwnd = hwnd,
                     lpVerb = new SafeResourceId(offset),
-                    lpVerbW = new SafeResourceId(offset),
                     nShow = ShowWindowCommand.SW_SHOWNORMAL,
                     ptInvoke = new POINT((int)screenPoint.X, (int)screenPoint.Y),
                 };

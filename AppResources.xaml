@@ -124,6 +124,7 @@
     <Color x:Key="HeaderColor">#F5F1E3</Color>
     <!-- タイトルバーもワンポイント用ダーク帯と同じチャコールブラックで統一 -->
     <Color x:Key="TitleBarColor">#545B64</Color>
+    <Color x:Key="TitleBarTextColor">#FFFFFF</Color>
     <Color x:Key="BorderColor">#D3D0C3</Color>
     <Color x:Key="AccentColor">#268BD2</Color> <!-- Solarized Blue -->
     <!-- メインテキスト: ほぼ黒に近い濃いグレー -->
@@ -188,6 +189,7 @@
     <SolidColorBrush x:Key="SidebarBrush" Color="{StaticResource SidebarColor}"/>
     <SolidColorBrush x:Key="HeaderBrush" Color="{StaticResource HeaderColor}"/>
     <SolidColorBrush x:Key="TitleBarBrush" Color="{StaticResource TitleBarColor}"/>
+    <SolidColorBrush x:Key="TitleBarTextBrush" Color="{StaticResource TitleBarTextColor}"/>
     <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}"/>
     <SolidColorBrush x:Key="TextBrush" Color="{StaticResource PrimaryTextColor}"/>
     <SolidColorBrush x:Key="SubTextBrush" Color="{StaticResource SecondaryTextColor}"/>
@@ -235,6 +237,33 @@
     <SolidColorBrush x:Key="TelemetryBorderBrush" Color="{StaticResource TelemetryBorderColor}"/>
     <SolidColorBrush x:Key="TelemetryTitleBrush" Color="{StaticResource TelemetryTitleColor}"/>
     <SolidColorBrush x:Key="TelemetryValueBrush" Color="{StaticResource TelemetryValueColor}"/>
+    <!-- ポップアップ・フィルター -->
+    <Color x:Key="PopupBackgroundColor">#FAFAF5</Color>
+    <Color x:Key="PopupTextColor">#1A1A1A</Color>
+    <Color x:Key="PopupHoverBackgroundColor">#48505A</Color>
+    <SolidColorBrush x:Key="PopupBackgroundBrush" Color="{StaticResource PopupBackgroundColor}"/>
+    <SolidColorBrush x:Key="PopupTextBrush" Color="{StaticResource PopupTextColor}"/>
+    <SolidColorBrush x:Key="PopupHoverBackgroundBrush" Color="{StaticResource PopupHoverBackgroundColor}"/>
+    <Color x:Key="FilterActiveIndicatorColor">#333333</Color>
+    <Color x:Key="FilterChipBackgroundColor">#FFFFFF</Color>
+    <Color x:Key="FilterChipBorderColor">#8A8578</Color>
+    <Color x:Key="FilterToggleCheckedBackgroundColor">#E3F2FD</Color>
+    <SolidColorBrush x:Key="FilterActiveIndicatorBrush" Color="{StaticResource FilterActiveIndicatorColor}"/>
+    <SolidColorBrush x:Key="FilterChipBackgroundBrush" Color="{StaticResource FilterChipBackgroundColor}"/>
+    <SolidColorBrush x:Key="FilterChipBorderBrush" Color="{StaticResource FilterChipBorderColor}"/>
+    <SolidColorBrush x:Key="FilterToggleCheckedBackgroundBrush" Color="{StaticResource FilterToggleCheckedBackgroundColor}"/>
+    <!-- 成功・有効状態 -->
+    <Color x:Key="SuccessColor">#4CAF50</Color>
+    <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}"/>
+    <!-- プレビュー・インデックス状態 -->
+    <Color x:Key="PreviewPanelBorderColor">#C4BFB0</Color>
+    <Color x:Key="PreviewPdfBackgroundColor">#F0F0F0</Color>
+    <Color x:Key="IndexStatusNormalColor">#C0A060</Color>
+    <Color x:Key="IndexStatusWarmColor">#C68958</Color>
+    <SolidColorBrush x:Key="PreviewPanelBorderBrush" Color="{StaticResource PreviewPanelBorderColor}"/>
+    <SolidColorBrush x:Key="PreviewPdfBackgroundBrush" Color="{StaticResource PreviewPdfBackgroundColor}"/>
+    <SolidColorBrush x:Key="IndexStatusNormalBrush" Color="{StaticResource IndexStatusNormalColor}"/>
+    <SolidColorBrush x:Key="IndexStatusWarmBrush" Color="{StaticResource IndexStatusWarmColor}"/>
 
     <!-- ダイアログ共通スタイル: リソース辞書の読み込みを待たずに背景色が即座に描画されるようハードコード -->
     <Style x:Key="BaseDialogStyle" TargetType="Window">

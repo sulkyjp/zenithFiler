@@ -57,6 +57,9 @@ namespace ZenithFiler
         private static readonly Lazy<Services.KeyBindingService> _keyBindingService = new(() => new Services.KeyBindingService());
         public static Services.KeyBindingService KeyBindings => _keyBindingService.Value;
 
+        private static readonly Lazy<Services.UsageStatisticsService> _stats = new(() => new Services.UsageStatisticsService());
+        public static Services.UsageStatisticsService Stats => _stats.Value;
+
         public static Services.TrayIconService? TrayService { get; private set; }
         public static Services.CpuIdleService? CpuIdleService { get; private set; }
         public static Services.UpdateService? UpdateService { get; private set; }
@@ -221,10 +224,10 @@ namespace ZenithFiler
                 ShutdownMode = ShutdownMode.OnLastWindowClose;
             }
 
-            // EULA 同意チェック（バージョンごとに再表示）
-            var currentVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.0.0";
-            if (preloadedSettings.EulaAcceptedVersion != currentVersion)
+            // EULA 同意チェック（初回起動時のみ表示）
+            if (string.IsNullOrEmpty(preloadedSettings.EulaAcceptedVersion))
             {
+                var currentVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.0.0";
                 ShutdownMode = ShutdownMode.OnExplicitShutdown;
                 var eulaDialog = new Views.EulaDialog();
                 if (eulaDialog.ShowDialog() != true)

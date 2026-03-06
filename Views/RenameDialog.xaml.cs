@@ -341,10 +341,8 @@ namespace ZenithFiler
                 Padding = new Thickness(10, 3, 10, 3),
                 Margin = new Thickness(0, 0, 6, 4),
                 FontSize = 12,
-                Foreground = new System.Windows.Media.SolidColorBrush(
-                    (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#1A1A1A")),
-                Background = new System.Windows.Media.SolidColorBrush(
-                    (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#E6E2D6")),
+                Foreground = Application.Current.Resources["TextBrush"] as System.Windows.Media.Brush ?? System.Windows.Media.Brushes.Black,
+                Background = Application.Current.Resources["InputBackgroundBrush"] as System.Windows.Media.Brush ?? System.Windows.Media.Brushes.White,
                 MaxWidth = 260,
                 Template = (ControlTemplate)FindResource("TrimmedButtonTemplate"),
             };

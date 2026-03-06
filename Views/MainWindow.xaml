@@ -61,7 +61,7 @@
         </Grid.RowDefinitions>
 
         <!-- タイトルバー（マニュアル・履歴ウィンドウのシステムタイトルバーと同じ高さに合わせる） -->
-        <ui:TitleBar Title="{Binding AppTitle}" Grid.Row="0" Height="32" Background="{DynamicResource TitleBarBrush}" Foreground="White" ButtonsForeground="White"
+        <ui:TitleBar Title="{Binding AppTitle}" Grid.Row="0" Height="32" Background="{DynamicResource TitleBarBrush}" Foreground="{DynamicResource TitleBarTextBrush}" ButtonsForeground="{DynamicResource TitleBarTextBrush}"
                      MouseLeftButtonDown="TitleBar_MouseLeftButtonDown"
                      MouseLeftButtonUp="TitleBar_MouseLeftButtonUp">
             <ui:TitleBar.Icon>
@@ -1501,6 +1501,15 @@
                                                                     <icon:PackIconLucide Kind="Lock" Width="14" Height="14"/>
                                                                 </MenuItem.Icon>
                                                             </MenuItem>
+                                                            <!-- 詳細設定 -->
+                                                            <MenuItem Header="詳細設定..."
+                                                                      Command="{Binding PlacementTarget.Tag.IndexSearchSettings.OpenItemSettingsCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                                      CommandParameter="{Binding}"
+                                                                      ToolTip="スケジュール・ロック・更新方式を設定します">
+                                                                <MenuItem.Icon>
+                                                                    <icon:PackIconLucide Kind="Settings" Width="14" Height="14"/>
+                                                                </MenuItem.Icon>
+                                                            </MenuItem>
                                                             <Separator Style="{StaticResource ContextMenuSeparatorStyle}"/>
                                                             <MenuItem Header="削除"
                                                                       Command="{Binding PlacementTarget.Tag.IndexSearchSettings.RemoveCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
@@ -1538,8 +1547,11 @@
                                                             <icon:PackIconLucide Kind="{Binding LocationIconKind}" Width="13" Height="13"
                                                                                  Foreground="{DynamicResource SubTextBrush}" VerticalAlignment="Center"/>
                                                             <icon:PackIconLucide x:Name="LockIcon" Kind="Lock" Width="10" Height="10"
-                                                                                 Foreground="#888888" VerticalAlignment="Center" Margin="3,0,0,0"
+                                                                                 Foreground="{DynamicResource SubTextBrush}" VerticalAlignment="Center" Margin="3,0,0,0"
                                                                                  Visibility="Collapsed" ToolTip="{Binding LockToolTipText}"/>
+                                                            <icon:PackIconLucide x:Name="ScheduleIcon" Kind="CalendarClock" Width="10" Height="10"
+                                                                                 Foreground="{DynamicResource SubTextBrush}" VerticalAlignment="Center" Margin="3,0,0,0"
+                                                                                 Visibility="Collapsed" ToolTip="{Binding ScheduleDisplayText}"/>
                                                         </StackPanel>
 
                                                         <!-- Col 1: フォルダ名 -->
@@ -1549,13 +1561,13 @@
 
                                                         <!-- Col 2: 完了日時（Indexed 時のみ表示） -->
                                                         <TextBlock x:Name="DateTimeLabel" Grid.Column="2" Text="{Binding CompactDateText}" FontSize="12"
-                                                                   Foreground="#888888" VerticalAlignment="Center" Margin="0,0,10,0"
+                                                                   Foreground="{DynamicResource SubTextBrush}" VerticalAlignment="Center" Margin="0,0,10,0"
                                                                    Visibility="Collapsed"/>
 
                                                         <!-- Col 3: 件数（Indexed 時）or ステータス（非 Indexed 時） -->
                                                         <!-- 件数バッジ（Indexed 時のみ） -->
                                                         <TextBlock x:Name="CountLabel" Grid.Column="3" Text="{Binding CountBadgeText}" FontSize="12"
-                                                                   Foreground="#888888" VerticalAlignment="Center" HorizontalAlignment="Right"
+                                                                   Foreground="{DynamicResource SubTextBrush}" VerticalAlignment="Center" HorizontalAlignment="Right"
                                                                    Visibility="Collapsed"/>
                                                         <!-- ステータス（非 Indexed 時） -->
                                                         <StackPanel x:Name="StatusPanel" Grid.Column="3" Orientation="Horizontal"
@@ -1571,7 +1583,7 @@
                                                                 </icon:PackIconLucide.RenderTransform>
                                                             </icon:PackIconLucide>
                                                             <TextBlock x:Name="StatusLabel" Text="{Binding StatusText}" FontSize="12"
-                                                                       Foreground="#C0A060" VerticalAlignment="Center"/>
+                                                                       Foreground="{DynamicResource IndexStatusNormalBrush}" VerticalAlignment="Center"/>
                                                             <Popup StaysOpen="True" AllowsTransparency="True"
                                                                    Placement="Top" PlacementTarget="{Binding ElementName=SpinnerIcon}"
                                                                    VerticalOffset="-4" PopupAnimation="Fade" IsHitTestVisible="False"
@@ -1586,27 +1598,27 @@
                                                                                    Foreground="{DynamicResource TelemetryTitleBrush}" FontWeight="SemiBold" Margin="0,0,0,6"/>
                                                                         <Border Background="#30FFFFFF" Height="1" Margin="0,0,0,6"/>
                                                                         <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
-                                                                            <TextBlock Text="Scan:   " FontFamily="Consolas" FontSize="10.5" Foreground="#888888"/>
+                                                                            <TextBlock Text="Scan:   " FontFamily="Consolas" FontSize="10.5" Foreground="{DynamicResource SubTextBrush}"/>
                                                                             <TextBlock Text="{Binding TelemetryScanText}" FontFamily="Consolas" FontSize="10.5"
-                                                                                       Foreground="#C0FFD0" TextTrimming="CharacterEllipsis" MaxWidth="200"/>
+                                                                                       Foreground="{DynamicResource TelemetryValueBrush}" TextTrimming="CharacterEllipsis" MaxWidth="200"/>
                                                                         </StackPanel>
                                                                         <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
-                                                                            <TextBlock Text="Speed:  " FontFamily="Consolas" FontSize="10.5" Foreground="#888888"/>
+                                                                            <TextBlock Text="Speed:  " FontFamily="Consolas" FontSize="10.5" Foreground="{DynamicResource SubTextBrush}"/>
                                                                             <TextBlock Text="{Binding TelemetrySpeedText}" FontFamily="Consolas" FontSize="10.5"
                                                                                        Foreground="{DynamicResource TelemetryValueBrush}"/>
                                                                         </StackPanel>
                                                                         <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
-                                                                            <TextBlock Text="DB:     " FontFamily="Consolas" FontSize="10.5" Foreground="#888888"/>
+                                                                            <TextBlock Text="DB:     " FontFamily="Consolas" FontSize="10.5" Foreground="{DynamicResource SubTextBrush}"/>
                                                                             <TextBlock Text="{Binding TelemetryDbText}" FontFamily="Consolas" FontSize="10.5"
                                                                                        Foreground="{DynamicResource TelemetryValueBrush}"/>
                                                                         </StackPanel>
                                                                         <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
-                                                                            <TextBlock Text="Thread: " FontFamily="Consolas" FontSize="10.5" Foreground="#888888"/>
+                                                                            <TextBlock Text="Thread: " FontFamily="Consolas" FontSize="10.5" Foreground="{DynamicResource SubTextBrush}"/>
                                                                             <TextBlock Text="{Binding TelemetryThreadText}" FontFamily="Consolas" FontSize="10.5"
                                                                                        Foreground="{DynamicResource TelemetryValueBrush}"/>
                                                                         </StackPanel>
                                                                         <StackPanel Orientation="Horizontal">
-                                                                            <TextBlock Text="Time:   " FontFamily="Consolas" FontSize="10.5" Foreground="#888888"/>
+                                                                            <TextBlock Text="Time:   " FontFamily="Consolas" FontSize="10.5" Foreground="{DynamicResource SubTextBrush}"/>
                                                                             <TextBlock Text="{Binding TelemetryElapsedText}" FontFamily="Consolas" FontSize="10.5"
                                                                                        Foreground="{DynamicResource TelemetryValueBrush}"/>
                                                                         </StackPanel>
@@ -1638,7 +1650,7 @@
                                                     </DataTrigger>
                                                     <!-- === 待機中 === -->
                                                     <DataTrigger Binding="{Binding StatusKind}" Value="Waiting">
-                                                        <Setter TargetName="StatusLabel" Property="Foreground" Value="#AAAAAA"/>
+                                                        <Setter TargetName="StatusLabel" Property="Foreground" Value="{DynamicResource SubTextBrush}"/>
                                                         <Setter TargetName="StatusLabel" Property="FontStyle" Value="Italic"/>
                                                     </DataTrigger>
                                                     <!-- === 完了（インデックス済み）: StatusPanel を隠し、DateTimeLabel + CountLabel を表示 === -->
@@ -1650,6 +1662,10 @@
                                                     <!-- === ロック済み（アーカイブ）: 南京錠アイコン表示 + 凍結された日時・件数を表示 === -->
                                                     <DataTrigger Binding="{Binding IsLocked}" Value="True">
                                                         <Setter TargetName="LockIcon" Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                    <!-- === スケジュール設定済み === -->
+                                                    <DataTrigger Binding="{Binding HasCustomSchedule}" Value="True">
+                                                        <Setter TargetName="ScheduleIcon" Property="Visibility" Value="Visible"/>
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding StatusKind}" Value="Locked">
                                                         <Setter TargetName="StatusPanel" Property="Visibility" Value="Collapsed"/>
@@ -1664,8 +1680,8 @@
                                                             <Condition Binding="{Binding StatusKind}" Value="Indexed"/>
                                                             <Condition Binding="{Binding IsStale}" Value="True"/>
                                                         </MultiDataTrigger.Conditions>
-                                                        <Setter TargetName="DateTimeLabel" Property="Foreground" Value="#C68958"/>
-                                                        <Setter TargetName="CountLabel" Property="Foreground" Value="#C68958"/>
+                                                        <Setter TargetName="DateTimeLabel" Property="Foreground" Value="{DynamicResource IndexStatusWarmBrush}"/>
+                                                        <Setter TargetName="CountLabel" Property="Foreground" Value="{DynamicResource IndexStatusWarmBrush}"/>
                                                     </MultiDataTrigger>
                                                 </DataTemplate.Triggers>
                                             </DataTemplate>
@@ -1951,7 +1967,7 @@
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="{Binding ActivePane.StatusText}" Foreground="#90A4AE" FontSize="10.5" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="0" Text="{Binding ActivePane.StatusText}" Foreground="{DynamicResource SubTextBrush}" FontSize="10.5" VerticalAlignment="Center"/>
                         <Border Grid.Column="1" Width="1" Height="12" Background="{DynamicResource BorderBrush}" Margin="10,0" VerticalAlignment="Center">
                             <Border.Style>
                                 <Style TargetType="Border">
@@ -1967,24 +1983,16 @@
                                 </Style>
                             </Border.Style>
                         </Border>
-                        <TextBlock Grid.Column="2" Text="{Binding ActivePane.SelectionInfoText}" Foreground="#90A4AE" FontSize="10.5" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="2" Text="{Binding ActivePane.SelectionInfoText}" Foreground="{DynamicResource SubTextBrush}" FontSize="10.5" VerticalAlignment="Center"/>
                     </Grid>
                 </Grid>
 
                 <!-- 中央通知メッセージ -->
                 <Grid x:Name="CenterNotificationGroup" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False">
-                    <!-- ファイル操作中のステータス（コピー/移動 ○○% [ファイル名]）-->
-                    <TextBlock Text="{Binding FileOperationStatusText}"
-                               VerticalAlignment="Center"
-                               Foreground="#90A4AE"
-                               FontSize="10.5"
-                               Visibility="{Binding IsFileOperationActive, Converter={StaticResource BoolToVis}}"/>
-
-                    <!-- 通常の通知メッセージ（ファイル操作中は非表示） -->
-                    <Grid x:Name="StatusMessageGrid" Visibility="{Binding IsFileOperationActive, Converter={StaticResource BoolToVisInverse}}">
+                    <Grid x:Name="StatusMessageGrid">
                         <TextBlock Text="{Binding Notification.StatusMessage}"
                                    VerticalAlignment="Center"
-                                   Foreground="#90A4AE"
+                                   Foreground="{DynamicResource SubTextBrush}"
                                    FontSize="10.5">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
@@ -2113,27 +2121,27 @@
                                            Foreground="{DynamicResource TelemetryTitleBrush}" FontWeight="SemiBold" Margin="0,0,0,6"/>
                                 <Border Background="#30FFFFFF" Height="1" Margin="0,0,0,6"/>
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
-                                    <TextBlock Text="Scan:   " FontFamily="Consolas" FontSize="10.5" Foreground="#888888"/>
+                                    <TextBlock Text="Scan:   " FontFamily="Consolas" FontSize="10.5" Foreground="{DynamicResource SubTextBrush}"/>
                                     <TextBlock x:Name="TelemetryScanFolder" FontFamily="Consolas" FontSize="10.5"
-                                               Foreground="#C0FFD0" TextTrimming="CharacterEllipsis" MaxWidth="220"/>
+                                               Foreground="{DynamicResource TelemetryValueBrush}" TextTrimming="CharacterEllipsis" MaxWidth="220"/>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
-                                    <TextBlock Text="Speed:  " FontFamily="Consolas" FontSize="10.5" Foreground="#888888"/>
+                                    <TextBlock Text="Speed:  " FontFamily="Consolas" FontSize="10.5" Foreground="{DynamicResource SubTextBrush}"/>
                                     <TextBlock x:Name="TelemetryThroughput" FontFamily="Consolas" FontSize="10.5"
                                                Foreground="{DynamicResource TelemetryValueBrush}"/>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
-                                    <TextBlock Text="DB:     " FontFamily="Consolas" FontSize="10.5" Foreground="#888888"/>
+                                    <TextBlock Text="DB:     " FontFamily="Consolas" FontSize="10.5" Foreground="{DynamicResource SubTextBrush}"/>
                                     <TextBlock x:Name="TelemetryDbStats" FontFamily="Consolas" FontSize="10.5"
                                                Foreground="{DynamicResource TelemetryValueBrush}"/>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
-                                    <TextBlock Text="Thread: " FontFamily="Consolas" FontSize="10.5" Foreground="#888888"/>
+                                    <TextBlock Text="Thread: " FontFamily="Consolas" FontSize="10.5" Foreground="{DynamicResource SubTextBrush}"/>
                                     <TextBlock x:Name="TelemetryThreads" FontFamily="Consolas" FontSize="10.5"
                                                Foreground="{DynamicResource TelemetryValueBrush}"/>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="Time:   " FontFamily="Consolas" FontSize="10.5" Foreground="#888888"/>
+                                    <TextBlock Text="Time:   " FontFamily="Consolas" FontSize="10.5" Foreground="{DynamicResource SubTextBrush}"/>
                                     <TextBlock x:Name="TelemetryElapsed" FontFamily="Consolas" FontSize="10.5"
                                                Foreground="{DynamicResource TelemetryValueBrush}"/>
                                 </StackPanel>
@@ -2226,7 +2234,7 @@
                 </StackPanel>
 
                 <!-- ════ 起動ウェルカムアニメーション（Fade-In & Slide-Up → Steps → Wait → Fade-Out）════ -->
-                <!-- 単一の TextBlock でステップ実行し、色は #90A4AE で統一。 -->
+                <!-- 単一の TextBlock でステップ実行し、色は SubTextBrush で統一。 -->
                 <!-- StackPanel は使用せず Grid で絶対位置を確保し、表示切替時のレイアウト変動を防ぐ -->
                 <Grid x:Name="WelcomePanel"
                       HorizontalAlignment="Center"
@@ -2244,7 +2252,7 @@
                     <!-- 固定部: 文頭位置を絶対固定 -->
                     <TextBlock Grid.Column="0"
                                Text="Welcome to Zenith Filer - Turbo Engine Ready"
-                               Foreground="#90A4AE"
+                               Foreground="{DynamicResource SubTextBrush}"
                                FontSize="10.5"
                                FontWeight="Normal"
                                VerticalAlignment="Center"/>
@@ -2253,7 +2261,7 @@
                     <TextBlock x:Name="WelcomeProgressText"
                                Grid.Column="1"
                                Text=""
-                               Foreground="#90A4AE"
+                               Foreground="{DynamicResource SubTextBrush}"
                                FontSize="10.5"
                                FontWeight="Normal"
                                VerticalAlignment="Center"
@@ -2298,7 +2306,7 @@
             <Border x:Name="QuickPreviewPanel"
                     HorizontalAlignment="Center" VerticalAlignment="Center"
                     Background="{DynamicResource BackgroundBrush}"
-                    BorderBrush="#333333" BorderThickness="1" CornerRadius="6">
+                    BorderBrush="{DynamicResource PreviewPanelBorderBrush}" BorderThickness="1" CornerRadius="6">
                 <Border.Effect>
                     <DropShadowEffect BlurRadius="32" ShadowDepth="4" Opacity="0.25" Color="#000000"/>
                 </Border.Effect>
@@ -2311,21 +2319,21 @@
                     <Border Grid.Row="0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="16,10">
                         <DockPanel>
                             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                                <Border BorderBrush="#999999" BorderThickness="1" CornerRadius="3" Padding="4,1">
-                                    <TextBlock Text="Esc" FontSize="10" Foreground="#666666"/>
+                                <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="3" Padding="4,1">
+                                    <TextBlock Text="Esc" FontSize="10" Foreground="{DynamicResource SubTextBrush}"/>
                                 </Border>
-                                <TextBlock Text=" 閉じる" FontSize="11" Foreground="#666666" VerticalAlignment="Center"/>
+                                <TextBlock Text=" 閉じる" FontSize="11" Foreground="{DynamicResource SubTextBrush}" VerticalAlignment="Center"/>
                                 <Button Style="{StaticResource IconButton}" Click="QuickPreviewCloseButton_Click"
                                         ToolTip="プレビューを閉じる" Margin="8,0,0,0" IsTabStop="False">
-                                    <icon:PackIconLucide Kind="X" Width="14" Height="14" Foreground="#666666"/>
+                                    <icon:PackIconLucide Kind="X" Width="14" Height="14" Foreground="{DynamicResource SubTextBrush}"/>
                                 </Button>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                 <Image x:Name="PreviewFileIcon" Width="16" Height="16" Margin="0,0,8,0"/>
-                                <TextBlock x:Name="PreviewFileName" FontSize="12" FontWeight="SemiBold" Foreground="#000000"
+                                <TextBlock x:Name="PreviewFileName" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"
                                            TextTrimming="CharacterEllipsis" MaxWidth="500"/>
-                                <TextBlock x:Name="PreviewFileInfo" FontSize="11" Foreground="#666666" Margin="12,0,0,0"/>
-                                <TextBlock x:Name="PreviewPositionCounter" FontSize="11" Foreground="#999999" Margin="12,0,0,0"/>
+                                <TextBlock x:Name="PreviewFileInfo" FontSize="11" Foreground="{DynamicResource SubTextBrush}" Margin="12,0,0,0"/>
+                                <TextBlock x:Name="PreviewPositionCounter" FontSize="11" Foreground="{DynamicResource SubTextBrush}" Margin="12,0,0,0"/>
                             </StackPanel>
                         </DockPanel>
                     </Border>
@@ -2356,7 +2364,7 @@
                                   Visibility="Collapsed"
                                   VerticalScrollBarVisibility="Auto"
                                   HorizontalScrollBarVisibility="Disabled"
-                                  Background="#F0F0F0"
+                                  Background="{DynamicResource PreviewPdfBackgroundBrush}"
                                   PreviewKeyDown="QuickPreviewTextBox_PreviewKeyDown">
                         <StackPanel x:Name="PreviewPdfImagePanel"
                                     HorizontalAlignment="Center"
@@ -2373,14 +2381,14 @@
                                 Visibility="Collapsed"
                                 HorizontalAlignment="Center" VerticalAlignment="Center">
                         <icon:PackIconLucide Kind="Loader" Width="28" Height="28"
-                                             Foreground="#888888" HorizontalAlignment="Center"
+                                             Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center"
                                              RenderTransformOrigin="0.5,0.5">
                             <icon:PackIconLucide.RenderTransform>
                                 <RotateTransform x:Name="PreviewLoadingRotate" Angle="0"/>
                             </icon:PackIconLucide.RenderTransform>
                         </icon:PackIconLucide>
                         <TextBlock x:Name="PreviewLoadingText" Text="変換中..."
-                                   FontSize="12" Foreground="#888888"
+                                   FontSize="12" Foreground="{DynamicResource SubTextBrush}"
                                    HorizontalAlignment="Center" Margin="0,8,0,0"/>
                     </StackPanel>
 
@@ -2410,7 +2418,7 @@
                             <DataGrid.ColumnHeaderStyle>
                                 <Style TargetType="DataGridColumnHeader">
                                     <Setter Property="Background" Value="{DynamicResource SidebarBrush}"/>
-                                    <Setter Property="Foreground" Value="#333333"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
                                     <Setter Property="FontWeight" Value="SemiBold"/>
                                     <Setter Property="FontSize" Value="11.5"/>
                                     <Setter Property="Padding" Value="6,4"/>
@@ -2423,7 +2431,7 @@
                                     <Setter Property="Background" Value="Transparent"/>
                                     <Style.Triggers>
                                         <Trigger Property="AlternationIndex" Value="1">
-                                            <Setter Property="Background" Value="#EBE7D9"/>
+                                            <Setter Property="Background" Value="{DynamicResource ListHoverBrush}"/>
                                         </Trigger>
                                         <Trigger Property="IsSelected" Value="True">
                                             <Setter Property="Background" Value="{DynamicResource SelectionBrush}"/>
@@ -2455,7 +2463,7 @@
                     <TextBlock x:Name="PreviewUnsupportedText"
                                Visibility="Collapsed"
                                Text="このファイル形式のプレビューには対応していません"
-                               Foreground="#000000" FontSize="13"
+                               Foreground="{DynamicResource TextBrush}" FontSize="13"
                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Grid> <!-- /PreviewContentArea -->
                 </Grid>

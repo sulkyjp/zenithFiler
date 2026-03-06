@@ -19,6 +19,7 @@ public class ThemeBaseColors
     public string? SidebarColor { get; set; }
     public string? HeaderColor { get; set; }
     public string? TitleBarColor { get; set; }
+    public string? TitleBarTextColor { get; set; }
     public string? BorderColor { get; set; }
     public string? PrimaryTextColor { get; set; }
     public string? SecondaryTextColor { get; set; }
@@ -31,6 +32,9 @@ public class ThemeBaseColors
     public string? TabHoverColor { get; set; }
     public string? ToolbarSeparatorColor { get; set; }
     public string? TreeLineColor { get; set; }
+    public string? PopupBackgroundColor { get; set; }
+    public string? PopupTextColor { get; set; }
+    public string? PopupHoverBackgroundColor { get; set; }
 }
 
 public class ThemeListColors
@@ -43,6 +47,10 @@ public class ThemeListColors
     public string? OptionSelectedHoverColor { get; set; }
     public string? CheckboxHoverColor { get; set; }
     public string? CheckedHoverAccentColor { get; set; }
+    public string? FilterActiveIndicatorColor { get; set; }
+    public string? FilterChipBackgroundColor { get; set; }
+    public string? FilterChipBorderColor { get; set; }
+    public string? FilterToggleCheckedBackgroundColor { get; set; }
 }
 
 public class ThemeSearchColors
@@ -58,6 +66,7 @@ public class ThemeAccentColors
     public string? ErrorTextColor { get; set; }
     public string? DestructiveHoverBackgroundColor { get; set; }
     public string? DestructiveIconColor { get; set; }
+    public string? SuccessColor { get; set; }
 }
 
 public class ThemeContextMenuColors
@@ -84,4 +93,8 @@ public class ThemeMiscColors
     public string? TelemetryBorderColor { get; set; }
     public string? TelemetryTitleColor { get; set; }
     public string? TelemetryValueColor { get; set; }
+    public string? PreviewPanelBorderColor { get; set; }
+    public string? PreviewPdfBackgroundColor { get; set; }
+    public string? IndexStatusNormalColor { get; set; }
+    public string? IndexStatusWarmColor { get; set; }
 }

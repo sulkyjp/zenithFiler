@@ -34,7 +34,7 @@ namespace ZenithFiler
             
             _typeface = new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
             _backgroundBrush = new SolidColorBrush(Color.FromArgb(220, 40, 40, 40));
-            _borderPen = new Pen(Brushes.Gray, 1);
+            _borderPen = new Pen(Application.Current.Resources["BorderBrush"] as Brush ?? Brushes.Gray, 1);
             _foregroundBrush = Brushes.White;
         }
 

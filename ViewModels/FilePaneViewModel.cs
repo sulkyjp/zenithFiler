@@ -37,14 +37,7 @@ namespace ZenithFiler
 
         private void NotifyAllPropertiesChanged()
         {
-            OnPropertyChanged(nameof(CurrentPath));
-            OnPropertyChanged(nameof(StatusText));
-            OnPropertyChanged(nameof(SelectionInfoText));
-            OnPropertyChanged(nameof(IsGroupFoldersFirst));
-            OnPropertyChanged(nameof(IsAdaptiveColumnsEnabled));
-            OnPropertyChanged(nameof(SortProperty));
-            OnPropertyChanged(nameof(SortDirection));
-            OnPropertyChanged(nameof(FileViewMode));
+            OnPropertyChanged(string.Empty);
         }
 
         private void SelectedTab_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -248,7 +241,9 @@ namespace ZenithFiler
             Tabs.Add(newTab);
             SelectedTab = newTab;
 
+            newTab.SuppressSearchOnTextChanged = true;
             newTab.SearchText = query;
+            newTab.SuppressSearchOnTextChanged = false;
             _ = newTab.ExecuteSearch(query);
         }
 
@@ -270,6 +265,7 @@ namespace ZenithFiler
 
         private void AddTabWithPathInternal(string path, bool isEditMode)
         {
+            _ = App.Stats.RecordAsync("Tab.Open");
             var newTab = new TabItemViewModel(path);
             newTab.CloseTabCommand = new RelayCommand(() => CloseTab(newTab));
             newTab.ParentPane = this;
@@ -298,6 +294,7 @@ namespace ZenithFiler
         {
             var tabToClose = tab ?? SelectedTab;
             if (tabToClose == null || tabToClose.IsLocked || Tabs.Count <= 1) return;
+            _ = App.Stats.RecordAsync("Tab.Close");
 
             bool wasSearchResultTab = tabToClose.IsSearchResultTab;
             string title = tabToClose.TabTitle;

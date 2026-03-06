@@ -155,5 +155,60 @@ namespace ZenithFiler
                 return $"最終更新: {dt:yyyy/MM/dd HH:mm}";
             }
         }
+
+        // ─── アイテム別スケジュール ───
+
+        /// <summary>スケジュール対象の曜日。null の場合は毎日。</summary>
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(ScheduleDisplayText))]
+        [NotifyPropertyChangedFor(nameof(HasCustomSchedule))]
+        private System.Collections.Generic.List<DayOfWeek>? _scheduleDays;
+
+        /// <summary>スケジュール対象の時刻（0-23）。null の場合はグローバル間隔に従う。</summary>
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(ScheduleDisplayText))]
+        [NotifyPropertyChangedFor(nameof(HasCustomSchedule))]
+        private int? _scheduleHour;
+
+        /// <summary>Per-Item 更新方式。null=グローバル設定に従う。</summary>
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(HasCustomSchedule))]
+        [NotifyPropertyChangedFor(nameof(UpdateModeDisplayText))]
+        private IndexItemUpdateMode? _updateMode;
+
+        private static readonly string[] _dayNames = { "日", "月", "火", "水", "木", "金", "土" };
+
+        /// <summary>スケジュール設定の表示用テキスト。</summary>
+        public string ScheduleDisplayText
+        {
+            get
+            {
+                if (ScheduleDays == null && !ScheduleHour.HasValue)
+                    return "グローバル設定に従う";
+                var days = ScheduleDays != null
+                    ? string.Join("", ScheduleDays.OrderBy(d => d).Select(d => _dayNames[(int)d]))
+                    : "毎日";
+                var time = ScheduleHour.HasValue ? $" {ScheduleHour.Value}:00" : "";
+                return $"{days}{time}";
+            }
+        }
+
+        /// <summary>カスタム設定が存在するか（スケジュール・更新方式のいずれか）。インジケーター表示用。</summary>
+        public bool HasCustomSchedule => ScheduleDays != null || ScheduleHour.HasValue || UpdateMode.HasValue;
+
+        /// <summary>更新方式の表示テキスト。サマリーテーブル用。</summary>
+        public string UpdateModeDisplayText => UpdateMode switch
+        {
+            IndexItemUpdateMode.Incremental => "差分更新",
+            IndexItemUpdateMode.FullRebuild => "フル再作成",
+            _ => "グローバル"
+        };
+
+        /// <summary>スケジュール関連のすべてのプロパティ変更を通知する。外部からも呼び出し可能。</summary>
+        internal void NotifyAllScheduleProperties()
+        {
+            OnPropertyChanged(nameof(HasCustomSchedule));
+            OnPropertyChanged(nameof(ScheduleDisplayText));
+        }
     }
 }

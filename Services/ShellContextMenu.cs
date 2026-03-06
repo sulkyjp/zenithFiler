@@ -22,13 +22,8 @@ namespace ZenithFiler
         private IContextMenu2? _currentContextMenu2;
         private IContextMenu3? _currentContextMenu3;
 
-        // リネーム要求時のコールバック
         private readonly Action<string>? _onRenameRequest;
-
-        // 削除要求時のコールバック（右クリックメニュー「削除」をアプリ側で実行するため）
         private readonly Action<string[]>? _onDeleteRequest;
-
-        // コマンド実行後のリフレッシュ要求コールバック（新規作成・圧縮等の後にフォルダ内容を再読み込み）
         private readonly Action? _onRefreshRequest;
 
         public ShellContextMenu(Action<string>? onRenameRequest = null, Action<string[]>? onDeleteRequest = null, Action? onRefreshRequest = null)
@@ -49,7 +44,6 @@ namespace ZenithFiler
         {
             if (filePaths == null || filePaths.Length == 0) return;
 
-            // メインウィンドウのハンドルを取得
             IntPtr mainHwnd = IntPtr.Zero;
             if (Application.Current?.MainWindow != null)
             {
@@ -57,7 +51,6 @@ namespace ZenithFiler
                 mainHwnd = helper.Handle;
             }
 
-            // 別スレッド（STA）でメニュー処理を実行
             var thread = new Thread(() =>
             {
                 try
@@ -82,6 +75,9 @@ namespace ZenithFiler
         // シェルメニューの概算サイズ（画面端判定用・論理ピクセル）
         private const double DefaultMenuWidth = 280;
         private const double DefaultMenuHeight = 450;
+
+        // QueryContextMenu の idCmdFirst（コマンド ID オフセットの起点）
+        private const uint IdCmdFirst = 1;
 
         private void ShowContextMenuInternal(IntPtr mainHwnd, string[] filePaths, System.Windows.Point screenPoint, bool isBackground, System.Windows.Rect? workArea)
         {
@@ -146,7 +142,7 @@ namespace ZenithFiler
                 if (hMenu.IsNull) return;
 
                 CMF flags = CMF.CMF_NORMAL | CMF.CMF_EXPLORE | CMF.CMF_CANRENAME;
-                contextMenu.QueryContextMenu(hMenu, 0, 1, 0x7FFF, flags);
+                contextMenu.QueryContextMenu(hMenu, 0, IdCmdFirst, 0x7FFF, flags);
 
                 hook = new HwndSourceHook(MenuHook);
                 source.AddHook(hook);
@@ -167,149 +163,93 @@ namespace ZenithFiler
                 source.RemoveHook(hook);
                 hook = null;
 
-                if (cmd != 0)
+                if (cmd == 0) return;
+
+                int offset = (int)cmd - (int)IdCmdFirst;
+                string verb = TryGetCommandVerb(contextMenu, offset);
+                string? menuText = GetMenuItemText(hMenu, cmd);
+
+                // リネームの場合
+                if (verb == "rename" && _onRenameRequest != null && filePaths.Length == 1)
                 {
-                    int offset = (int)cmd - 1;
+                    _ = Application.Current.Dispatcher.InvokeAsync(
+                        () => _onRenameRequest(filePaths[0]),
+                        DispatcherPriority.Background);
+                    return;
+                }
 
-                    // コマンドの Verb を取得して判定
-                    // 7-zip 等のサードパーティ Shell 拡張は GetCommandString で E_NOTIMPL を返すため
-                    // 例外を捕捉して空文字列として扱う
-                    const int bufSize = 256;
-                    string verb = "";
-                    IntPtr ptr = Marshal.AllocHGlobal(bufSize * 2); // Unicode = 2 bytes per char
-                    try
-                    {
-                        contextMenu.GetCommandString((nint)offset, GCS.GCS_VERBW, IntPtr.Zero, ptr, (uint)bufSize);
-                        verb = Marshal.PtrToStringUni(ptr)?.ToLowerInvariant() ?? "";
-                    }
-                    catch { /* Shell 拡張が GetCommandString 未実装の場合 */ }
-                    finally
-                    {
-                        Marshal.FreeHGlobal(ptr);
-                    }
+                // 削除の場合（verb が "delete" を含む または 表示文字列が「削除」/ "Delete" のときアプリの削除処理に委譲）
+                if (IsDeleteCommand(verb, menuText) && _onDeleteRequest != null)
+                {
+                    _ = Application.Current.Dispatcher.InvokeAsync(
+                        () => _onDeleteRequest(filePaths),
+                        DispatcherPriority.Background);
+                    return;
+                }
 
-                    // 組み込み「削除」では GetCommandString が空を返すことがあるため ANSI 版も試行
-                    if (string.IsNullOrEmpty(verb))
-                    {
-                        ptr = Marshal.AllocHGlobal(bufSize);
-                        try
-                        {
-                            contextMenu.GetCommandString((nint)offset, GCS.GCS_VERBA, IntPtr.Zero, ptr, (uint)bufSize);
-                            verb = Marshal.PtrToStringAnsi(ptr)?.ToLowerInvariant() ?? "";
-                        }
-                        catch { /* 無視 */ }
-                        finally { Marshal.FreeHGlobal(ptr); }
-                    }
+                // プロパティの場合 — 単一ファイルなら安全な SHObjectProperties をメインスレッドで実行
+                if (verb == "properties" && filePaths.Length == 1)
+                {
+                    _ = Application.Current.Dispatcher.InvokeAsync(
+                        () => ShellIconHelper.ShowFileProperties(filePaths[0]),
+                        DispatcherPriority.Background);
+                    return;
+                }
 
-                    string? menuText = null;
-                    try
-                    {
-                        if (!hMenu.IsNull)
-                        {
-                            menuText = GetMenuItemText(hMenu, (uint)cmd);
-                        }
-                    }
-                    catch { /* 無視 */ }
-                    
-                    // verb が空の場合、メニュー項目の表示文字列で「削除」を判定する（日本語「削除」/ 英語 "Delete"）
-                    bool isDeleteByMenuText = false;
-                    if (_onDeleteRequest != null && !string.IsNullOrEmpty(menuText))
-                    {
-                        var t = menuText.Trim();
-                        // 判定を緩和: "削除", "Delete" を含む場合も対象にする（アクセラレータキー対策）
-                        isDeleteByMenuText = t.Contains("削除") || t.Contains("Delete", StringComparison.OrdinalIgnoreCase);
-                    }
+                // シェル拡張判定（verb が空 = GetCommandString 未実装 = サードパーティ拡張）
+                bool isShellExtension = string.IsNullOrEmpty(verb);
 
-                    // リネームの場合
-                    if (verb == "rename" && _onRenameRequest != null && filePaths.Length == 1)
-                    {
-                        _ = Application.Current.Dispatcher.InvokeAsync(
-                            () => _onRenameRequest(filePaths[0]),
-                            DispatcherPriority.Background);
-                        return;
-                    }
+                // 作業ディレクトリ算出（shell の NewMenu 等が作成先ディレクトリを正しく認識するために必要）
+                string? workingDir = isBackground
+                    ? PathHelper.GetPhysicalPath(filePaths[0])
+                    : Path.GetDirectoryName(PathHelper.GetPhysicalPath(filePaths[0]));
 
-                    // 削除の場合（verb が "delete" を含む または 表示文字列が「削除」/ "Delete" のときアプリの削除処理に委譲）
-                    if (((verb?.Contains("delete") == true) || isDeleteByMenuText) && _onDeleteRequest != null)
-                    {
-                        _ = Application.Current.Dispatcher.InvokeAsync(
-                            () => _onDeleteRequest(filePaths),
-                            DispatcherPriority.Background);
-                        return;
-                    }
+                // rename/delete/properties は上で個別処理して return 済み。
+                // ここに到達するコマンドはすべて ASYNCOK で非同期許可する。
+                // 7-zip 24.x 等は NOASYNC だと InvokeCommand が S_OK を返すが実行されない。
+                // RunPostInvokeMessagePump が STA メッセージループを維持するため ASYNCOK で問題ない。
+                //
+                // 【重要】Vanara の CMINVOKECOMMANDINFOEX では lpVerbW が String 型のため、
+                // SafeResourceId(offset) を代入すると MAKEINTRESOURCE ではなく文字列ポインタに
+                // 変換されてしまう。CMIC_MASK_UNICODE を外し、lpVerb（ResourceId 型で正しく
+                // MAKEINTRESOURCE としてマーシャリングされる）のみ使用する。
+                var ici = new CMINVOKECOMMANDINFOEX
+                {
+                    cbSize = (uint)Marshal.SizeOf<CMINVOKECOMMANDINFOEX>(),
+                    fMask = CMIC.CMIC_MASK_PTINVOKE | CMIC.CMIC_MASK_ASYNCOK,
+                    hwnd = hwnd,
+                    lpVerb = new SafeResourceId(offset),
+                    lpDirectory = workingDir,
+                    nShow = ShowWindowCommand.SW_SHOWNORMAL,
+                    ptInvoke = new POINT((int)screenPoint.X, (int)screenPoint.Y)
+                };
 
-                    // プロパティの場合（特に問題になりやすい）
-                        if (verb == "properties")
-                        {
-                            // 単一ファイルなら安全な SHObjectProperties をメインスレッドで実行
-                            if (filePaths.Length == 1)
-                            {
-                                _ = Application.Current.Dispatcher.InvokeAsync(
-                                    () => ShellIconHelper.ShowFileProperties(filePaths[0]),
-                                    DispatcherPriority.Background);
-                            return;
-                        }
-                        // 複数ファイルの場合は通常のInvokeCommandに頼るが、メインスレッドにディスパッチしてみる
-                        // IContextMenu のマーシャリングが機能するかは環境依存だが、スレッド終了で消えるよりはマシ
-                        /*
-                        // 注意: IContextMenu をメインスレッドで使うと RPC_E_WRONG_THREAD になる可能性が高い。
-                        // そのため、バックグラウンドスレッドのまま実行するしかないが、プロパティウィンドウが消えないように工夫が必要。
-                        // ここでは、InvokeCommand を実行し、少し待機するか、メッセージループを維持するトライを行う。
-                        */
-                    }
+                _ = App.FileLogger.LogAsync($"[ShellContextMenu] InvokeCommand: verb='{verb}', offset={offset}, isBackground={isBackground}");
+                try
+                {
+                    contextMenu.InvokeCommand(ici);
+                }
+                catch (Exception invokeEx)
+                {
+                    _ = App.FileLogger.LogAsync($"[ShellContextMenu] InvokeCommand failed: {invokeEx.GetType().Name}: {invokeEx.Message} (HResult=0x{invokeEx.HResult:X8})");
+                    return;
+                }
 
-                    // 作業ディレクトリ算出（shell の NewMenu 等が作成先ディレクトリを正しく認識するために必要）
-                    string? workingDir = isBackground
-                        ? PathHelper.GetPhysicalPath(filePaths[0])
-                        : Path.GetDirectoryName(PathHelper.GetPhysicalPath(filePaths[0]));
+                bool needsRefresh = isBackground || isShellExtension
+                    || IsLongRunningVerb(verb) || IsLongRunningByMenuText(menuText);
 
-                    // InvokeCommand には STA スレッドの hwnd を使用する。
-                    // Shell 拡張（7-zip 等）は InvokeCommand の hwnd を親としてダイアログを生成するため、
-                    // 同一 STA スレッド上の hwnd でないとモーダルダイアログが正常に動作しない。
-                    var ici = new CMINVOKECOMMANDINFOEX
-                    {
-                        cbSize = (uint)Marshal.SizeOf<CMINVOKECOMMANDINFOEX>(),
-                        fMask = CMIC.CMIC_MASK_UNICODE | CMIC.CMIC_MASK_PTINVOKE | CMIC.CMIC_MASK_NOASYNC,
-                        hwnd = hwnd,
-                        lpVerb = new SafeResourceId(offset),
-                        lpVerbW = new SafeResourceId(offset),
-                        lpDirectory = workingDir,
-                        lpDirectoryW = workingDir,
-                        nShow = ShowWindowCommand.SW_SHOWNORMAL,
-                        ptInvoke = new POINT((int)screenPoint.X, (int)screenPoint.Y)
-                    };
+                if (verb == "properties")
+                {
+                    // プロパティウィンドウが確立するまでスレッドを維持
+                    Thread.Sleep(1000);
+                }
+                else if (needsRefresh)
+                {
+                    // 背景メニュー操作や Shell 拡張の場合、
+                    // STA スレッドを維持して進捗ダイアログ等が正常に動作するようにする
+                    RunPostInvokeMessagePump((IntPtr)hwnd);
 
-                    _ = App.FileLogger.LogAsync($"[ShellContextMenu] InvokeCommand: verb='{verb}', menuText='{menuText}', offset={offset}, isBackground={isBackground}");
-                    try
-                    {
-                        contextMenu.InvokeCommand(ici);
-                    }
-                    catch (Exception invokeEx)
-                    {
-                        _ = App.FileLogger.LogAsync($"[ShellContextMenu] InvokeCommand failed: {invokeEx.GetType().Name}: {invokeEx.Message} (HResult=0x{invokeEx.HResult:X8})");
-                        return;
-                    }
-
-                    // verb が空 = サードパーティ Shell 拡張（GetCommandString 未実装）の可能性が高い。
-                    // 操作内容を判定できないため、安全のためメッセージポンプを実行する。
-                    bool isShellExtension = string.IsNullOrEmpty(verb);
-                    bool needsRefresh = isBackground || isShellExtension
-                        || IsLongRunningVerb(verb ?? "") || IsLongRunningByMenuText(menuText);
-
-                    // プロパティなどの場合、スレッドが即終了するとウィンドウが消えることがあるため、少し待つ
-                    if (verb == "properties")
-                    {
-                        Thread.Sleep(1000);
-                    }
-                    else if (needsRefresh)
-                    {
-                        // 背景メニュー操作や Shell 拡張の場合、
-                        // STA スレッドを維持して進捗ダイアログ等が正常に動作するようにする
-                        RunPostInvokeMessagePump((IntPtr)hwnd);
-
-                        // 完了後にフォルダ内容を再読み込み
-                        _onRefreshRequest?.Invoke();
-                    }
+                    _onRefreshRequest?.Invoke();
                 }
             }
             catch (Exception ex)
@@ -318,7 +258,7 @@ namespace ZenithFiler
             }
             finally
             {
-                if (source != null && hook != null) source.RemoveHook(hook);
+                if (hook != null) source.RemoveHook(hook);
                 _currentContextMenu2 = null;
                 _currentContextMenu3 = null;
                 if (contextMenu != null)
@@ -333,6 +273,46 @@ namespace ZenithFiler
         public void ShowBackgroundContextMenu(string folderPath, System.Windows.Point screenPoint, System.Windows.Rect? workArea = null, Action? onClosed = null)
         {
             ShowContextMenu(new[] { folderPath }, screenPoint, true, workArea, onClosed);
+        }
+
+        /// <summary>
+        /// IContextMenu から verb 文字列を取得する。Unicode → ANSI の順に試行し、
+        /// 取得できなければ空文字列を返す。
+        /// </summary>
+        private static string TryGetCommandVerb(IContextMenu contextMenu, int offset)
+        {
+            const int bufSize = 256;
+
+            // Unicode 版
+            string? verb = GetCommandStringCore(contextMenu, offset, GCS.GCS_VERBW, bufSize, unicode: true);
+            if (!string.IsNullOrEmpty(verb)) return verb;
+
+            // 組み込み「削除」では Unicode 版が空を返すことがあるため ANSI 版も試行
+            verb = GetCommandStringCore(contextMenu, offset, GCS.GCS_VERBA, bufSize, unicode: false);
+            return verb ?? "";
+        }
+
+        private static string? GetCommandStringCore(IContextMenu contextMenu, int offset, GCS gcsType, int bufSize, bool unicode)
+        {
+            IntPtr ptr = Marshal.AllocHGlobal(unicode ? bufSize * 2 : bufSize);
+            try
+            {
+                contextMenu.GetCommandString((nint)offset, gcsType, IntPtr.Zero, ptr, (uint)bufSize);
+                string? result = unicode
+                    ? Marshal.PtrToStringUni(ptr)
+                    : Marshal.PtrToStringAnsi(ptr);
+                return result?.ToLowerInvariant();
+            }
+            catch { return null; }
+            finally { Marshal.FreeHGlobal(ptr); }
+        }
+
+        /// <summary>verb または menuText から削除コマンドかどうかを判定する。</summary>
+        private static bool IsDeleteCommand(string verb, string? menuText)
+        {
+            if (verb.Contains("delete")) return true;
+            if (string.IsNullOrEmpty(menuText)) return false;
+            return menuText.Contains("削除") || menuText.Contains("Delete", StringComparison.OrdinalIgnoreCase);
         }
 
         private IntPtr MenuHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -382,7 +362,7 @@ namespace ZenithFiler
             bool everSawChildWindow = false;
             // Phase 1: ダイアログが出ない操作（新規フォルダ等）は 2 秒で早期終了
             // Phase 2: ダイアログが出た場合（圧縮等）は閉じてから 1.5 秒待機
-            const int initialQuietThreshold = 20;   // 20 * 100ms = 2秒（ダイアログ出現前の早期終了を防止）
+            const int initialQuietThreshold = 20;   // 20 * 100ms = 2秒
             const int postDialogQuietThreshold = 15; // 15 * 100ms = 1.5 秒
             const int maxMinutes = 10;
 
@@ -457,38 +437,31 @@ namespace ZenithFiler
         /// 指定したメニュー項目の表示文字列を取得する。サブメニューも再帰的に検索する。
         /// 7-zip 等の Shell 拡張はサブメニュー内に項目を配置するため、ルートメニューだけでは見つからない。
         /// </summary>
-        private static string? GetMenuItemText(HMENU hMenu, uint itemId)
+        private static string? GetMenuItemText(HMENU hMenu, uint itemId, int depth = 0)
         {
-            // まずルートメニューから ID 指定で検索
-            string? text = GetMenuItemTextDirect((IntPtr)hMenu, itemId);
+            if (depth > 3) return null;
+
+            IntPtr hMenuPtr = (IntPtr)hMenu;
+
+            // ID 指定で検索
+            string? text = GetMenuItemTextDirect(hMenuPtr, itemId);
             if (text != null) return text;
 
-            // 見つからない場合はサブメニューを再帰検索
-            int count = NativeMethods.GetMenuItemCount((IntPtr)hMenu);
+            // サブメニューを再帰検索
+            int count = NativeMethods.GetMenuItemCount(hMenuPtr);
             for (int i = 0; i < count; i++)
             {
-                IntPtr subMenu = NativeMethods.GetSubMenu((IntPtr)hMenu, i);
+                IntPtr subMenu = NativeMethods.GetSubMenu(hMenuPtr, i);
                 if (subMenu == IntPtr.Zero) continue;
 
-                text = GetMenuItemTextDirect(subMenu, itemId);
+                text = GetMenuItemText((HMENU)subMenu, itemId, depth + 1);
                 if (text != null) return text;
-
-                // さらに深いサブメニューも検索（7-zip のネスト対応）
-                int subCount = NativeMethods.GetMenuItemCount(subMenu);
-                for (int j = 0; j < subCount; j++)
-                {
-                    IntPtr subSubMenu = NativeMethods.GetSubMenu(subMenu, j);
-                    if (subSubMenu == IntPtr.Zero) continue;
-                    text = GetMenuItemTextDirect(subSubMenu, itemId);
-                    if (text != null) return text;
-                }
             }
             return null;
         }
 
         private static string? GetMenuItemTextDirect(IntPtr hMenu, uint itemId)
         {
-            const uint MIIM_STRING = 0x80;
             const int cchMax = 256;
             IntPtr buf = Marshal.AllocHGlobal(cchMax * 2);
             try
@@ -496,12 +469,13 @@ namespace ZenithFiler
                 var mii = new MenuItemInfoNative
                 {
                     cbSize = (uint)Marshal.SizeOf<MenuItemInfoNative>(),
-                    fMask = MIIM_STRING,
+                    fMask = NativeMethods.MIIM_STRING,
                     dwTypeData = buf,
                     cch = (uint)cchMax
                 };
                 if (!NativeMethods.GetMenuItemInfoW(hMenu, itemId, false, ref mii))
                     return null;
+                if (mii.cch == 0) return null;
                 return Marshal.PtrToStringUni(mii.dwTypeData, (int)mii.cch);
             }
             finally
@@ -530,6 +504,12 @@ namespace ZenithFiler
 
     internal static class NativeMethods
     {
+        // Win32 MENUITEMINFO fMask 定数
+        internal const uint MIIM_ID      = 0x00000002;
+        internal const uint MIIM_SUBMENU = 0x00000004;
+        internal const uint MIIM_STRING  = 0x00000040;
+        internal const uint MIIM_BITMAP  = 0x00000080;
+
         [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
         internal static extern bool GetMenuItemInfoW(IntPtr hMenu, uint uItem, bool fByPosition, ref MenuItemInfoNative lpmii);

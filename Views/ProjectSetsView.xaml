@@ -11,7 +11,7 @@
         <!-- フッター内ボタン共通スタイル（チャコール背景に馴染む白文字・アイコン） -->
         <Style x:Key="FooterButton" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#E8EAED"/>
+            <Setter Property="Foreground" Value="{DynamicResource TitleBarTextBrush}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="8,5"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -27,10 +27,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#4A5059"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource OnePointDarkBackground}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#3C4249"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource OnePointDarkBackground}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -222,10 +222,10 @@
                     <StackPanel Orientation="Horizontal">
                         <icon:PackIconLucide Kind="Check" Width="12" Height="12"
                                              Margin="0,0,5,0"
-                                             Foreground="#E8EAED"/>
+                                             Foreground="{DynamicResource TitleBarTextBrush}"/>
                         <TextBlock Text="このセットを適用する"
                                    FontSize="11"
-                                   Foreground="#E8EAED"
+                                   Foreground="{DynamicResource TitleBarTextBrush}"
                                    VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
@@ -236,7 +236,7 @@
                         Command="{Binding CancelPreviewCommand}"
                         Padding="7,5"
                         ToolTip="読み込み前の状態に戻します">
-                    <icon:PackIconLucide Kind="X" Width="12" Height="12" Foreground="#E8EAED"/>
+                    <icon:PackIconLucide Kind="X" Width="12" Height="12" Foreground="{DynamicResource TitleBarTextBrush}"/>
                 </Button>
             </Grid>
         </Border>

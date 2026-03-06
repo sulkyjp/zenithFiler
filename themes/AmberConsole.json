@@ -7,6 +7,7 @@
     "SidebarColor": "#121212",
     "HeaderColor": "#0A0A0A",
     "TitleBarColor": "#000000",
+    "TitleBarTextColor": "#FFB000",                    // タイトルバーの文字・ボタン色
     "BorderColor": "#4D3500",
     "PrimaryTextColor": "#FFB000",
     "SecondaryTextColor": "#996A00",
@@ -18,7 +19,10 @@
     "TabSeparatorColor": "#4D3500",
     "TabHoverColor": "#261D00",
     "ToolbarSeparatorColor": "#996A00",
-    "TreeLineColor": "#664700"
+    "TreeLineColor": "#664700",
+    "PopupBackgroundColor": "#121212",                 // フローティングポップアップの背景色
+    "PopupTextColor": "#FFB000",                       // ポップアップ内のテキスト色
+    "PopupHoverBackgroundColor": "#332300"            // ポップアップリスト項目のホバー背景色
   },
   "List": {
     "ListHoverColor": "#261D00",
@@ -28,7 +32,11 @@
     "OptionSelectedColor": "#FFB000",
     "OptionSelectedHoverColor": "#FFC84D",
     "CheckboxHoverColor": "#261D00",
-    "CheckedHoverAccentColor": "#FFB000"
+    "CheckedHoverAccentColor": "#FFB000",
+    "FilterActiveIndicatorColor": "#FFB000",           // アクティブフィルターのインジケーター色
+    "FilterChipBackgroundColor": "#1A1400",            // フィルターチップのデフォルト背景色
+    "FilterChipBorderColor": "#996A00",                // フィルターチップの枠線色
+    "FilterToggleCheckedBackgroundColor": "#261D00"   // フィルタートグルのチェック済み背景色
   },
   "Search": {
     "IndexSearchBackgroundColor": "#1A1400",
@@ -39,7 +47,8 @@
     "AccentColor": "#FFB000",
     "ErrorTextColor": "#FF4444",
     "DestructiveHoverBackgroundColor": "#440000",
-    "DestructiveIconColor": "#FF6B6B"
+    "DestructiveIconColor": "#FF6B6B",
+    "SuccessColor": "#66CC00"                         // 成功・有効状態のアイコン色
   },
   "ContextMenu": {
     "ContextMenuSeparatorColor": "#4D3500",
@@ -61,6 +70,10 @@
     "TelemetryBackgroundColor": "#E60A0A0A",
     "TelemetryBorderColor": "#40FFB000",
     "TelemetryTitleColor": "#FFB000",
-    "TelemetryValueColor": "#FFB000"
+    "TelemetryValueColor": "#FFB000",
+    "PreviewPanelBorderColor": "#4D3500",              // クイックプレビューパネルの枠線色
+    "PreviewPdfBackgroundColor": "#121212",            // PDFプレビューのキャンバス背景色
+    "IndexStatusNormalColor": "#FFB000",               // インデックス状態テキストの通常色
+    "IndexStatusWarmColor": "#FFC84D"                 // インデックスの日時・件数バッジ色
   }
 }

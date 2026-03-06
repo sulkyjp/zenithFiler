@@ -59,5 +59,11 @@ namespace ZenithFiler.Views
         {
             App.UpdateService?.ApplyAndRestart();
         }
+
+        private async void ResetStatsBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is MainViewModel vm)
+                await vm.AppSettings.ResetStatisticsAsync();
+        }
     }
 }

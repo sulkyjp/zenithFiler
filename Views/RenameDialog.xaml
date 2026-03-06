@@ -25,10 +25,10 @@
             </Border>
             <ControlTemplate.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter TargetName="Bd" Property="Background" Value="#E2DED2"/>
+                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ButtonHoverBrush}"/>
                 </Trigger>
                 <Trigger Property="IsPressed" Value="True">
-                    <Setter TargetName="Bd" Property="Background" Value="#D6D2C6"/>
+                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ListHoverBrush}"/>
                 </Trigger>
             </ControlTemplate.Triggers>
         </ControlTemplate>
@@ -42,10 +42,10 @@
             </Border>
             <ControlTemplate.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter TargetName="Bd" Property="Background" Value="#E2DED2"/>
+                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ButtonHoverBrush}"/>
                 </Trigger>
                 <Trigger Property="IsPressed" Value="True">
-                    <Setter TargetName="Bd" Property="Background" Value="#D6D2C6"/>
+                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ListHoverBrush}"/>
                 </Trigger>
             </ControlTemplate.Triggers>
         </ControlTemplate>
@@ -56,8 +56,8 @@
             <Setter Property="Padding" Value="10,3"/>
             <Setter Property="Margin" Value="0,0,6,4"/>
             <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Foreground" Value="#1A1A1A"/>
-            <Setter Property="Background" Value="#EEEAE0"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
             <Setter Property="Template" Value="{StaticResource SuggestionButtonTemplate}"/>
         </Style>
     </Window.Resources>
@@ -112,7 +112,7 @@
                 <Button x:Name="AddCustomBtn" Click="AddCustomButton_Click"
                         ToolTip="現在の入力をカスタムボタンとして追加"
                         MinHeight="26" MinWidth="26" Padding="4,3" Margin="0,0,6,4" FontSize="12"
-                        Foreground="#999999" Background="#EEEAE0"
+                        Foreground="{DynamicResource SubTextBrush}" Background="{DynamicResource InputBackgroundBrush}"
                         Template="{StaticResource SuggestionButtonTemplate}">
                     <icon:PackIconLucide Kind="Plus" Width="12" Height="12"/>
                 </Button>
@@ -143,11 +143,11 @@
                             <Border x:Name="Bd" Background="Transparent" Padding="{TemplateBinding Padding}"
                                     CornerRadius="3">
                                 <icon:PackIconLucide Kind="ChevronDown" Width="12" Height="12"
-                                                     Foreground="#999999" VerticalAlignment="Center"/>
+                                                     Foreground="{DynamicResource SubTextBrush}" VerticalAlignment="Center"/>
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="Bd" Property="Background" Value="#E2DED2"/>
+                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ButtonHoverBrush}"/>
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
@@ -170,14 +170,14 @@
                    AllowsTransparency="True"
                    PopupAnimation="Fade">
                 <!-- ※Popup内のためStaticResource不可: ContextMenuBorderColor/ContextMenuOuterBackgroundColor に対応 -->
-                <Border BorderBrush="#B0B0B0" BorderThickness="1" Background="#FEFEFE" CornerRadius="5"
+                <Border BorderBrush="{DynamicResource ContextMenuBorderBrush}" BorderThickness="1" Background="{DynamicResource ContextMenuOuterBackgroundBrush}" CornerRadius="5"
                         MaxHeight="200"
                         Width="{Binding ActualWidth, ElementName=InputTextBox}">
                     <Border.Effect>
                         <DropShadowEffect BlurRadius="24" ShadowDepth="6" Opacity="0.22" Color="Black"/>
                     </Border.Effect>
                     <ListBox x:Name="HistoryList"
-                             Background="#F5F5F0"
+                             Background="{DynamicResource ContextMenuBackgroundBrush}"
                              BorderThickness="0"
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                              PreviewMouseLeftButtonUp="HistoryList_PreviewMouseLeftButtonUp"

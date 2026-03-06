@@ -15,13 +15,16 @@ namespace ZenithFiler.Services
     /// WindowsAPICodePack-Shell を用いたサムネイル取得サービス。
     /// エクスプローラと同等のサムネイル表示を実現し、STA スレッド要件を満たします。
     /// </summary>
-    public sealed class ShellThumbnailService
+    public sealed class ShellThumbnailService : IDisposable
     {
         private const int MaxCacheSize = 300;
         private const int MaxThumbnailsPerFolder = 200;
 
         private static readonly Lazy<ShellThumbnailService> _instance = new(() => new ShellThumbnailService());
         public static ShellThumbnailService Instance => _instance.Value;
+        public static bool IsCreated => _instance.IsValueCreated;
+
+        private int _disposed; // 0=未, 1=済
 
         private readonly object _cacheLock = new();
         private readonly Dictionary<string, (ImageSource Source, DateTime Added)> _cache = new(StringComparer.OrdinalIgnoreCase);
@@ -108,13 +111,30 @@ namespace ZenithFiler.Services
         /// サムネイルを同期で取得します。キャッシュにあれば即返し、なければ STA スレッドで取得するまでブロックします。
         /// UIスレッドやバインディングから呼ぶとフリーズの原因になるため、一覧表示などでは必ず <see cref="GetThumbnailAsync"/> を使用してください。
         /// </summary>
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+
+            // キューを閉じ → GetConsumingEnumerable が終了
+            try { _queue.CompleteAdding(); } catch (ObjectDisposedException) { }
+
+            // STA スレッドの終了を最大 3 秒待機
+            if (_staThread.IsAlive)
+                _staThread.Join(TimeSpan.FromSeconds(3));
+
+            // BlockingCollection を破棄
+            _queue.Dispose();
+        }
+
         public ImageSource? GetThumbnail(string path, int size = 256)
         {
+            if (_disposed != 0) return null;
             if (TryGetCachedOrValidate(path, size, out var cacheKey, out var cached))
                 return cached;
 
             var tcs = new TaskCompletionSource<ImageSource?>();
-            _queue.Add((path, size, tcs, CacheKey: (string?)null));
+            try { _queue.Add((path, size, tcs, CacheKey: (string?)null)); }
+            catch (InvalidOperationException) { return null; }
 
             try
             {
@@ -140,11 +160,13 @@ namespace ZenithFiler.Services
         /// </summary>
         public Task<ImageSource?> GetThumbnailAsync(string path, int size = 256, CancellationToken cancellationToken = default)
         {
+            if (_disposed != 0) return Task.FromResult<ImageSource?>(null);
             if (TryGetCachedOrValidate(path, size, out var cacheKey, out var cached))
                 return Task.FromResult(cached);
 
             var tcs = new TaskCompletionSource<ImageSource?>();
-            _queue.Add((path, size, tcs, cacheKey));
+            try { _queue.Add((path, size, tcs, cacheKey)); }
+            catch (InvalidOperationException) { return Task.FromResult<ImageSource?>(null); }
 
             if (cancellationToken.CanBeCanceled)
             {

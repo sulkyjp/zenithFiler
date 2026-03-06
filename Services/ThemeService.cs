@@ -47,6 +47,7 @@ public class ThemeService
         ["SidebarColor"] = "#E6E1D3",
         ["HeaderColor"] = "#F5F1E3",
         ["TitleBarColor"] = "#545B64",
+        ["TitleBarTextColor"] = "#FFFFFF",
         ["BorderColor"] = "#D3D0C3",
         ["PrimaryTextColor"] = "#1A1A1A",
         ["SecondaryTextColor"] = "#777777",
@@ -92,6 +93,18 @@ public class ThemeService
         ["TelemetryBorderColor"] = "#40FFFFFF",
         ["TelemetryTitleColor"] = "#80C0FF",
         ["TelemetryValueColor"] = "#E0E0E0",
+        ["PopupBackgroundColor"] = "#FAFAF5",
+        ["PopupTextColor"] = "#1A1A1A",
+        ["PopupHoverBackgroundColor"] = "#48505A",
+        ["FilterActiveIndicatorColor"] = "#333333",
+        ["FilterChipBackgroundColor"] = "#FFFFFF",
+        ["FilterChipBorderColor"] = "#8A8578",
+        ["FilterToggleCheckedBackgroundColor"] = "#E3F2FD",
+        ["SuccessColor"] = "#4CAF50",
+        ["PreviewPanelBorderColor"] = "#C4BFB0",
+        ["PreviewPdfBackgroundColor"] = "#F0F0F0",
+        ["IndexStatusNormalColor"] = "#C0A060",
+        ["IndexStatusWarmColor"] = "#C68958",
     };
 
     /// <summary>Color リソースキー → SolidColorBrush リソースキーのマッピング。</summary>
@@ -101,6 +114,7 @@ public class ThemeService
         ["SidebarColor"] = "SidebarBrush",
         ["HeaderColor"] = "HeaderBrush",
         ["TitleBarColor"] = "TitleBarBrush",
+        ["TitleBarTextColor"] = "TitleBarTextBrush",
         ["BorderColor"] = "BorderBrush",
         ["PrimaryTextColor"] = "TextBrush",
         ["SecondaryTextColor"] = "SubTextBrush",
@@ -144,6 +158,18 @@ public class ThemeService
         ["TelemetryBorderColor"] = "TelemetryBorderBrush",
         ["TelemetryTitleColor"] = "TelemetryTitleBrush",
         ["TelemetryValueColor"] = "TelemetryValueBrush",
+        ["PopupBackgroundColor"] = "PopupBackgroundBrush",
+        ["PopupTextColor"] = "PopupTextBrush",
+        ["PopupHoverBackgroundColor"] = "PopupHoverBackgroundBrush",
+        ["FilterActiveIndicatorColor"] = "FilterActiveIndicatorBrush",
+        ["FilterChipBackgroundColor"] = "FilterChipBackgroundBrush",
+        ["FilterChipBorderColor"] = "FilterChipBorderBrush",
+        ["FilterToggleCheckedBackgroundColor"] = "FilterToggleCheckedBackgroundBrush",
+        ["SuccessColor"] = "SuccessBrush",
+        ["PreviewPanelBorderColor"] = "PreviewPanelBorderBrush",
+        ["PreviewPdfBackgroundColor"] = "PreviewPdfBackgroundBrush",
+        ["IndexStatusNormalColor"] = "IndexStatusNormalBrush",
+        ["IndexStatusWarmColor"] = "IndexStatusWarmBrush",
     };
 
     private static readonly Dictionary<string, string> Comments = new()
@@ -152,6 +178,7 @@ public class ThemeService
         ["SidebarColor"] = "サイドバー（ナビペイン）背景色",
         ["HeaderColor"] = "ヘッダー背景色",
         ["TitleBarColor"] = "タイトルバー背景色（チャコールブラック）",
+        ["TitleBarTextColor"] = "タイトルバーの文字・ボタン色",
         ["BorderColor"] = "枠線・区切り線の色",
         ["PrimaryTextColor"] = "メインテキスト色（ほぼ黒）",
         ["SecondaryTextColor"] = "サブテキスト・補足情報の色",
@@ -197,6 +224,18 @@ public class ThemeService
         ["TelemetryBorderColor"] = "テレメトリーパネル枠線色（#AARRGGBB 半透明）",
         ["TelemetryTitleColor"] = "テレメトリーパネルのタイトル色",
         ["TelemetryValueColor"] = "テレメトリーパネルの値テキスト色",
+        ["PopupBackgroundColor"] = "フローティングポップアップの背景色",
+        ["PopupTextColor"] = "ポップアップ内のテキスト色",
+        ["PopupHoverBackgroundColor"] = "ポップアップリスト項目のホバー背景色",
+        ["FilterActiveIndicatorColor"] = "アクティブフィルターのインジケーター色",
+        ["FilterChipBackgroundColor"] = "フィルターチップのデフォルト背景色",
+        ["FilterChipBorderColor"] = "フィルターチップの枠線色",
+        ["FilterToggleCheckedBackgroundColor"] = "フィルタートグルのチェック済み背景色",
+        ["SuccessColor"] = "成功・有効状態のアイコン色",
+        ["PreviewPanelBorderColor"] = "クイックプレビューパネルの枠線色",
+        ["PreviewPdfBackgroundColor"] = "PDFプレビューのキャンバス背景色",
+        ["IndexStatusNormalColor"] = "インデックス状態テキストの通常色",
+        ["IndexStatusWarmColor"] = "インデックスの日時・件数バッジ色",
     };
 
     private static readonly ConcurrentDictionary<Type, PropertyInfo[]> _propCache = new();
@@ -553,6 +592,7 @@ public class ThemeService
         sb.AppendLine(Entry("SidebarColor"));
         sb.AppendLine(Entry("HeaderColor"));
         sb.AppendLine(Entry("TitleBarColor"));
+        sb.AppendLine(Entry("TitleBarTextColor"));
         sb.AppendLine(Entry("BorderColor"));
         sb.AppendLine(Entry("PrimaryTextColor"));
         sb.AppendLine(Entry("SecondaryTextColor"));
@@ -564,7 +604,10 @@ public class ThemeService
         sb.AppendLine(Entry("TabSeparatorColor"));
         sb.AppendLine(Entry("TabHoverColor"));
         sb.AppendLine(Entry("ToolbarSeparatorColor"));
-        sb.AppendLine(Entry("TreeLineColor", last: true));
+        sb.AppendLine(Entry("TreeLineColor"));
+        sb.AppendLine(Entry("PopupBackgroundColor"));
+        sb.AppendLine(Entry("PopupTextColor"));
+        sb.AppendLine(Entry("PopupHoverBackgroundColor", last: true));
         sb.AppendLine("  },");
         sb.AppendLine();
 
@@ -577,7 +620,11 @@ public class ThemeService
         sb.AppendLine(Entry("OptionSelectedColor"));
         sb.AppendLine(Entry("OptionSelectedHoverColor"));
         sb.AppendLine(Entry("CheckboxHoverColor"));
-        sb.AppendLine(Entry("CheckedHoverAccentColor", last: true));
+        sb.AppendLine(Entry("CheckedHoverAccentColor"));
+        sb.AppendLine(Entry("FilterActiveIndicatorColor"));
+        sb.AppendLine(Entry("FilterChipBackgroundColor"));
+        sb.AppendLine(Entry("FilterChipBorderColor"));
+        sb.AppendLine(Entry("FilterToggleCheckedBackgroundColor", last: true));
         sb.AppendLine("  },");
         sb.AppendLine();
 
@@ -594,7 +641,8 @@ public class ThemeService
         sb.AppendLine(Entry("AccentColor"));
         sb.AppendLine(Entry("ErrorTextColor"));
         sb.AppendLine(Entry("DestructiveHoverBackgroundColor"));
-        sb.AppendLine(Entry("DestructiveIconColor", last: true));
+        sb.AppendLine(Entry("DestructiveIconColor"));
+        sb.AppendLine(Entry("SuccessColor", last: true));
         sb.AppendLine("  },");
         sb.AppendLine();
 
@@ -622,7 +670,11 @@ public class ThemeService
         sb.AppendLine(Entry("TelemetryBackgroundColor"));
         sb.AppendLine(Entry("TelemetryBorderColor"));
         sb.AppendLine(Entry("TelemetryTitleColor"));
-        sb.AppendLine(Entry("TelemetryValueColor", last: true));
+        sb.AppendLine(Entry("TelemetryValueColor"));
+        sb.AppendLine(Entry("PreviewPanelBorderColor"));
+        sb.AppendLine(Entry("PreviewPdfBackgroundColor"));
+        sb.AppendLine(Entry("IndexStatusNormalColor"));
+        sb.AppendLine(Entry("IndexStatusWarmColor", last: true));
         sb.AppendLine("  }");
 
         sb.AppendLine("}");

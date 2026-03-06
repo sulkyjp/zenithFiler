@@ -116,6 +116,38 @@ namespace ZenithFiler
                         .Select(x => x.Path).ToList();
         }
 
+        /// <summary>アイテム別詳細設定を保存用に返す。設定なしのアイテムは含めない。</summary>
+        public List<IndexItemSettingsDto>? GetItemSettingsForSave()
+        {
+            var result = Items
+                .Where(x => !string.IsNullOrWhiteSpace(x.Path)
+                    && (x.ScheduleDays != null || x.ScheduleHour.HasValue || x.UpdateMode.HasValue))
+                .Select(x => new IndexItemSettingsDto
+                {
+                    Path = x.Path,
+                    ScheduleDays = x.ScheduleDays,
+                    ScheduleHour = x.ScheduleHour,
+                    UpdateMode = x.UpdateMode
+                })
+                .ToList();
+            return result.Count > 0 ? result : null;
+        }
+
+        /// <summary>保存済みアイテム別設定を各アイテムに適用する。LoadPaths の後に呼び出す。</summary>
+        public void LoadItemSettings(List<IndexItemSettingsDto>? settings)
+        {
+            if (settings == null) return;
+            foreach (var s in settings)
+            {
+                var item = Items.FirstOrDefault(x =>
+                    string.Equals(x.Path, s.Path, StringComparison.OrdinalIgnoreCase));
+                if (item == null) continue;
+                item.ScheduleDays = s.ScheduleDays;
+                item.ScheduleHour = s.ScheduleHour;
+                item.UpdateMode = s.UpdateMode;
+            }
+        }
+
         /// <summary>設定読み込み時にパス一覧を反映する。初回インデックスは MainWindow で ConfigureIndexUpdate 後にトリガー。</summary>
         public void LoadPaths(IReadOnlyList<string> paths)
         {
@@ -167,6 +199,7 @@ namespace ZenithFiler
             }
 
             var newItem = new IndexSearchTargetItemViewModel { Path = physical };
+
             Items.Add(newItem);
             NotifyItemsChanged();
             RefreshItemsStatus();
@@ -339,6 +372,7 @@ namespace ZenithFiler
                     continue;
 
                 var newItem = new IndexSearchTargetItemViewModel { Path = physical };
+    
                 Items.Add(newItem);
                 addedCount++;
 
@@ -395,6 +429,7 @@ namespace ZenithFiler
             }
 
             var newItem = new IndexSearchTargetItemViewModel { Path = physical };
+
             Items.Add(newItem);
             NotifyItemsChanged();
             RefreshItemsStatus();
@@ -427,6 +462,7 @@ namespace ZenithFiler
         [RelayCommand]
         private void UpdateNow()
         {
+            _ = App.Stats.RecordAsync("Index.UpdateNow");
             if (App.IndexService.IsPaused)
             {
                 App.Notification.Notify("一時停止中です。「再開」でインデックス作成を再開してください", "インデックス");
@@ -573,6 +609,35 @@ namespace ZenithFiler
             App.Notification.Notify(
                 newState ? "インデックス更新をロックしました" : "ロックを解除しました",
                 $"インデックス検索: {target.DisplayName}");
+        }
+
+        /// <summary>アイテム別詳細設定を保存する。</summary>
+        internal void SaveItemSettings()
+        {
+            WindowSettings.SaveIndexItemSettingsOnly(GetItemSettingsForSave());
+        }
+
+        /// <summary>アイテム別詳細設定ポップアップを表示する。</summary>
+        [RelayCommand]
+        private void OpenItemSettings(IndexSearchTargetItemViewModel? item)
+        {
+            var target = item ?? SelectedItem;
+            if (target == null) return;
+
+            // 既存設定を取得
+            var existingDto = GetItemSettingsForSave()?.FirstOrDefault(s =>
+                string.Equals(s.Path, target.Path, StringComparison.OrdinalIgnoreCase));
+
+            var vm = new IndexItemSettingsPopupViewModel();
+            vm.LoadFrom(target, existingDto);
+
+            var dialog = new Views.IndexItemSettingsDialog { DataContext = vm };
+            if (dialog.ShowDialog() != true) return;
+
+            // 結果を書き戻し
+            vm.ApplyTo(target);
+            ApplySort();
+            SaveItemSettings();
         }
 
         /// <summary>アプリ設定ビューのインデックス設定セクションを開く。MainViewModel 経由で呼ぶ。</summary>

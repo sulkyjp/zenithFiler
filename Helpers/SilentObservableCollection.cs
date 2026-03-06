@@ -33,6 +33,24 @@ namespace ZenithFiler
             OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
         }
 
+        /// <summary>
+        /// 複数アイテムを一括追加する。CollectionChanged は Reset を 1 回だけ発火する。
+        /// </summary>
+        public void AddRange(IEnumerable<T> items)
+        {
+            _suppressNotification = true;
+            try
+            {
+                foreach (var item in items)
+                    Items.Add(item);
+            }
+            finally
+            {
+                _suppressNotification = false;
+            }
+            OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+        }
+
         protected override void OnCollectionChanged(NotifyCollectionChangedEventArgs e)
         {
             if (!_suppressNotification)

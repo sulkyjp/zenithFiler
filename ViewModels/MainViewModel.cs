@@ -218,10 +218,10 @@ namespace ZenithFiler
                         FileOperationProgress = 100;
                         await Task.Delay(300);
                     }
+                    FileOperationStatusText = string.Empty;  // 通知テキストとの重複防止: Visibility 切替前にクリア
                     IsFileOperationActive = false;  // Grid の Opacity フェードアウト開始 (0.5s)
                     await Task.Delay(500);           // フェードアウト完了を待ってからリセット
                     FileOperationProgress = 0;
-                    FileOperationStatusText = string.Empty;
                 }
                 catch { /* ウィンドウ閉鎖時など、UI 更新失敗は無視 */ }
                 finally
@@ -594,9 +594,12 @@ namespace ZenithFiler
         public GridLength RightPaneWidth => PaneCount == 2 ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
         public GridLength SplitterWidth => PaneCount == 2 ? GridLength.Auto : new GridLength(0);
 
+        /// <summary>アプリケーションバージョン文字列（About ページ等で使用）。</summary>
+        public string AppVersion { get; } = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.0.0";
+
         public MainViewModel()
         {
-            var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.0.0";
+            var version = AppVersion;
             _baseAppTitle = $"Zenith Filer v{version}";
             _appTitle = _baseAppTitle;
 
@@ -646,6 +649,7 @@ namespace ZenithFiler
             IndexSearchSettings = new IndexSearchSettingsViewModel(this);
             SearchPresets = new SearchPresetViewModel(this);
             AppSettings = new AppSettingsViewModel(this);
+            AppSettings.SubscribeStatEvents();
             ProjectSets = new ProjectSetsViewModel(this);
 
             // インデックス更新モード・間隔・パフォーマンス設定の変更時に即座に IndexService へ反映
@@ -657,7 +661,7 @@ namespace ZenithFiler
                     or nameof(AppSettingsViewModel.IndexEcoMode)
                     or nameof(AppSettingsViewModel.IndexNetworkLowPriority))
                 {
-                    App.IndexService.ConfigureIndexUpdate(AppSettings.GetIndexSettingsForSave(), () => IndexSearchSettings.GetPathsForSave() ?? new List<string>());
+                    App.IndexService.ConfigureIndexUpdate(AppSettings.GetIndexSettingsForSave(), () => IndexSearchSettings.GetPathsForSave() ?? new List<string>(), IndexSearchSettings.GetItemSettingsForSave());
                 }
             };
 
@@ -775,8 +779,35 @@ namespace ZenithFiler
         private void UpdateWindowTitle()
         {
             var path = ActivePane?.CurrentPath ?? string.Empty;
-            var title = string.IsNullOrEmpty(path) ? _baseAppTitle : $"{_baseAppTitle} - {path}";
+            var title = (string.IsNullOrEmpty(path) || !WindowSettings.ShowPathInTitleBarEnabled)
+                ? _baseAppTitle
+                : $"{_baseAppTitle} - {path}";
             Application.Current.Dispatcher.InvokeAsync(() => { AppTitle = title; }, DispatcherPriority.Background);
+        }
+
+        /// <summary>タイトルバーのパス表示設定変更時に外部から呼び出す。</summary>
+        public void RefreshWindowTitle() => UpdateWindowTitle();
+
+        /// <summary>全タブの全 FileItem に DisplayName 変更を通知する（拡張子表示切替用）。</summary>
+        public void RefreshAllDisplayNames()
+        {
+            foreach (var pane in new[] { LeftPane, RightPane })
+            {
+                foreach (var tab in pane.Tabs)
+                {
+                    foreach (var item in tab.Items)
+                        item.NotifyDisplayNameChanged();
+                }
+            }
+        }
+
+        /// <summary>全ペインのアクティブタブをリロードする（隠しファイル表示切替等）。</summary>
+        public void RefreshAllPanes()
+        {
+            foreach (var pane in new[] { LeftPane, RightPane })
+            {
+                pane.SelectedTab?.Refresh();
+            }
         }
 
         [RelayCommand]
@@ -796,7 +827,6 @@ namespace ZenithFiler
             if (PaneCount == 1)
             {
                 PaneCount = 2;
-                App.Notification.Notify("2ペイン表示に切り替えました", "検索結果を反対ペインに表示");
             }
 
             var targetPane = sourcePane == LeftPane ? RightPane : LeftPane;
@@ -816,7 +846,6 @@ namespace ZenithFiler
             if (PaneCount == 2)
             {
                 PaneCount = 1;
-                App.Notification.Notify("1画面モードに切り替えました", "検索結果を表示");
             }
 
             // 3. Aペインをアクティブに

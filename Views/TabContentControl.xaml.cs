@@ -140,7 +140,7 @@ namespace ZenithFiler
             Loaded += TabContentControl_Loaded;
             Unloaded += TabContentControl_Unloaded;
             IsVisibleChanged += TabContentControl_IsVisibleChanged;
-            LayoutUpdated += TabContentControl_LayoutUpdated;
+            DataContextChanged += (_, _) => UpdateColumnWidths();
 
             // カラムヘッダーの手動リサイズ検知用
             FileListView.AddHandler(Thumb.DragCompletedEvent, new DragCompletedEventHandler(OnColumnHeaderDragCompleted));
@@ -149,7 +149,7 @@ namespace ZenithFiler
             // ショートカットツールチップ初期化 + 変更追従
             UpdateShortcutTooltips();
             App.KeyBindings.BindingsChanged += (_, _) =>
-                Dispatcher.Invoke(UpdateShortcutTooltips);
+                _ = Dispatcher.InvokeAsync(UpdateShortcutTooltips);
         }
 
         /// <summary>ツールチップのショートカット表示を KeyBindingService から動的に設定する。</summary>
@@ -186,15 +186,6 @@ namespace ZenithFiler
             {
                 vm.IsAdaptiveColumnsEnabled = false;
             }
-        }
-
-        private void TabContentControl_LayoutUpdated(object? sender, EventArgs e)
-        {
-            // 方針G-3: アイコンビュー時は FileListView が切断されているため、カラム幅更新は不要。
-            // LayoutUpdated → UpdateColumnWidths → カラム幅変更 → LayoutUpdated のフィードバックループを排除。
-            if (DataContext is TabItemViewModel vm && vm.FileViewMode != FileViewMode.Details)
-                return;
-            UpdateColumnWidths();
         }
 
         private void TabContentControl_Loaded(object sender, RoutedEventArgs e)
@@ -235,7 +226,6 @@ namespace ZenithFiler
                 _itemsViewSubscription = null;
             }
 
-            LayoutUpdated -= TabContentControl_LayoutUpdated;
             IsVisibleChanged -= TabContentControl_IsVisibleChanged;
         }
 
@@ -1199,6 +1189,7 @@ namespace ZenithFiler
 
         private async void ShowContextMenuForItems(TabItemViewModel vm, IList<FileItem> selectedItems, bool isBackground)
         {
+            _ = App.Stats.RecordAsync("ContextMenu.Open");
             _menuTaskCts?.Cancel();
             _menuTaskCts = new CancellationTokenSource();
             var menuToken = _menuTaskCts.Token;
@@ -1814,7 +1805,7 @@ namespace ZenithFiler
                 Add("このフォルダをAペインのホームに設定", PackIconLucideKind.PanelLeft, () => mainVm.AppSettings.SetLeftPaneHomeFromPath(first.FullPath));
                 Add("このフォルダをBペインのホームに設定", PackIconLucideKind.PanelRight, () => mainVm.AppSettings.SetRightPaneHomeFromPath(first.FullPath));
                 if (mainVm.Favorites.ContainsPath(first.FullPath))
-                    Add("お気に入りから解除", PackIconLucideKind.Minus, () => { mainVm.Favorites.RemovePath(first.FullPath); vm.UpdateIsFavorite(); });
+                    Add("お気に入りから解除", PackIconLucideKind.Minus, () => { _ = App.Stats.RecordAsync("Favorites.Remove"); mainVm.Favorites.RemovePath(first.FullPath); vm.UpdateIsFavorite(); });
                 else
                     Add("お気に入りに追加", PackIconLucideKind.Star, () => _ = mainVm.Favorites.AddPathWithDialogAndHighlightAsync(first.FullPath));
                 Add("インデックス検索でこのフォルダを検索", PackIconLucideKind.Search, () =>
@@ -1854,7 +1845,7 @@ namespace ZenithFiler
                 AddCopyNameAndPath();
                 AddBoxSharePathCopyItem();
                 if (mainVm.Favorites.ContainsPath(first.FullPath))
-                    Add("お気に入りから解除", PackIconLucideKind.Minus, () => { mainVm.Favorites.RemovePath(first.FullPath); vm.UpdateIsFavorite(); });
+                    Add("お気に入りから解除", PackIconLucideKind.Minus, () => { _ = App.Stats.RecordAsync("Favorites.Remove"); mainVm.Favorites.RemovePath(first.FullPath); vm.UpdateIsFavorite(); });
                 else
                     Add("お気に入りに追加", PackIconLucideKind.Star, () => _ = mainVm.Favorites.AddPathWithDialogAndHighlightAsync(first.FullPath));
                 if (IsConvertibleToPdf(first.FullPath))

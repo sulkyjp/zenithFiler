@@ -13,6 +13,7 @@
     "SidebarColor": "#F8F8F8",                         // わずかに明度を下げ、メイン領域との境界を明確化
     "HeaderColor": "#FFFFFF",
     "TitleBarColor": "#1A1A1A",                        // 純黒よりわずかに柔らかい黒で高級感を演出
+    "TitleBarTextColor": "#FFFFFF",                    // タイトルバーの文字・ボタン色
     "BorderColor": "#D0D0D0",                          // 境界線を少し濃くし、骨格を強調
     "PrimaryTextColor": "#000000",
     "SecondaryTextColor": "#444444",                   // #666666から濃くし、補足情報の読みやすさを改善
@@ -24,7 +25,10 @@
     "TabSeparatorColor": "#D0D0D0",
     "TabHoverColor": "#F0F0F0",
     "ToolbarSeparatorColor": "#444444",
-    "TreeLineColor": "#BBBBBB"                         // 視認性向上のため少し濃く調整
+    "TreeLineColor": "#BBBBBB",                         // 視認性向上のため少し濃く調整
+    "PopupBackgroundColor": "#FFFFFF",                 // フローティングポップアップの背景色
+    "PopupTextColor": "#000000",                       // ポップアップ内のテキスト色
+    "PopupHoverBackgroundColor": "#000000"            // ポップアップリスト項目のホバー背景色
   },
 
   "List": {
@@ -35,7 +39,11 @@
     "OptionSelectedColor": "#D0D0D0",                  // #333333から変更。黒文字が最も読みやすいグレーに
     "OptionSelectedHoverColor": "#C0C0C0",             // ホバー時も黒文字を維持できる濃度
     "CheckboxHoverColor": "#F0F0F0",
-    "CheckedHoverAccentColor": "#1A1A1A"
+    "CheckedHoverAccentColor": "#1A1A1A",
+    "FilterActiveIndicatorColor": "#004488",           // アクティブフィルターのインジケーター色
+    "FilterChipBackgroundColor": "#FFFFFF",            // フィルターチップのデフォルト背景色
+    "FilterChipBorderColor": "#444444",                // フィルターチップの枠線色
+    "FilterToggleCheckedBackgroundColor": "#D0E0F0"   // フィルタートグルのチェック済み背景色
   },
 
   "Search": {
@@ -48,7 +56,8 @@
     "AccentColor": "#004488",                          // 純黒と区別するため、万年筆の「ブルーブラック」を採用
     "ErrorTextColor": "#B22222",                       // 白背景で目に刺さらない深い赤
     "DestructiveHoverBackgroundColor": "#440000",
-    "DestructiveIconColor": "#CC0000"
+    "DestructiveIconColor": "#CC0000",
+    "SuccessColor": "#2E7D32"                         // 成功・有効状態のアイコン色
   },
 
   "ContextMenu": {
@@ -72,6 +81,10 @@
     "TelemetryBackgroundColor": "#F2000000",
     "TelemetryBorderColor": "#22000000",
     "TelemetryTitleColor": "#FFFFFF",
-    "TelemetryValueColor": "#FFFFFF"
+    "TelemetryValueColor": "#FFFFFF",
+    "PreviewPanelBorderColor": "#D0D0D0",              // クイックプレビューパネルの枠線色
+    "PreviewPdfBackgroundColor": "#F5F5F5",            // PDFプレビューのキャンバス背景色
+    "IndexStatusNormalColor": "#B8860B",               // インデックス状態テキストの通常色
+    "IndexStatusWarmColor": "#CD853F"                 // インデックスの日時・件数バッジ色
   }
 }
