@@ -26,8 +26,8 @@ jobs:
 
       - name: Restore
         run: |
-          dotnet restore ZenithFiler.csproj
-          dotnet restore ZenithDocViewer/ZenithDocViewer.csproj
+          dotnet restore ZenithFiler.csproj -r win-x64
+          dotnet restore ZenithDocViewer/ZenithDocViewer.csproj -r win-x64
 
       - name: Publish
         run: dotnet publish ZenithFiler.csproj -c Release -r win-x64 --self-contained -o publish
