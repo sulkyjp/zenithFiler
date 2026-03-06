@@ -122,6 +122,14 @@ namespace ZenithFiler
         [ObservableProperty]
         private int _indexFullRebuildCooldownHours = 24;
 
+        /// <summary>CPU 負荷が低い時のみインデックスを更新するか。</summary>
+        [ObservableProperty]
+        private bool _indexIdleOnlyExecution = false;
+
+        /// <summary>アイドル判定の CPU 使用率閾値（%）。</summary>
+        [ObservableProperty]
+        private int _indexIdleCpuThreshold = 20;
+
         /// <summary>テーマ一覧。</summary>
         public ObservableCollection<ThemeInfo> AvailableThemes { get; } = new();
 
@@ -229,6 +237,7 @@ namespace ZenithFiler
             ThemesView.SortDescriptions.Add(new SortDescription(nameof(ThemeInfo.CategorySortOrder), ListSortDirection.Ascending));
             ThemesView.SortDescriptions.Add(new SortDescription(nameof(ThemeInfo.StandardFirstSortKey), ListSortDirection.Ascending));
             ThemesView.SortDescriptions.Add(new SortDescription(nameof(ThemeInfo.Name), ListSortDirection.Ascending));
+            SubscribeUpdateService();
         }
 
         /// <summary>設定読み込み時にホームパスを反映する。</summary>
@@ -300,6 +309,8 @@ namespace ZenithFiler
             IndexFreshnessAggressive = s.FreshnessAggressive;
             IndexFreshnessWarnStale = s.FreshnessWarnStale;
             IndexFullRebuildCooldownHours = s.FullRebuildCooldownHours is 6 or 12 or 24 ? s.FullRebuildCooldownHours : 24;
+            IndexIdleOnlyExecution = s.IdleOnlyExecution;
+            IndexIdleCpuThreshold = s.IdleCpuThreshold;
         }
 
         /// <summary>現在のインデックス設定を DTO として返す。</summary>
@@ -314,7 +325,9 @@ namespace ZenithFiler
                 NetworkLowPriority = IndexNetworkLowPriority,
                 FreshnessAggressive = IndexFreshnessAggressive,
                 FreshnessWarnStale = IndexFreshnessWarnStale,
-                FullRebuildCooldownHours = IndexFullRebuildCooldownHours
+                FullRebuildCooldownHours = IndexFullRebuildCooldownHours,
+                IdleOnlyExecution = IndexIdleOnlyExecution,
+                IdleCpuThreshold = IndexIdleCpuThreshold
             };
         }
 
@@ -691,6 +704,140 @@ namespace ZenithFiler
             WindowSettings.SaveGeneralSettingsOnly(SingleClickOpenFolder, ConfirmDelete, RestoreTabsOnStartup, value);
         }
 
+        // ─── General 追加 (v0.20) ───
+
+        /// <summary>タイトルバーにパスを表示するか。</summary>
+        [ObservableProperty]
+        private bool _showPathInTitleBar = true;
+
+        partial void OnShowPathInTitleBarChanged(bool value)
+        {
+            WindowSettings.SetShowPathInTitleBarRuntime(value);
+            _main.RefreshWindowTitle();
+            WindowSettings.SaveShowPathInTitleBarOnly(value);
+        }
+
+        /// <summary>ファイル名に拡張子を表示するか。</summary>
+        [ObservableProperty]
+        private bool _showFileExtensions = true;
+
+        partial void OnShowFileExtensionsChanged(bool value)
+        {
+            WindowSettings.SetShowFileExtensionsRuntime(value);
+            _main.RefreshAllDisplayNames();
+            WindowSettings.SaveShowFileExtensionsOnly(value);
+        }
+
+        /// <summary>隠しファイル・フォルダを表示するか。</summary>
+        [ObservableProperty]
+        private bool _showHiddenFiles = false;
+
+        partial void OnShowHiddenFilesChanged(bool value)
+        {
+            WindowSettings.SetShowHiddenFilesRuntime(value);
+            _main.RefreshAllPanes();
+            WindowSettings.SaveShowHiddenFilesOnly(value);
+        }
+
+        /// <summary>タスクトレイ常駐モード。</summary>
+        [ObservableProperty]
+        private bool _residentMode = false;
+
+        partial void OnResidentModeChanged(bool value)
+        {
+            WindowSettings.SetResidentModeRuntime(value);
+            App.TrayService?.SetVisible(value);
+            WindowSettings.SaveResidentModeOnly(value);
+        }
+
+        // ─── Auto Update ───
+
+        /// <summary>自動更新を有効にするか。</summary>
+        [ObservableProperty]
+        private bool _enableAutoUpdate = true;
+
+        /// <summary>更新ステータス表示テキスト。</summary>
+        [ObservableProperty]
+        private string _updateStatus = "";
+
+        /// <summary>新バージョンが利用可能か。</summary>
+        [ObservableProperty]
+        private bool _isUpdateAvailable = false;
+
+        /// <summary>ダウンロード完了で再起動可能か。</summary>
+        [ObservableProperty]
+        private bool _isUpdateReadyToRestart = false;
+
+        partial void OnEnableAutoUpdateChanged(bool value)
+        {
+            WindowSettings.SetAutoUpdateRuntime(value);
+            App.UpdateService?.SetEnabled(value);
+            WindowSettings.SaveAutoUpdateOnly(value);
+        }
+
+        /// <summary>手動で更新をチェックする。</summary>
+        public async Task CheckForUpdateAsync()
+        {
+            UpdateStatus = "更新を確認中...";
+            var (hasUpdate, version, error) = await (App.UpdateService?.CheckForUpdatesAsync()
+                ?? Task.FromResult<(bool, string?, string?)>((false, null, null)));
+
+            if (error != null)
+            {
+                UpdateStatus = $"チェック失敗: {error}";
+                return;
+            }
+
+            if (hasUpdate && version != null)
+            {
+                IsUpdateAvailable = true;
+                UpdateStatus = $"バージョン {version} が利用可能です";
+            }
+            else
+            {
+                IsUpdateAvailable = false;
+                UpdateStatus = "最新バージョンです";
+            }
+        }
+
+        /// <summary>ダウンロード→展開→再起動適用。</summary>
+        public async void DownloadAndApplyAsync()
+        {
+            if (App.UpdateService == null) return;
+
+            UpdateStatus = "ダウンロード中...";
+            var success = await App.UpdateService.DownloadAndExtractAsync(_main);
+            if (success)
+            {
+                UpdateStatus = "ダウンロード完了 — 再起動して適用できます";
+                IsUpdateReadyToRestart = true;
+            }
+            else
+            {
+                UpdateStatus = "ダウンロードに失敗しました";
+            }
+        }
+
+        /// <summary>UpdateService の StateChanged イベントを購読する。</summary>
+        public void SubscribeUpdateService()
+        {
+            if (App.UpdateService == null) return;
+            App.UpdateService.StateChanged += (_, _) =>
+            {
+                var svc = App.UpdateService;
+                if (svc.AvailableVersion != null && !IsUpdateAvailable)
+                {
+                    IsUpdateAvailable = true;
+                    UpdateStatus = $"バージョン {svc.AvailableVersion} が利用可能です";
+                }
+                if (svc.IsReadyToRestart && !IsUpdateReadyToRestart)
+                {
+                    IsUpdateReadyToRestart = true;
+                    UpdateStatus = "ダウンロード完了 — 再起動して適用できます";
+                }
+            };
+        }
+
         // ─── Search デフォルト ───
 
         /// <summary>新規タブ作成時のフォルダ先頭表示デフォルト。</summary>
@@ -737,6 +884,11 @@ namespace ZenithFiler
             _defaultSortProperty = s.DefaultSortProperty;
             _defaultSortDirection = s.DefaultSortDirection;
             _enableListAnimations = s.EnableListAnimations;
+            _showPathInTitleBar = s.ShowPathInTitleBar;
+            _showFileExtensions = s.ShowFileExtensions;
+            _showHiddenFiles = s.ShowHiddenFiles;
+            _residentMode = s.ResidentMode;
+            _enableAutoUpdate = s.AutoUpdate;
 #pragma warning restore MVVMTK0034
             OnPropertyChanged(nameof(EnableMicroAnimations));
             OnPropertyChanged(nameof(ListRowHeight));
@@ -748,6 +900,11 @@ namespace ZenithFiler
             OnPropertyChanged(nameof(DefaultSortProperty));
             OnPropertyChanged(nameof(DefaultSortDirection));
             OnPropertyChanged(nameof(EnableListAnimations));
+            OnPropertyChanged(nameof(ShowPathInTitleBar));
+            OnPropertyChanged(nameof(ShowFileExtensions));
+            OnPropertyChanged(nameof(ShowHiddenFiles));
+            OnPropertyChanged(nameof(ResidentMode));
+            OnPropertyChanged(nameof(EnableAutoUpdate));
         }
 
         // ── ペイン個別テーマ ──

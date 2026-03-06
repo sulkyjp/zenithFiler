@@ -9,7 +9,7 @@
     <ApplicationIcon>assets\app_icon2_1.ico</ApplicationIcon>
     <ApplicationTitle>ZenithFiler</ApplicationTitle>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>0.19.5</Version>
+    <Version>0.23.0</Version>
     <PublishDir>bin\$(Configuration)\$(TargetFramework)\$(RuntimeIdentifier)\ZenithFiler_v$(Version)\</PublishDir>
   </PropertyGroup>
 
@@ -60,6 +60,7 @@
     <PackageReference Include="VirtualizingWrapPanel" Version="2.3.2" />
     <PackageReference Include="WPF-UI" Version="4.2.0" />
     <PackageReference Include="WindowsAPICodePackShell" Version="8.0.14" />
+    <PackageReference Include="Hardcodet.NotifyIcon.Wpf" Version="1.1.0" />
     <PackageReference Include="Serilog" Version="4.3.1" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageReference Include="Serilog.Sinks.Async" Version="2.1.0" />
@@ -97,6 +98,11 @@
       <TargetPath>apps\MANUAL.md</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="EULA.md">
+      <Link>apps\EULA.md</Link>
+      <TargetPath>apps\EULA.md</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <!-- 標準テーマ JSON を出力フォルダの themes/ にコピー -->
@@ -105,6 +111,15 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+
+  <!-- コード署名（正式証明書取得後に有効化）
+  <PropertyGroup>
+    <SignAssembly>false</SignAssembly>
+  </PropertyGroup>
+  <Target Name="SignAfterPublish" AfterTargets="Publish" Condition="'$(SignAssembly)' == 'true'">
+    <Exec Command="powershell -ExecutionPolicy Bypass -File scripts\sign.ps1 -BinDir $(PublishDir)" />
+  </Target>
+  -->
 
   <!-- ビルド後に ZenithDocViewer を出力フォルダへコピー -->
   <!-- Debug: Build で多ファイル出力をコピー / Release: Publish で単一 EXE をコピー -->

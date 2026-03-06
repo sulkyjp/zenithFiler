@@ -307,35 +307,43 @@
                                         <TextBlock Text="起動時に前回のタブを復元する" TextWrapping="Wrap"/>
                                     </CheckBox>
                                     <TextBlock Text="オフにすると起動時にホームフォルダのみ表示します"
+                                               FontSize="11" Foreground="{DynamicResource SubTextBrush}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                                    <CheckBox IsChecked="{Binding AppSettings.ResidentMode, Mode=TwoWay}"
+                                              Margin="0,0,0,2" FontSize="12">
+                                        <TextBlock Text="常駐モード（トレイに最小化）" TextWrapping="Wrap"/>
+                                    </CheckBox>
+                                    <TextBlock Text="ウィンドウの×ボタンで閉じずにタスクトレイに常駐します"
                                                FontSize="11" Foreground="{DynamicResource SubTextBrush}" TextWrapping="Wrap" Margin="0,0,0,0"/>
                                 </StackPanel>
                             </Border>
 
-                            <!-- 通知 -->
+                            <!-- 表示 -->
                             <Border Width="400" Margin="0,0,20,20" Padding="16,14" CornerRadius="6"
                                     Background="{DynamicResource InputBackgroundBrush}"
                                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                                 <StackPanel>
-                                    <TextBlock Text="通知の表示時間" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                                    <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}"
-                                               TextWrapping="Wrap" Margin="0,0,0,10"
-                                               Text="ファイルのコピー・移動・削除の完了や、テーマ変更などの操作結果をステータスバーに表示する時間を設定します。短めにすると素早く消え、長めにすると読み逃しを防げます。"/>
-                                    <StackPanel Orientation="Horizontal">
-                                        <RadioButton GroupName="NotificationDurationDeck" Style="{StaticResource OptionRadioButton}" Margin="0,0,12,0"
-                                                    IsChecked="{Binding AppSettings.NotificationDurationMs, Mode=TwoWay, Converter={StaticResource IntEqualityToBool}, ConverterParameter=1500}">
-                                            <TextBlock Text="短め (1.5秒)" FontSize="12"/>
-                                        </RadioButton>
-                                        <RadioButton GroupName="NotificationDurationDeck" Style="{StaticResource OptionRadioButton}" Margin="0,0,12,0"
-                                                    IsChecked="{Binding AppSettings.NotificationDurationMs, Mode=TwoWay, Converter={StaticResource IntEqualityToBool}, ConverterParameter=3000}">
-                                            <TextBlock Text="標準 (3秒)" FontSize="12"/>
-                                        </RadioButton>
-                                        <RadioButton GroupName="NotificationDurationDeck" Style="{StaticResource OptionRadioButton}"
-                                                    IsChecked="{Binding AppSettings.NotificationDurationMs, Mode=TwoWay, Converter={StaticResource IntEqualityToBool}, ConverterParameter=5000}">
-                                            <TextBlock Text="長め (5秒)" FontSize="12"/>
-                                        </RadioButton>
-                                    </StackPanel>
+                                    <TextBlock Text="ファイル表示" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                                    <CheckBox IsChecked="{Binding AppSettings.ShowPathInTitleBar, Mode=TwoWay}"
+                                              Margin="0,0,0,2" FontSize="12">
+                                        <TextBlock Text="タイトルバーにフォルダパスを表示する" TextWrapping="Wrap"/>
+                                    </CheckBox>
+                                    <TextBlock Text="オフにするとアプリ名のみ表示します"
+                                               FontSize="11" Foreground="{DynamicResource SubTextBrush}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                                    <CheckBox IsChecked="{Binding AppSettings.ShowFileExtensions, Mode=TwoWay}"
+                                              Margin="0,0,0,2" FontSize="12">
+                                        <TextBlock Text="ファイルの拡張子を表示する" TextWrapping="Wrap"/>
+                                    </CheckBox>
+                                    <TextBlock Text="オフにするとファイル名から拡張子を隠します"
+                                               FontSize="11" Foreground="{DynamicResource SubTextBrush}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                                    <CheckBox IsChecked="{Binding AppSettings.ShowHiddenFiles, Mode=TwoWay}"
+                                              Margin="0,0,0,2" FontSize="12">
+                                        <TextBlock Text="隠しファイル・フォルダを表示する" TextWrapping="Wrap"/>
+                                    </CheckBox>
+                                    <TextBlock Text="Windows の隠し属性が設定されたファイルを表示します"
+                                               FontSize="11" Foreground="{DynamicResource SubTextBrush}" TextWrapping="Wrap" Margin="0,0,0,0"/>
                                 </StackPanel>
                             </Border>
+
                         </WrapPanel>
                     </ScrollViewer>
 
@@ -432,7 +440,8 @@
                     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                                   Padding="0"
                                   Visibility="{Binding AppSettings.ActiveCategory, Converter={StaticResource EnumEqualityToVis}, ConverterParameter={x:Static local:SettingsCategory.Index}}">
-                        <WrapPanel Margin="24,20" Orientation="Horizontal">
+                        <StackPanel Margin="24,20">
+                        <WrapPanel Orientation="Horizontal">
                             <!-- 更新タイミング -->
                             <Border Width="400" Margin="0,0,20,20" Padding="16,14" CornerRadius="6"
                                     Background="{DynamicResource InputBackgroundBrush}"
@@ -513,6 +522,34 @@
                                             <TextBlock Text="24時間" FontSize="12"/>
                                         </RadioButton>
                                     </StackPanel>
+                                    <!-- アイドル時実行 -->
+                                    <CheckBox IsChecked="{Binding AppSettings.IndexIdleOnlyExecution, Mode=TwoWay}"
+                                              Margin="0,12,0,6" FontSize="12">
+                                        <TextBlock Text="CPU 負荷が低い時のみインデックスを更新する" TextWrapping="Wrap"/>
+                                    </CheckBox>
+                                    <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}" TextWrapping="Wrap" Margin="0,0,0,8">
+                                        <TextBlock.Text>
+                                            <MultiBinding StringFormat="CPU 使用率が {0}% 以下の時にのみ実行します">
+                                                <Binding Path="AppSettings.IndexIdleCpuThreshold"/>
+                                            </MultiBinding>
+                                        </TextBlock.Text>
+                                    </TextBlock>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,0"
+                                                IsEnabled="{Binding AppSettings.IndexIdleOnlyExecution}">
+                                        <TextBlock Text="CPU 閾値:" FontSize="11" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                        <RadioButton GroupName="IndexIdleCpuThresholdDeck" Style="{StaticResource OptionRadioButton}" Margin="0,0,8,0"
+                                                    IsChecked="{Binding AppSettings.IndexIdleCpuThreshold, Mode=TwoWay, Converter={StaticResource IntEqualityToBool}, ConverterParameter=10}">
+                                            <TextBlock Text="10%" FontSize="12"/>
+                                        </RadioButton>
+                                        <RadioButton GroupName="IndexIdleCpuThresholdDeck" Style="{StaticResource OptionRadioButton}" Margin="0,0,8,0"
+                                                    IsChecked="{Binding AppSettings.IndexIdleCpuThreshold, Mode=TwoWay, Converter={StaticResource IntEqualityToBool}, ConverterParameter=20}">
+                                            <TextBlock Text="20%" FontSize="12"/>
+                                        </RadioButton>
+                                        <RadioButton GroupName="IndexIdleCpuThresholdDeck" Style="{StaticResource OptionRadioButton}" Margin="0,0,0,0"
+                                                    IsChecked="{Binding AppSettings.IndexIdleCpuThreshold, Mode=TwoWay, Converter={StaticResource IntEqualityToBool}, ConverterParameter=30}">
+                                            <TextBlock Text="30%" FontSize="12"/>
+                                        </RadioButton>
+                                    </StackPanel>
                                 </StackPanel>
                             </Border>
 
@@ -535,6 +572,93 @@
                                 </StackPanel>
                             </Border>
                         </WrapPanel>
+
+                        <!-- アイテム別設定一覧 -->
+                        <Border Margin="0,4,0,0" Padding="16,14" CornerRadius="6"
+                                Background="{DynamicResource InputBackgroundBrush}"
+                                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                            <StackPanel>
+                                <TextBlock Text="アイテム別設定一覧" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,10"/>
+
+                                <!-- ヘッダー行 -->
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="36"/>
+                                        <ColumnDefinition Width="180"/>
+                                        <ColumnDefinition Width="100"/>
+                                        <ColumnDefinition Width="36"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="フォルダ" FontSize="11" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource SubTextBrush}"/>
+                                    <TextBlock Grid.Column="1" Text="" FontSize="11"/>
+                                    <TextBlock Grid.Column="2" Text="スケジュール" FontSize="11" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource SubTextBrush}"/>
+                                    <TextBlock Grid.Column="3" Text="更新方式" FontSize="11" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource SubTextBrush}"/>
+                                    <TextBlock Grid.Column="4" Text="" FontSize="11"/>
+                                </Grid>
+
+                                <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,0,0,4"/>
+
+                                <!-- 空メッセージ -->
+                                <TextBlock Text="インデックス対象フォルダが登録されていません"
+                                           FontSize="11" Foreground="{DynamicResource SubTextBrush}"
+                                           Margin="0,8,0,8" HorizontalAlignment="Center">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IndexSearchSettings.Items.Count}" Value="0">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+
+                                <!-- アイテム行 -->
+                                <ItemsControl ItemsSource="{Binding IndexSearchSettings.Items}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type local:IndexSearchTargetItemViewModel}">
+                                            <Border Padding="0,5" Cursor="Hand"
+                                                    Background="Transparent"
+                                                    MouseLeftButtonDown="IndexSummaryRow_MouseLeftButtonDown">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="36"/>
+                                                        <ColumnDefinition Width="180"/>
+                                                        <ColumnDefinition Width="100"/>
+                                                        <ColumnDefinition Width="36"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Grid.Column="0" Text="{Binding DisplayName}" FontSize="12"
+                                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                                               ToolTip="{Binding Path}"/>
+                                                    <icon:PackIconLucide Grid.Column="1" Kind="Lock" Width="12" Height="12"
+                                                                         VerticalAlignment="Center" HorizontalAlignment="Center"
+                                                                         Foreground="{DynamicResource SubTextBrush}"
+                                                                         Visibility="{Binding IsLocked, Converter={StaticResource BoolToVis}}"/>
+                                                    <TextBlock Grid.Column="2" Text="{Binding ScheduleDisplayText}" FontSize="11"
+                                                               VerticalAlignment="Center" Foreground="{DynamicResource SubTextBrush}"/>
+                                                    <TextBlock Grid.Column="3" Text="{Binding UpdateModeDisplayText}" FontSize="11"
+                                                               VerticalAlignment="Center" Foreground="{DynamicResource SubTextBrush}"/>
+                                                    <Button Grid.Column="4" Padding="4" Cursor="Hand" IsTabStop="False"
+                                                            Style="{StaticResource IconButton}"
+                                                            ToolTip="詳細設定を開く"
+                                                            Command="{Binding DataContext.IndexSearchSettings.OpenItemSettingsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            CommandParameter="{Binding}">
+                                                        <icon:PackIconLucide Kind="Settings" Width="12" Height="12"
+                                                                             Foreground="{DynamicResource SubTextBrush}"/>
+                                                    </Button>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+                        </StackPanel>
                     </ScrollViewer>
 
                     <!-- ══ Backup ══ -->
@@ -1107,7 +1231,7 @@
                                                                     <Setter TargetName="CategoryGroupBorder" Property="BorderThickness" Value="2"/>
                                                                     <Setter TargetName="CategoryGroupBorder" Property="Effect">
                                                                         <Setter.Value>
-                                                                            <DropShadowEffect ShadowDepth="0" BlurRadius="10" Color="#5B9CF6" Opacity="0.28"/>
+                                                                            <DropShadowEffect ShadowDepth="0" BlurRadius="10" Color="{DynamicResource AccentColor}" Opacity="0.28"/>
                                                                         </Setter.Value>
                                                                     </Setter>
                                                                 </MultiDataTrigger>
@@ -1127,7 +1251,7 @@
                                                                     <Setter TargetName="CategoryGroupBorder" Property="Background" Value="{DynamicResource SelectionBrush}"/>
                                                                     <Setter TargetName="CategoryGroupBorder" Property="Effect">
                                                                         <Setter.Value>
-                                                                            <DropShadowEffect ShadowDepth="0" BlurRadius="18" Color="#5B9CF6" Opacity="0.52"/>
+                                                                            <DropShadowEffect ShadowDepth="0" BlurRadius="18" Color="{DynamicResource AccentColor}" Opacity="0.52"/>
                                                                         </Setter.Value>
                                                                     </Setter>
                                                                 </DataTrigger>
@@ -1460,19 +1584,38 @@
                                 </StackPanel>
                             </Border>
 
-                            <!-- 起動時の通知 -->
+                            <!-- 通知 -->
                             <Border Width="400" Margin="0,0,20,20" Padding="16,14" CornerRadius="6"
                                     Background="{DynamicResource InputBackgroundBrush}"
                                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                                 <StackPanel>
-                                    <TextBlock Text="起動時の通知" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                                    <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}"
-                                               TextWrapping="Wrap" Margin="0,0,0,10"
-                                               Text="アプリ起動直後にテーマ適用結果をトースト通知で表示するか設定します。テーマをランダム・カテゴリモードで使用している場合に、どのテーマが適用されたか確認するのに役立ちます。"/>
+                                    <TextBlock Text="通知" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,4"/>
                                     <CheckBox IsChecked="{Binding AppSettings.ShowStartupToast, Mode=TwoWay}"
-                                              FontSize="12">
+                                              Margin="0,0,0,2" FontSize="12">
                                         <TextBlock Text="起動時のテーマ適用通知を表示する" TextWrapping="Wrap"/>
                                     </CheckBox>
+                                    <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,12"
+                                               Text="テーマをランダム・カテゴリモードで使用している場合に、どのテーマが適用されたか確認するのに役立ちます"/>
+                                    <TextBlock Text="表示時間" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,4"
+                                               Foreground="{DynamicResource SubTextBrush}"/>
+                                    <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,8"
+                                               Text="コピー・移動・削除の完了やテーマ変更などの通知をステータスバーに表示する時間"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <RadioButton GroupName="NotificationDurationDeck" Style="{StaticResource OptionRadioButton}" Margin="0,0,12,0"
+                                                    IsChecked="{Binding AppSettings.NotificationDurationMs, Mode=TwoWay, Converter={StaticResource IntEqualityToBool}, ConverterParameter=1500}">
+                                            <TextBlock Text="短め (1.5秒)" FontSize="12"/>
+                                        </RadioButton>
+                                        <RadioButton GroupName="NotificationDurationDeck" Style="{StaticResource OptionRadioButton}" Margin="0,0,12,0"
+                                                    IsChecked="{Binding AppSettings.NotificationDurationMs, Mode=TwoWay, Converter={StaticResource IntEqualityToBool}, ConverterParameter=3000}">
+                                            <TextBlock Text="標準 (3秒)" FontSize="12"/>
+                                        </RadioButton>
+                                        <RadioButton GroupName="NotificationDurationDeck" Style="{StaticResource OptionRadioButton}"
+                                                    IsChecked="{Binding AppSettings.NotificationDurationMs, Mode=TwoWay, Converter={StaticResource IntEqualityToBool}, ConverterParameter=5000}">
+                                            <TextBlock Text="長め (5秒)" FontSize="12"/>
+                                        </RadioButton>
+                                    </StackPanel>
                                 </StackPanel>
                             </Border>
 
@@ -1625,7 +1768,7 @@
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate>
                                                         <TextBlock Text="{Binding ConflictWarning}" FontSize="11"
-                                                                   Foreground="#E53935" Margin="0,2,0,0"
+                                                                   Foreground="{DynamicResource ErrorTextBrush}" Margin="0,2,0,0"
                                                                    Visibility="{Binding ConflictWarning, Converter={StaticResource NonEmptyStringToVis}}"/>
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
@@ -1657,7 +1800,7 @@
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding AppSettings.IsFullLicense}" Value="True">
                                                         <Setter Property="Kind" Value="ShieldCheck"/>
-                                                        <Setter Property="Foreground" Value="#4CAF50"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
@@ -1756,7 +1899,7 @@
                                        Foreground="{DynamicResource TextBrush}"
                                        Margin="0,0,0,4"/>
                             <!-- バージョン -->
-                            <TextBlock Text="Version 0.17.0" FontSize="13"
+                            <TextBlock Text="{Binding MainVM.AppVersion, StringFormat=Version {0}}" FontSize="13"
                                        HorizontalAlignment="Center"
                                        Foreground="{DynamicResource SubTextBrush}"
                                        Margin="0,0,0,24"/>
@@ -1805,6 +1948,30 @@
                                     <TextBlock Grid.Row="2" Grid.Column="1" Text="© 2024-2026 K.AKASAKA" FontSize="12"
                                                Foreground="{DynamicResource TextBrush}"/>
                                 </Grid>
+                            </Border>
+                            <!-- 自動更新 -->
+                            <Border Background="{DynamicResource PanelBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                    CornerRadius="8" Padding="20,16" Margin="0,20,0,0">
+                                <StackPanel>
+                                    <CheckBox IsChecked="{Binding AppSettings.EnableAutoUpdate, Mode=TwoWay}"
+                                              Content="自動更新を有効にする"
+                                              Foreground="{DynamicResource TextBrush}" FontSize="13"
+                                              IsTabStop="False"/>
+                                    <DockPanel Margin="0,10,0,0">
+                                        <Button DockPanel.Dock="Right" Content="更新を確認"
+                                                x:Name="CheckUpdateBtn" Click="CheckUpdateBtn_Click"
+                                                MinHeight="28" Padding="12,4" Margin="8,0,0,0" IsTabStop="False"/>
+                                        <TextBlock Text="{Binding AppSettings.UpdateStatus}" FontSize="12"
+                                                   Foreground="{DynamicResource SubTextBrush}"
+                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                    </DockPanel>
+                                    <Button x:Name="ApplyUpdateBtn" Content="再起動して適用"
+                                            Click="ApplyUpdateBtn_Click"
+                                            Visibility="Collapsed"
+                                            MinHeight="30" Padding="16,4" Margin="0,12,0,0"
+                                            HorizontalAlignment="Center" IsTabStop="False"/>
+                                </StackPanel>
                             </Border>
                         </StackPanel>
                     </ScrollViewer>

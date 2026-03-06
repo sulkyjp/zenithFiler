@@ -167,6 +167,35 @@ namespace ZenithFiler
         }
     }
 
+    /// <summary>インデックスのアイテム別スケジュール設定（旧形式、マイグレーション用に残す）。</summary>
+    public class IndexScheduleDto
+    {
+        public string Path { get; set; } = string.Empty;
+        public List<DayOfWeek>? ScheduleDays { get; set; }  // null = 毎日
+        public int? ScheduleHour { get; set; }               // null = 制限なし（グローバル間隔に従う）
+    }
+
+    /// <summary>Per-Item のインデックス更新方式。</summary>
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public enum IndexItemUpdateMode
+    {
+        /// <summary>差分更新（増分）。新規・更新ファイルのみ追加。</summary>
+        Incremental,
+        /// <summary>フル再作成。既存インデックスを削除して再スキャン。</summary>
+        FullRebuild
+    }
+
+    /// <summary>インデックスのアイテム別詳細設定 DTO。スケジュール・ロック・更新方式を管理。</summary>
+    public class IndexItemSettingsDto
+    {
+        public string Path { get; set; } = string.Empty;
+        public List<DayOfWeek>? ScheduleDays { get; set; }  // null = 毎日
+        public int? ScheduleHour { get; set; }               // null = 制限なし
+        /// <summary>Per-Item 更新方式。null の場合はグローバル設定に従う。</summary>
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public IndexItemUpdateMode? UpdateMode { get; set; }
+    }
+
     /// <summary>インデックスの更新タイミング。負荷を抑えるためデフォルトは Interval。</summary>
     public enum IndexUpdateMode
     {
@@ -190,6 +219,11 @@ namespace ZenithFiler
         public bool FreshnessAggressive { get; set; } = false;
         public bool FreshnessWarnStale { get; set; } = true;
         public int FullRebuildCooldownHours { get; set; } = 24;
+
+        /// <summary>CPU 負荷が低い時のみインデックスを更新するか。</summary>
+        public bool IdleOnlyExecution { get; set; } = false;
+        /// <summary>アイドル判定の CPU 使用率閾値（%）。</summary>
+        public int IdleCpuThreshold { get; set; } = 20;
 
         /// <summary>ベストプラクティス（負荷控えめ）のデフォルトを返す。</summary>
         public static IndexSettings CreateDefaults() => new();
@@ -323,6 +357,32 @@ namespace ZenithFiler
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public ListSortDirection DefaultSortDirection { get; set; } = ListSortDirection.Ascending;
 
+        // ─── General 追加 (v0.20) ───
+        /// <summary>タイトルバーにアクティブペインのパスを表示するか。</summary>
+        public bool ShowPathInTitleBar { get; set; } = true;
+
+        /// <summary>ファイル名に拡張子を表示するか。</summary>
+        public bool ShowFileExtensions { get; set; } = true;
+
+        /// <summary>隠しファイル・フォルダを表示するか。</summary>
+        public bool ShowHiddenFiles { get; set; } = false;
+
+        /// <summary>ウィンドウを閉じた際にタスクトレイに常駐するか。</summary>
+        public bool ResidentMode { get; set; } = false;
+
+        // ─── Auto Update ───
+        /// <summary>GitHub Releases からの自動更新を有効にするか。</summary>
+        public bool AutoUpdate { get; set; } = true;
+
+        /// <summary>最終更新チェック日時（ISO 8601）。</summary>
+        public string? LastUpdateCheck { get; set; }
+
+        /// <summary>ユーザーがスキップしたバージョン。</summary>
+        public string? SkippedVersion { get; set; }
+
+        /// <summary>ユーザーが同意した EULA のバージョン。未同意時は空文字。</summary>
+        public string EulaAcceptedVersion { get; set; } = "";
+
         /// <summary>起動時テーマ適用トーストを表示するか。</summary>
         public bool ShowStartupToast { get; set; } = true;
 
@@ -378,6 +438,21 @@ namespace ZenithFiler
         private static bool _listAnimationsEnabled = true;
         public static bool ListAnimationsEnabled => _listAnimationsEnabled;
 
+        private static bool _showPathInTitleBar = true;
+        public static bool ShowPathInTitleBarEnabled => _showPathInTitleBar;
+
+        private static bool _showFileExtensions = true;
+        public static bool ShowFileExtensionsEnabled => _showFileExtensions;
+
+        private static bool _showHiddenFiles = false;
+        public static bool ShowHiddenFilesEnabled => _showHiddenFiles;
+
+        private static bool _residentMode = false;
+        public static bool ResidentModeEnabled => _residentMode;
+
+        private static bool _autoUpdate = true;
+        public static bool AutoUpdateEnabled => _autoUpdate;
+
         /// <summary>インスタンスプロパティの値を static フラグへ反映する。Load() 完了後に呼び出す。</summary>
         internal void ApplyStaticFlags()
         {
@@ -390,6 +465,11 @@ namespace ZenithFiler
             _defaultSortProperty = DefaultSortProperty;
             _defaultSortDirection = DefaultSortDirection;
             _listAnimationsEnabled = EnableListAnimations;
+            _showPathInTitleBar = ShowPathInTitleBar;
+            _showFileExtensions = ShowFileExtensions;
+            _showHiddenFiles = ShowHiddenFiles;
+            _residentMode = ResidentMode;
+            _autoUpdate = AutoUpdate;
         }
 
         // ─── Runtime setter メソッド（ViewModel から呼び出し）───
@@ -402,6 +482,17 @@ namespace ZenithFiler
         internal static void SetDefaultGroupFoldersFirstRuntime(bool v) => _defaultGroupFoldersFirst = v;
         internal static void SetDefaultSortPropertyRuntime(string v) => _defaultSortProperty = v;
         internal static void SetDefaultSortDirectionRuntime(ListSortDirection v) => _defaultSortDirection = v;
+        internal static void SetShowPathInTitleBarRuntime(bool v) => _showPathInTitleBar = v;
+        internal static void SetShowFileExtensionsRuntime(bool v) => _showFileExtensions = v;
+        internal static void SetShowHiddenFilesRuntime(bool v) => _showHiddenFiles = v;
+        internal static void SetResidentModeRuntime(bool v) => _residentMode = v;
+        internal static void SetAutoUpdateRuntime(bool v) => _autoUpdate = v;
+
+        /// <summary>インデックスのアイテム別スケジュール（旧形式）。マイグレーション用。新規保存には IndexItemSettings を使用。</summary>
+        public List<IndexScheduleDto>? IndexSchedules { get; set; }
+
+        /// <summary>インデックスのアイテム別詳細設定。スケジュール・更新方式を管理。null の場合は全パスがグローバル設定に従う。</summary>
+        public List<IndexItemSettingsDto>? IndexItemSettings { get; set; }
 
         /// <summary>カスタムキーバインド設定。null の場合はすべてデフォルト。</summary>
         public List<Models.KeyBindingDto>? CustomKeyBindings { get; set; }
@@ -471,6 +562,7 @@ namespace ZenithFiler
                 var json = File.ReadAllText(path);
                 var s = JsonSerializer.Deserialize<WindowSettings>(json, CreateJsonOptions());
                 if (s == null) return null;
+                s.MigrateIndexSchedulesToItemSettings();
                 s.EnsureIndexSettingsDefaults();
                 s.ApplyStaticFlags();
                 return s;
@@ -479,6 +571,20 @@ namespace ZenithFiler
             {
                 return null;
             }
+        }
+
+        /// <summary>旧 IndexSchedules → 新 IndexItemSettings へのマイグレーション。</summary>
+        private void MigrateIndexSchedulesToItemSettings()
+        {
+            if (IndexItemSettings != null || IndexSchedules == null || IndexSchedules.Count == 0) return;
+            IndexItemSettings = IndexSchedules.Select(s => new IndexItemSettingsDto
+            {
+                Path = s.Path,
+                ScheduleDays = s.ScheduleDays,
+                ScheduleHour = s.ScheduleHour,
+                UpdateMode = null
+            }).ToList();
+            IndexSchedules = null; // 旧形式をクリア
         }
 
         /// <summary>IndexSettings が null の場合にデフォルトを補完する。</summary>
@@ -768,6 +874,12 @@ namespace ZenithFiler
             });
         }
 
+        /// <summary>EULA 同意バージョンを保存する。</summary>
+        public static void SaveEulaAcceptedOnly(string version)
+        {
+            DebouncedSettingsSaver.ScheduleSave(s => s.EulaAcceptedVersion = version);
+        }
+
         /// <summary>ペイン個別テーマ名を保存する。</summary>
         public static void SavePaneThemeNames(string nav, string aPane, string bPane)
         {
@@ -776,6 +888,64 @@ namespace ZenithFiler
                 s.NavPaneThemeName = nav;
                 s.APaneThemeName   = aPane;
                 s.BPaneThemeName   = bPane;
+            });
+        }
+
+        /// <summary>タイトルバーのパス表示設定のみを保存する。</summary>
+        public static void SaveShowPathInTitleBarOnly(bool value)
+        {
+            DebouncedSettingsSaver.ScheduleSave(s => s.ShowPathInTitleBar = value);
+        }
+
+        /// <summary>拡張子表示設定のみを保存する。</summary>
+        public static void SaveShowFileExtensionsOnly(bool value)
+        {
+            DebouncedSettingsSaver.ScheduleSave(s => s.ShowFileExtensions = value);
+        }
+
+        /// <summary>隠しファイル表示設定のみを保存する。</summary>
+        public static void SaveShowHiddenFilesOnly(bool value)
+        {
+            DebouncedSettingsSaver.ScheduleSave(s => s.ShowHiddenFiles = value);
+        }
+
+        /// <summary>常駐モード設定のみを保存する。</summary>
+        public static void SaveResidentModeOnly(bool value)
+        {
+            DebouncedSettingsSaver.ScheduleSave(s => s.ResidentMode = value);
+        }
+
+        /// <summary>自動更新設定のみを保存する。</summary>
+        public static void SaveAutoUpdateOnly(bool value)
+        {
+            DebouncedSettingsSaver.ScheduleSave(s => s.AutoUpdate = value);
+        }
+
+        /// <summary>最終更新チェック日時のみを保存する。</summary>
+        public static void SaveLastUpdateCheckOnly(DateTime dt)
+        {
+            DebouncedSettingsSaver.ScheduleSave(s => s.LastUpdateCheck = dt.ToString("o"));
+        }
+
+        /// <summary>スキップバージョンのみを保存する。</summary>
+        public static void SaveSkippedVersionOnly(string? version)
+        {
+            DebouncedSettingsSaver.ScheduleSave(s => s.SkippedVersion = version);
+        }
+
+        /// <summary>インデックススケジュール設定のみを保存する（旧形式、後方互換）。</summary>
+        public static void SaveIndexSchedulesOnly(List<IndexScheduleDto>? schedules)
+        {
+            DebouncedSettingsSaver.ScheduleSave(s => s.IndexSchedules = schedules);
+        }
+
+        /// <summary>インデックスのアイテム別詳細設定のみを保存する。</summary>
+        public static void SaveIndexItemSettingsOnly(List<IndexItemSettingsDto>? itemSettings)
+        {
+            DebouncedSettingsSaver.ScheduleSave(s =>
+            {
+                s.IndexItemSettings = itemSettings;
+                s.IndexSchedules = null; // 旧形式をクリア
             });
         }
 

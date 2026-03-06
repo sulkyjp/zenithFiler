@@ -3,6 +3,175 @@
 
 # Zenith Filer - Version History
 
+## [0.23.0] - 2026-03-07 : GitHub API ベース自動アップデート機能
+
+### Added
+- **自動更新**: GitHub Releases API から新バージョンを自動検知し、ZIP ダウンロード → バッチスクリプトで上書き → 再起動までフル自動で行う `UpdateService` を追加
+- **自動更新設定**: About ページに「自動更新を有効にする」チェックボックスと「更新を確認」ボタンを追加
+- **更新適用 UI**: ダウンロード完了後に「再起動して適用」ボタンを表示し、ワンクリックで更新を適用
+- **定期チェック**: 起動 30 秒後に初回チェック、以後 4 時間間隔でバックグラウンドチェック
+- **GlowBar 進捗**: ダウンロード中は GlowBar でリアルタイム進捗表示
+- **`--updated` 引数**: アップデート適用後の再起動時にトースト通知で更新完了を表示
+- **設定永続化**: `AutoUpdate` / `LastUpdateCheck` / `SkippedVersion` を settings.json に保存
+- **リリーススクリプト**: `scripts/pack.ps1` でリリース ZIP を自動作成
+
+## [0.22.1] - 2026-03-07 : EULA 同意画面・コード署名基盤・About バージョン動的化
+
+### Added
+- **EULA**: 日本語シェアウェア向け使用許諾契約書（`EULA.md`）を追加
+- **EULA ダイアログ**: 初回起動時（およびバージョン更新時）に EULA 同意画面を表示。同意しない場合はアプリを終了
+- **コード署名**: 自己署名証明書の作成・EXE 署名・検証を行う PowerShell スクリプト（`scripts/sign.ps1`）を追加
+- **csproj**: EULA.md の配布設定、署名ターゲットのコメント付きテンプレートを追加
+
+### Changed
+- **About ページ**: バージョン表示をハードコードから `MainViewModel.AppVersion` へのバインディングに変更
+
+### Fixed
+- **About ページ**: バージョン番号が `0.17.0` のまま更新されていなかった問題を修正
+
+## [0.22.0] - 2026-03-06 : テーマ色指定の詳細化 — ハードコード色の DynamicResource 化
+
+### Added
+- **テーマシステム**: 12 個の新規テーマカラーキーを追加（PopupBackground/Text/Hover、FilterActiveIndicator、FilterChipBackground/Border、FilterToggleCheckedBackground、Success、PreviewPanelBorder、PreviewPdfBackground、IndexStatusNormal/Warm）
+- **全 20 テーマ JSON**: 新 12 キーをテーマ別に最適化した値で追加
+
+### Changed
+- **TabContentControl.xaml**: フィルタポップアップ・スコープ・サイズ・日付パネル内の約 40 箇所のハードコード色を DynamicResource に置換
+- **MainWindow.xaml**: Quick Preview、ステータスバー、テレメトリー、インデックス行の約 25 箇所を DynamicResource 化
+- **FilePaneControl.xaml**: タブ一覧ポップアップ・閉じるボタンの 8 箇所を DynamicResource 化
+- **RenameDialog**: ダイアログ全体（XAML + コードビハインド）の約 12 箇所を DynamicResource 化
+- **ZenithDialog**: static frozen brush を動的リソース参照に変更（テーマ連動アイコン色）
+- **ControlDeckView.xaml**: グロー DropShadowEffect・エラー表示・成功アイコンの 4 箇所を DynamicResource 化
+- **ProjectSetsView.xaml**: フッターボタンテキスト・ホバー背景の 5 箇所を DynamicResource 化
+- **MainWindow.xaml.cs**: ドロップハイライト・PDF ページ数テキストの 2 箇所をリソース参照に変更
+- **DragAdorner.cs**: 枠線色を BorderBrush リソース参照に変更
+
+### Fixed
+- **視認性**: ダークテーマでフィルタポップアップの黒文字が背景に溶け込んで読めない問題を修正
+- **視認性**: ライトテーマ以外で Quick Preview パネルのファイル名・補足テキストが見えない問題を修正
+- **視認性**: テーマ切替時にリネームダイアログ・ZenithDialog のテキスト色が追従しない問題を修正
+
+## [0.21.4] - 2026-03-06 : 起動安定性・UI レスポンス改善
+
+### Changed
+- **起動**: `OnStartup` を async 化し、`GetAwaiter().GetResult()` によるUIスレッドブロッキングを排除。テーマ設定抽出をメモリ上で完結するよう変更（`ReadThemeSettingsFromSettings` の sync File I/O を廃止）
+- **検索結果**: `SilentObservableCollection.AddRange` を追加し、検索結果のバッチ追加で CollectionChanged 発火を大幅削減（500件で500回→10回）
+- **検索結果**: `FilteredSearchResultCount` をキャッシュ化し、毎回の `Cast<object>().Count()` O(n) 走査を排除
+- **タブ切替**: `FilePaneViewModel.NotifyAllPropertiesChanged` を `OnPropertyChanged(string.Empty)` 1回に集約（8回→1回）
+- **レイアウト**: `LayoutUpdated` の常時購読を除去し、`DataContextChanged` に置換（不要な `UpdateColumnWidths` 連続発火を排除）
+- **キーバインド**: `Dispatcher.Invoke`（ブロッキング）を `Dispatcher.InvokeAsync`（非ブロッキング）に置換（MainWindow、TabContentControl）
+- **アイコン読込**: `DispatcherPriority.Normal` → `Background` に変更し、入力操作を優先。不要な `Task.Delay(30)` を削除
+- **パンくずリスト**: `Typeface` インスタンスを static キャッシュ化し、幅推定ごとの再生成を排除
+
+### Fixed
+- **ファイル削除**: `DeleteItems` で HWND を UI スレッドで事前取得し、`Task.Run` 内の `Dispatcher.Invoke` ブロッキングを排除
+- **インデックス**: 起動2秒後の `ConfigureIndexUpdate(null, ...)` が正しい設定を上書きしてインデックスを壊すバグを修正（二重呼び出しを削除）
+
+## [0.21.3] - 2026-03-06 : リソースリーク修正・終了時タスク管理改善
+
+### Fixed
+- **安定性**: ShellThumbnailService に IDisposable を実装し、アプリ終了時に STA スレッドと BlockingCollection を確実に解放するよう修正
+- **安定性**: App_Exit のシャットダウン順序を整備し、ShellThumbnailService の Dispose を追加（COM リソースの後始末を保証）
+- **安定性**: IndexService の Dispose で `_globalIndexingCts` が Cancel/Dispose されない問題を修正
+
+## [0.21.2] - 2026-03-06 : 7-zip コンテキストメニュー修正・内部リファクタリング
+
+### Fixed
+- **コンテキストメニュー**: 7-zip 等のシェル拡張メニュー項目をクリックしても実行されない問題を修正（Vanara の `CMINVOKECOMMANDINFOEX.lpVerbW` が String 型のため `SafeResourceId` が MAKEINTRESOURCE ではなく不正なポインタにマーシャリングされていた。`CMIC_MASK_UNICODE` を除去し `lpVerb`（ResourceId 型）のみ使用するよう変更）
+- **コンテキストメニュー**: `GetMenuItemText` の `MIIM_STRING` 定数が `0x80`（MIIM_BITMAP）になっていたバグを修正。メニュー項目テキストが文字化けし、削除判定のフォールバックが機能しない原因だった
+
+### Fixed
+- **検索バー**: ペイン幅が狭い場合にフィルタボタンが検索キーワード入力欄のスペースを圧迫する問題を修正（テキスト入力列に `MinWidth` を設定し、キーワード表示を最優先化）
+- **検索履歴**: ポップアップ幅が狭い場合に検索条件（プリセット・サイズ・日付）がキーワード表示を圧迫する問題を修正（キーワード列に `MinWidth`、条件列に `MaxWidth` を設定。条件表示を StackPanel から TextBlock+Run に変更し `TextTrimming` を有効化）
+
+### Changed
+- **ShellContextMenu リファクタリング**: GetCommandString の重複パターンを `TryGetCommandVerb`/`GetCommandStringCore` に統合、削除判定を `IsDeleteCommand` に集約、`GetMenuItemText` を再帰化（ハードコード3階層→深度制限付き再帰）、MIIM 定数を `NativeMethods` に統合して `CloudShellMenuService` と共有、デッドコード除去
+
+## [0.21.1] - 2026-03-06 : グローバルホットキーのカスタマイズ対応
+
+### Changed
+- **ショートカット**: 「アクティブペインにフォーカス」のショートカット変更がグローバルホットキー（トレイ復帰）にも反映されるように改善
+
+### Fixed
+- **トレイ復帰**: トレイ格納状態からグローバルホットキーでウィンドウが再表示されない問題を修正（`Hide()` 後に `Show()` が呼ばれていなかった）
+
+## [0.21.0] - 2026-03-06 : 検索通知の重複表示を根本修正
+
+### Fixed
+- **通知**: NotificationService を即時上書き方式に変更し、通知の重複表示を根本修正（pending 方式を廃止、同一メッセージ抑制 + タイマーリセットで即座に差し替え）
+- **検索通知**: 検索実行時にGlowBarステータステキストと通知メッセージが重複表示される問題を修正（GlowBarのテキスト表示を廃止しプログレスバーのみに統一、通知エリアをGlowBar状態から独立化、同一メッセージ通知時のタイマーリセット、HideStatusAfterDelayAsync のレース条件修正）
+
+## [0.20.9] - 2026-03-05 : ステータスバー通知の重複表示を抑制
+
+### Fixed
+- **通知**: 同一メッセージが連続してステータスバーに表示される問題を修正（表示中・pending ともに直前と同一メッセージを抑制）
+
+## [0.20.8] - 2026-03-05 : 設定カード名の明確化
+
+### Changed
+- **設定画面**: 基本設定ページの「表示」カード名を「ファイル表示」に変更し、表示ページとの区別を明確化
+
+## [0.20.7] - 2026-03-05 : 通知設定を表示ページに統合
+
+### Changed
+- **設定画面**: 「通知の表示時間」を基本設定ページから表示ページへ移動し、「起動時の通知」と統合した「通知」カードにまとめた
+
+## [0.20.6] - 2026-03-05 : Ctrl+終了で常駐モードバイパス
+
+### Added
+- **常駐モード即終了**: Ctrl キーを押しながら Alt+F4 または × ボタンを押すと、常駐モードが有効でもトレイに隠れずに即座にアプリを終了できるように
+
+## [0.20.5] - 2026-03-05 : インデックス スケジュール実行バグ修正
+
+### Fixed
+- **インデックス スケジュール**: アイテム別スケジュール（曜日・時刻）設定が実際には無視されるバグを修正（`ConfigureIndexUpdate` に `itemSettings` が渡されていなかった）
+
+## [0.20.4] - 2026-03-05 : パンくずリスト表示不具合の修正
+
+### Fixed
+- **パンくずリスト**: フォルダ名が表示されない不具合を修正（XAML バインディングが存在しないプロパティを参照していた）
+
+## [0.20.3] - 2026-03-05 : インデックスアイテム別設定サマリーテーブル
+
+### Added
+- **インデックスアイテム別設定サマリーテーブル**: Control Deck › インデックス設定ページの最下部に、登録済みアイテムの設定一覧テーブルを追加。フォルダ名・ロック状態・スケジュール・更新方式を俯瞰可能に
+- 行ダブルクリックまたは⚙ボタンで既存の詳細設定ポップアップを直接起動し、OK で即時反映
+
+## [0.20.2] - 2026-03-05 : インデックスアイテム別詳細設定ポップアップ
+
+### Added
+- **インデックスアイテム別詳細設定ポップアップ**: 右クリック「詳細設定...」から専用ダイアログを表示。スケジュール（曜日・時刻）・ロック（アーカイブ）・更新方式（グローバル/差分/フル再作成）を一箇所で管理可能に
+- **Per-Item 更新方式（IndexItemUpdateMode）**: アイテムごとに差分更新・フル再作成を選択可能。未設定時はグローバル設定に従う
+- **IndexScheduleDto → IndexItemSettingsDto マイグレーション**: 旧スケジュール設定から新詳細設定への自動変換
+
+### Changed
+- **コンテキストメニュー簡素化**: スケジュール設定サブメニュー（曜日・時刻の多階層メニュー）を削除し、「詳細設定...」1項目に集約。操作性を改善
+- **IndexService**: 定期更新時に Per-Item UpdateMode をチェックし、FullRebuild 指定のアイテムは削除+再スキャン、Incremental は差分更新にルーティング
+
+## [0.20.1] - 2026-03-05 : インデックスアイテム別スケジュール設定 UI 追加
+
+### Added
+- **インデックスアイテム別スケジュール設定 UI**: インデックス対象フォルダの右クリックメニューに「スケジュール設定」サブメニューを追加。曜日チェック（月～日）・時刻選択（3時間刻み 8段階）・リセットを GUI から操作可能に
+- **スケジュール設定インジケーター**: カスタムスケジュールが設定されたアイテムにカレンダーアイコンを表示。ToolTip でスケジュール内容を確認可能
+
+## [0.20.0] - 2026-03-05 : 設定オプション拡充（基本設定 4 項目 + インデックス設定 2 項目）
+
+### Added
+- **タイトルバーのパス表示切替**: 基本設定 › 表示で、タイトルバーにフォルダパスを表示するかを選択可能に（デフォルト: ON）
+- **ファイル拡張子の表示切替**: 基本設定 › 表示で、ファイル名の拡張子表示/非表示を切替可能に（デフォルト: ON）。ToolTip ではフルネームを表示
+- **隠しファイルの表示切替**: 基本設定 › 表示で、Windows の隠し属性ファイル・フォルダの表示/非表示を切替可能に（デフォルト: OFF）
+- **常駐モード（タスクトレイ）**: 基本設定 › 操作で、ウィンドウの×ボタンでトレイに最小化する常駐モードを追加（デフォルト: OFF）。トレイアイコンのダブルクリックで復帰、右クリック「終了」で完全終了
+- **インデックスのアイテム別スケジュール**: インデックス対象フォルダごとに更新曜日・時刻を個別設定可能に。未設定のフォルダはグローバルの更新間隔に従う
+- **CPU アイドル時のみインデックス更新**: インデックス設定 › パフォーマンスと負荷で、CPU 使用率が閾値以下の時にのみインデックスを更新するオプションを追加（閾値: 10%/20%/30% から選択）
+
+## [0.19.6] - 2026-03-05 : タイトルバー文字色テーマ連動
+
+### Changed
+- **タイトルバー文字色・ボタン色がテーマに連動**: `TitleBarTextColor` を新設し、タイトルバーのテキスト・ウィンドウ制御ボタン（ー □ ×）の色がテーマごとに自動切替。全20テーマに世界観に合った個別色を設定
+
+### Fixed
+- **テーマ切替時にタイトルバー文字色が反映されない不具合を修正**: `ThemeBaseColors` に `TitleBarTextColor` プロパティが未定義だったため、JSONデシリアライズ時に値が無視されていた問題を修正
+
 ## [0.19.5] - 2026-03-05 : 内部リファクタリング・パフォーマンス改善
 
 ### Changed

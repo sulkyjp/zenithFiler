@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -56,6 +57,10 @@ namespace ZenithFiler
         private static readonly Lazy<Services.KeyBindingService> _keyBindingService = new(() => new Services.KeyBindingService());
         public static Services.KeyBindingService KeyBindings => _keyBindingService.Value;
 
+        public static Services.TrayIconService? TrayService { get; private set; }
+        public static Services.CpuIdleService? CpuIdleService { get; private set; }
+        public static Services.UpdateService? UpdateService { get; private set; }
+
         private static CancellationTokenSource? _gcCts;
         private const int GcDelaySeconds = 60;
         private const int LohCompactionDelaySeconds = 300;
@@ -63,7 +68,6 @@ namespace ZenithFiler
         // --- Main() からの引き継ぎ（WPF 初期化前に開始した処理の結果） ---
         private SplashScreen? _firstLaunchSplash;
         private bool _isFirstLaunch;
-        private string _settingsPath = string.Empty;
         private Task<WindowSettings>? _settingsTask;
 
         /// <summary>バックグラウンドで実行中の起動時初期化タスク。Window_Loaded から await して完了を待機できる。</summary>
@@ -112,13 +116,12 @@ namespace ZenithFiler
             var app = new App();
             app._firstLaunchSplash = splash;
             app._isFirstLaunch = isFirstLaunch;
-            app._settingsPath = settingsPath;
             app._settingsTask = settingsTask;
             app.InitializeComponent();
             app.Run();
         }
 
-        protected override void OnStartup(StartupEventArgs e)
+        protected override async void OnStartup(StartupEventArgs e)
         {
             // 0. 多重起動チェック（設定ファイル・DB 読み込みに先立ち最速で実行）
             _singleInstanceMutex = new Mutex(true, SingleInstanceMutexName, out bool createdNew);
@@ -137,14 +140,18 @@ namespace ZenithFiler
             // 基盤フォルダの準備はバックグラウンドへ（UI スレッドの I/O を排除）
             _ = Task.Run(EnsureAppFolders);
             _ = Services.SettingsBackupService.CleanupOldBackupsAsync(30);
-            // テーマ設定のパース（ファイルI/O なし — JSON は設定 Task で読み込み済み）
-            var ts = ReadThemeSettingsFromSettings(_settingsPath);
+
+            // 設定を await で取得（Main() で開始済み — ブロッキング排除）
+            WindowSettings preloadedSettings = await _settingsTask!;
+
+            // テーマ設定をメモリ上の設定オブジェクトから抽出（ファイル I/O なし）
+            var ts = ExtractThemeStartupSettings(preloadedSettings);
             StartupSavedThemeName = ts.SavedTheme;
             StartupPaneThemes = (ts.NavPane, ts.APane, ts.BPane);
             string themeToApply = ts.SavedTheme;
 
             // テーマ関連のファイルI/Oをバックグラウンドで並列実行（UIスレッドのブロック削減）
-            Task<string>? autoThemeTask = null;
+            Task<string> autoThemeTask;
             if (ts.Mode == "Auto")
             {
                 // Auto モード: テーマスキャン + ランダム選択 + JSON事前読み込み を一括で実行
@@ -176,13 +183,10 @@ namespace ZenithFiler
             // テーマ JSON のバックグラウンド読み込みと並列実行
             LoadHeavyResources();
 
-            // バックグラウンド テーマ I/O の完了を待機
-            if (autoThemeTask != null)
-            {
-                themeToApply = autoThemeTask.GetAwaiter().GetResult();
-                if (themeToApply != ts.SavedTheme)
-                    _ = Task.Run(() => WindowSettings.SaveThemeOnly(themeToApply));
-            }
+            // バックグラウンド テーマ I/O の完了を await（ブロッキング排除）
+            themeToApply = await autoThemeTask;
+            if (themeToApply != ts.SavedTheme)
+                _ = Task.Run(() => WindowSettings.SaveThemeOnly(themeToApply));
 
             ThemeService.LoadAndApply(Current.Resources, themeToApply);
             StartupAppliedThemeName = themeToApply;
@@ -217,8 +221,23 @@ namespace ZenithFiler
                 ShutdownMode = ShutdownMode.OnLastWindowClose;
             }
 
-            // 設定を取得（Main() で開始済み — 完了待機）
-            WindowSettings preloadedSettings = _settingsTask!.GetAwaiter().GetResult();
+            // EULA 同意チェック（バージョンごとに再表示）
+            var currentVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.0.0";
+            if (preloadedSettings.EulaAcceptedVersion != currentVersion)
+            {
+                ShutdownMode = ShutdownMode.OnExplicitShutdown;
+                var eulaDialog = new Views.EulaDialog();
+                if (eulaDialog.ShowDialog() != true)
+                {
+                    Shutdown();
+                    return;
+                }
+                WindowSettings.SaveEulaAcceptedOnly(currentVersion);
+                // DebouncedSaver のフラッシュを待つ（即座に settings.json に書き込む）
+                WindowSettings.FlushPendingSaves();
+                ShutdownMode = ShutdownMode.OnLastWindowClose;
+            }
+
             // 行高リソースを起動時設定から初期化（ListViewItem の MinHeight に DynamicResource で使用）
             Current.Resources["ListRowHeight"] = (double)preloadedSettings.ListRowHeight;
             // 一覧アニメーション時間リソースを初期化（ホバーフェード・スケール）
@@ -228,6 +247,27 @@ namespace ZenithFiler
             KeyBindings.ApplyCustomBindings(preloadedSettings.CustomKeyBindings);
 
             var mainWindow = new MainWindow(preloadedSettings);
+
+            // タスクトレイサービスの初期化
+            TrayService = new Services.TrayIconService(mainWindow);
+            TrayService.Initialize();
+
+            // CPU アイドル監視サービスの初期化
+            CpuIdleService = new Services.CpuIdleService();
+
+            // 自動更新サービスの初期化
+            UpdateService = new Services.UpdateService();
+            UpdateService.Initialize();
+
+            // --updated 引数処理（アップデート適用後の再起動時）
+            if (Environment.GetCommandLineArgs().Contains("--updated"))
+            {
+                var ver = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3);
+                Dispatcher.CurrentDispatcher.BeginInvoke(() =>
+                    Notification.Notify($"バージョン {ver} に更新しました"),
+                    DispatcherPriority.Loaded);
+                _ = Task.Run(() => UpdateService.CleanupTempFiles());
+            }
 
             // レンダリング準備が整った段階で Visible に切り替え、完成済みの画面を一発表示
             Dispatcher.CurrentDispatcher.BeginInvoke(new Action(() =>
@@ -247,25 +287,29 @@ namespace ZenithFiler
             // ShellNew レジストリスキャン（コンテキストメニューの「新規作成」サブメニュー用）
             _ = ShellNewService.InitializeAsync();
 
-            // 8. IndexService の初期化は起動 2 秒後に遅延実行（UIの応答性を優先）
-            _ = Task.Run(async () =>
-            {
-                await Task.Delay(2000);
-                IndexService.ConfigureIndexUpdate(null, () => new List<string>());
-            });
-
             base.OnStartup(e);
         }
 
         private void App_Exit(object sender, ExitEventArgs e)
         {
+            // 1. UI 系サービス（トレイアイコン除去）
+            TrayService?.Dispose();
+            CpuIdleService?.Dispose();
+            UpdateService?.Dispose();
+
+            // 2. ShellThumbnailService（STA スレッド停止 + COM 後始末）
+            if (ShellThumbnailService.IsCreated)
+                ShellThumbnailService.Instance.Dispose();
+
+            // 3. IndexService（Lucene ライター flush + CTS キャンセル）
             if (_indexService.IsValueCreated)
                 _indexService.Value.Dispose();
 
+            // 4. FileLogger を最後に（他サービスの Dispose 中のログを拾うため）
             if (_fileLogger.IsValueCreated)
                 _fileLogger.Value.Dispose();
 
-            // Mutex 解放（所有者のみ）
+            // 5. Mutex 解放（所有者のみ）
             if (_mutexOwned && _singleInstanceMutex != null)
             {
                 try { _singleInstanceMutex.ReleaseMutex(); } catch { }
@@ -328,34 +372,18 @@ namespace ZenithFiler
             string SavedTheme, string LastApplied,
             string NavPane, string APane, string BPane);
 
-        /// <summary>settings.json からテーマ関連フィールドを高速に取得する。フル Load を避けて起動を高速化。</summary>
-        private static ThemeStartupSettings ReadThemeSettingsFromSettings(string settingsPath)
+        /// <summary>読み込み済みの WindowSettings からテーマ関連フィールドを抽出する（ファイル I/O なし）。</summary>
+        private static ThemeStartupSettings ExtractThemeStartupSettings(WindowSettings s)
         {
-            string mode = "Personalize", sub = "All", last = "standard";
-            string? cat = null;
-            string navPane = string.Empty, aPane = string.Empty, bPane = string.Empty;
-            try
-            {
-                if (File.Exists(settingsPath))
-                {
-                    using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(settingsPath),
-                        new System.Text.Json.JsonDocumentOptions { CommentHandling = System.Text.Json.JsonCommentHandling.Skip });
-                    var r = doc.RootElement;
-                    // ThemeName を先読みし、SavedThemeName 未記録時のフォールバックとして使用（マイグレーション互換）
-                    if (r.TryGetProperty("ThemeName",         out var p)) last  = p.GetString() ?? last;
-                    string saved = last; // SavedThemeName がなければ ThemeName で代替
-                    if (r.TryGetProperty("CurrentThemeMode", out     p)) mode  = p.GetString() ?? mode;
-                    if (r.TryGetProperty("AutoSelectSubMode", out     p)) sub   = p.GetString() ?? sub;
-                    if (r.TryGetProperty("SelectedCategory",  out     p)) cat   = p.GetString();
-                    if (r.TryGetProperty("SavedThemeName",    out     p)) saved = p.GetString() ?? saved;
-                    if (r.TryGetProperty("NavPaneThemeName",  out     p)) navPane = p.GetString() ?? navPane;
-                    if (r.TryGetProperty("APaneThemeName",    out     p)) aPane   = p.GetString() ?? aPane;
-                    if (r.TryGetProperty("BPaneThemeName",    out     p)) bPane   = p.GetString() ?? bPane;
-                    return new(mode, sub, cat, saved, last, navPane, aPane, bPane);
-                }
-            }
-            catch { }
-            return new(mode, sub, cat, last, last, navPane, aPane, bPane);
+            string mode = s.CurrentThemeMode;
+            string sub = s.AutoSelectSubMode;
+            string? cat = s.SelectedCategory;
+            string last = s.ThemeName;
+            string saved = string.IsNullOrEmpty(s.SavedThemeName) ? last : s.SavedThemeName;
+            string navPane = s.NavPaneThemeName;
+            string aPane = s.APaneThemeName;
+            string bPane = s.BPaneThemeName;
+            return new(mode, sub, cat, saved, last, navPane, aPane, bPane);
         }
 
         /// <summary>プール内からランダムにテーマを選ぶ。前回と重複しないものを優先する。</summary>
