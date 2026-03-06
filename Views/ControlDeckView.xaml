@@ -20,6 +20,10 @@
         <local:IsCurrentPresetThemeConverter x:Key="IsCurrentPresetTheme"/>
         <local:NonEmptyStringToVisibilityConverter x:Key="NonEmptyStringToVis"/>
         <local:InverseBooleanConverter x:Key="InverseBool"/>
+        <local:ActionKeyToDisplayNameConverter x:Key="ActionKeyToDisplayName"/>
+        <local:ActionKeyToTriggerDescConverter x:Key="ActionKeyToTriggerDesc"/>
+        <local:PathToFileNameConverter x:Key="PathToFileName"/>
+        <local:BoolToUnderlineConverter x:Key="BoolToUnderline"/>
     </UserControl.Resources>
 
     <Grid>
@@ -76,6 +80,17 @@
                         </StackPanel>
                     </RadioButton>
                     <RadioButton GroupName="ControlDeckNav" Style="{StaticResource ControlDeckNavButton}"
+                                 IsChecked="{Binding AppSettings.ActiveCategory, Mode=TwoWay, Converter={StaticResource EnumEqualityToBool}, ConverterParameter={x:Static local:SettingsCategory.Shortcut}}">
+                        <StackPanel Orientation="Horizontal">
+                            <icon:PackIconLucide Kind="Keyboard" Width="14" Height="14"
+                                                 VerticalAlignment="Center" Margin="0,0,10,0"
+                                                 Foreground="{DynamicResource SubTextBrush}"/>
+                            <TextBlock Text="ショートカットキー" FontSize="13" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </RadioButton>
+                    <!-- セパレーター -->
+                    <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="8,8,8,4"/>
+                    <RadioButton GroupName="ControlDeckNav" Style="{StaticResource ControlDeckNavButton}"
                                  IsChecked="{Binding AppSettings.ActiveCategory, Mode=TwoWay, Converter={StaticResource EnumEqualityToBool}, ConverterParameter={x:Static local:SettingsCategory.Search}}">
                         <StackPanel Orientation="Horizontal">
                             <icon:PackIconLucide Kind="Search" Width="14" Height="14"
@@ -102,15 +117,6 @@
                             <TextBlock Text="リカバリ" FontSize="13" VerticalAlignment="Center"/>
                         </StackPanel>
                     </RadioButton>
-                    <RadioButton GroupName="ControlDeckNav" Style="{StaticResource ControlDeckNavButton}"
-                                 IsChecked="{Binding AppSettings.ActiveCategory, Mode=TwoWay, Converter={StaticResource EnumEqualityToBool}, ConverterParameter={x:Static local:SettingsCategory.Shortcut}}">
-                        <StackPanel Orientation="Horizontal">
-                            <icon:PackIconLucide Kind="Keyboard" Width="14" Height="14"
-                                                 VerticalAlignment="Center" Margin="0,0,10,0"
-                                                 Foreground="{DynamicResource SubTextBrush}"/>
-                            <TextBlock Text="ショートカットキー" FontSize="13" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </RadioButton>
                     <!-- セパレーター -->
                     <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="8,8,8,4"/>
                     <RadioButton GroupName="ControlDeckNav" Style="{StaticResource ControlDeckNavButton}"
@@ -120,6 +126,15 @@
                                                  VerticalAlignment="Center" Margin="0,0,10,0"
                                                  Foreground="{DynamicResource SubTextBrush}"/>
                             <TextBlock Text="ライセンス" FontSize="13" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </RadioButton>
+                    <RadioButton GroupName="ControlDeckNav" Style="{StaticResource ControlDeckNavButton}"
+                                 IsChecked="{Binding AppSettings.ActiveCategory, Mode=TwoWay, Converter={StaticResource EnumEqualityToBool}, ConverterParameter={x:Static local:SettingsCategory.Statistics}}">
+                        <StackPanel Orientation="Horizontal">
+                            <icon:PackIconLucide Kind="BarChart3" Width="14" Height="14"
+                                                 VerticalAlignment="Center" Margin="0,0,10,0"
+                                                 Foreground="{DynamicResource SubTextBrush}"/>
+                            <TextBlock Text="統計" FontSize="13" VerticalAlignment="Center"/>
                         </StackPanel>
                     </RadioButton>
                     <RadioButton GroupName="ControlDeckNav" Style="{StaticResource ControlDeckNavButton}"
@@ -177,6 +192,9 @@
                                         </DataTrigger>
                                         <DataTrigger Binding="{Binding AppSettings.ActiveCategory}" Value="{x:Static local:SettingsCategory.License}">
                                             <Setter Property="Text" Value="ライセンス"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding AppSettings.ActiveCategory}" Value="{x:Static local:SettingsCategory.Statistics}">
+                                            <Setter Property="Text" Value="利用統計"/>
                                         </DataTrigger>
                                         <DataTrigger Binding="{Binding AppSettings.ActiveCategory}" Value="{x:Static local:SettingsCategory.About}">
                                             <Setter Property="Text" Value="バージョン情報"/>
@@ -340,6 +358,12 @@
                                         <TextBlock Text="隠しファイル・フォルダを表示する" TextWrapping="Wrap"/>
                                     </CheckBox>
                                     <TextBlock Text="Windows の隠し属性が設定されたファイルを表示します"
+                                               FontSize="11" Foreground="{DynamicResource SubTextBrush}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                                    <CheckBox IsChecked="{Binding AppSettings.DownloadsSortByDate, Mode=TwoWay}"
+                                              Margin="0,0,0,2" FontSize="12">
+                                        <TextBlock Text="ダウンロードフォルダを更新日時で並べる" TextWrapping="Wrap"/>
+                                    </CheckBox>
+                                    <TextBlock Text="ダウンロードフォルダに移動した際、更新日時の新しい順に自動ソートします"
                                                FontSize="11" Foreground="{DynamicResource SubTextBrush}" TextWrapping="Wrap" Margin="0,0,0,0"/>
                                 </StackPanel>
                             </Border>
@@ -1881,6 +1905,163 @@
                                 </StackPanel>
                             </Border>
 
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- ═══ 利用統計 ═══ -->
+                    <ScrollViewer Visibility="{Binding AppSettings.ActiveCategory, Converter={StaticResource EnumEqualityToVis}, ConverterParameter={x:Static local:SettingsCategory.Statistics}}"
+                                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                  Padding="0">
+                        <StackPanel Margin="24,20">
+                            <Border Padding="16,14" CornerRadius="6"
+                                    Background="{DynamicResource InputBackgroundBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                <StackPanel>
+                                    <!-- ヘッダー行 + リセットボタン -->
+                                    <DockPanel Margin="0,0,0,10">
+                                        <Button DockPanel.Dock="Right" Content="リセット"
+                                                x:Name="ResetStatsBtn" Click="ResetStatsBtn_Click"
+                                                Style="{StaticResource TextButton}"
+                                                Padding="12,6" FontSize="12"
+                                                VerticalAlignment="Center"/>
+                                        <TextBlock Text="各機能の使用回数" FontSize="13" FontWeight="SemiBold"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource TextBrush}"/>
+                                    </DockPanel>
+                                    <!-- テーブルヘッダー -->
+                                    <Grid Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="70"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="機能" FontSize="11" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource SubTextBrush}"/>
+                                        <TextBlock Grid.Column="1" Text="カウント契機" FontSize="11" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource SubTextBrush}"/>
+                                        <TextBlock Grid.Column="2" Text="使用回数" FontSize="11" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource SubTextBrush}" TextAlignment="Right"/>
+                                    </Grid>
+                                    <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,0,0,4"/>
+                                    <!-- データ行 -->
+                                    <ItemsControl ItemsSource="{Binding AppSettings.StatItems}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Padding="0,5">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="120"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="70"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Text="{Binding ActionKey, Converter={StaticResource ActionKeyToDisplayName}}"
+                                                                   FontSize="12"
+                                                                   Foreground="{DynamicResource TextBrush}"
+                                                                   VerticalAlignment="Center"/>
+                                                        <TextBlock Grid.Column="1"
+                                                                   Text="{Binding ActionKey, Converter={StaticResource ActionKeyToTriggerDesc}}"
+                                                                   FontSize="11"
+                                                                   Foreground="{DynamicResource SubTextBrush}"
+                                                                   VerticalAlignment="Center"/>
+                                                        <TextBlock Grid.Column="2"
+                                                                   Text="{Binding Count, StringFormat={}{0:N0} 回}"
+                                                                   FontSize="12"
+                                                                   Foreground="{DynamicResource SubTextBrush}"
+                                                                   TextAlignment="Right"
+                                                                   VerticalAlignment="Center"/>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- よく表示するフォルダ TOP50 -->
+                            <Border Margin="0,16,0,0" Padding="16,14" CornerRadius="6"
+                                    Background="{DynamicResource InputBackgroundBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="よく表示するフォルダ" FontSize="13" FontWeight="SemiBold"
+                                               Margin="0,0,0,10"
+                                               Foreground="{DynamicResource TextBrush}"/>
+                                    <!-- テーブルヘッダー -->
+                                    <Grid Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="140"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="70"/>
+                                            <ColumnDefinition Width="32"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="フォルダ名" FontSize="11" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource SubTextBrush}"/>
+                                        <TextBlock Grid.Column="1" Text="パス" FontSize="11" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource SubTextBrush}"/>
+                                        <TextBlock Grid.Column="2" Text="表示回数" FontSize="11" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource SubTextBrush}" TextAlignment="Right"/>
+                                    </Grid>
+                                    <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,0,0,4"/>
+                                    <!-- データ行 -->
+                                    <ItemsControl ItemsSource="{Binding AppSettings.TopFolders}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Padding="0,5">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="140"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="70"/>
+                                                            <ColumnDefinition Width="32"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <Button Command="{Binding DataContext.AppSettings.OpenFolderInExplorerCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                CommandParameter="{Binding}"
+                                                                Cursor="Hand" ToolTip="エクスプローラで開く"
+                                                                HorizontalAlignment="Left" VerticalAlignment="Center">
+                                                            <Button.Template>
+                                                                <ControlTemplate TargetType="Button">
+                                                                    <TextBlock Text="{Binding Path, Converter={StaticResource PathToFileName}}"
+                                                                               FontSize="12"
+                                                                               Foreground="{DynamicResource TextBrush}"
+                                                                               TextTrimming="CharacterEllipsis"
+                                                                               TextDecorations="{Binding IsMouseOver, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BoolToUnderline}}"/>
+                                                                </ControlTemplate>
+                                                            </Button.Template>
+                                                        </Button>
+                                                        <Button Grid.Column="1"
+                                                                Command="{Binding DataContext.AppSettings.OpenFolderInExplorerCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                CommandParameter="{Binding}"
+                                                                Cursor="Hand" ToolTip="エクスプローラで開く"
+                                                                HorizontalAlignment="Stretch" VerticalAlignment="Center">
+                                                            <Button.Template>
+                                                                <ControlTemplate TargetType="Button">
+                                                                    <TextBlock Text="{Binding Path}"
+                                                                               FontSize="11"
+                                                                               Foreground="{DynamicResource SubTextBrush}"
+                                                                               TextTrimming="CharacterEllipsis"
+                                                                               TextDecorations="{Binding IsMouseOver, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BoolToUnderline}}"/>
+                                                                </ControlTemplate>
+                                                            </Button.Template>
+                                                        </Button>
+                                                        <TextBlock Grid.Column="2"
+                                                                   Text="{Binding AccessCount, StringFormat={}{0:N0} 回}"
+                                                                   FontSize="12"
+                                                                   Foreground="{DynamicResource SubTextBrush}"
+                                                                   TextAlignment="Right"
+                                                                   VerticalAlignment="Center"/>
+                                                        <Button Grid.Column="3"
+                                                                Style="{StaticResource IconButton}"
+                                                                Command="{Binding DataContext.AppSettings.AddFolderToFavoritesCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                CommandParameter="{Binding}"
+                                                                ToolTip="お気に入りに追加">
+                                                            <icon:PackIconLucide Kind="Star" Width="14" Height="14"/>
+                                                        </Button>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
                         </StackPanel>
                     </ScrollViewer>
 

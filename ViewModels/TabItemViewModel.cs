@@ -51,6 +51,9 @@ namespace ZenithFiler
         [ObservableProperty]
         private bool _isLocked;
 
+        /// <summary>true の間、SearchText セットによる OnSearchTextChanged からの ExecuteSearch 発火を抑制する。</summary>
+        internal bool SuppressSearchOnTextChanged;
+
         [ObservableProperty]
         private bool _isAdaptiveColumnsEnabled = true;
 
@@ -88,6 +91,9 @@ namespace ZenithFiler
 
         [ObservableProperty]
         private bool _isNotificationFlashActive;
+
+        /// <summary>Downloads フォルダ自動ソートが現在適用中かどうか。フォルダ移動時のリセット判定に使用。</summary>
+        private bool _isDownloadsSortApplied;
 
         [ObservableProperty]
         private bool _isGroupFoldersFirst = WindowSettings.DefaultGroupFoldersFirstValue;
@@ -241,6 +247,8 @@ namespace ZenithFiler
 
         partial void OnSearchTextChanged(string value)
         {
+            if (SuppressSearchOnTextChanged) return;
+
             // インデックス登録確認の場合（IsIndexSearchMode かつ CurrentPath がある）は、空文字列でも検索を続行
             if (string.IsNullOrWhiteSpace(value) && !(IsIndexSearchMode && IsSearchResultTab && !string.IsNullOrEmpty(CurrentPath)))
             {
@@ -311,6 +319,9 @@ namespace ZenithFiler
         [ObservableProperty]
         private bool _isSearchRunning;
 
+        private long _lastSearchTicks;
+        private string? _lastSearchQuery;
+
         partial void OnIsSearchRunningChanged(bool value) => OnPropertyChanged(nameof(ShowEmptySearchResult));
 
         public SilentObservableCollection<FileItem> SearchResults { get; } = new();
@@ -331,7 +342,14 @@ namespace ZenithFiler
         public bool ShowEmptySearchResult => IsSearching && SearchResults.Count == 0 && !IsSearchRunning;
 
         /// <summary>フィルタ適用後の検索結果件数。検索バー右端の「XX items」表示に使用。</summary>
-        public int FilteredSearchResultCount => SearchResultsView?.Cast<object>().Count() ?? 0;
+        private int _filteredSearchResultCount;
+        public int FilteredSearchResultCount => _filteredSearchResultCount;
+
+        private void UpdateFilteredSearchResultCount()
+        {
+            _filteredSearchResultCount = SearchResultsView?.Cast<object>().Count() ?? 0;
+            OnPropertyChanged(nameof(FilteredSearchResultCount));
+        }
 
         [RelayCommand]
         private void DismissIndexFreshnessWarning()
@@ -346,7 +364,7 @@ namespace ZenithFiler
             foreach (var item in FileTypeFilterItems)
                 item.IsEnabled = true;
             SearchResultsView.Refresh();
-            OnPropertyChanged(nameof(FilteredSearchResultCount));
+            UpdateFilteredSearchResultCount();
             SaveFileTypeFilterState();
         }
 
@@ -356,7 +374,7 @@ namespace ZenithFiler
             foreach (var item in FileTypeFilterItems)
                 item.IsEnabled = false;
             SearchResultsView.Refresh();
-            OnPropertyChanged(nameof(FilteredSearchResultCount));
+            UpdateFilteredSearchResultCount();
             SaveFileTypeFilterState();
         }
 
@@ -402,7 +420,7 @@ namespace ZenithFiler
             if (e.PropertyName == nameof(FileTypeFilterItem.IsEnabled))
             {
                 SearchResultsView.Refresh();
-                OnPropertyChanged(nameof(FilteredSearchResultCount));
+                UpdateFilteredSearchResultCount();
                 SaveFileTypeFilterState();
             }
         }
@@ -414,7 +432,7 @@ namespace ZenithFiler
             for (int i = 0; i < 11; i++)
                 FileTypeFilterItems[i].IsEnabled = state[i];
             SearchResultsView.Refresh();
-            OnPropertyChanged(nameof(FilteredSearchResultCount));
+            UpdateFilteredSearchResultCount();
         }
 
         private bool IncludeSearchResultByFilter(object? obj)
@@ -469,6 +487,14 @@ namespace ZenithFiler
             if (string.IsNullOrWhiteSpace(text) && !(IsIndexSearchMode && IsSearchResultTab && !string.IsNullOrEmpty(CurrentPath)))
                 return;
 
+            // 再入防止: 同じクエリが 1000ms 以内に再度呼ばれた場合は無視
+            long now = Environment.TickCount64;
+            long last = Volatile.Read(ref _lastSearchTicks);
+            if (now - last < 1000 && string.Equals(text, _lastSearchQuery, StringComparison.Ordinal))
+                return;
+            Volatile.Write(ref _lastSearchTicks, now);
+            _lastSearchQuery = text;
+
             var behavior = MainVM?.AppSettings?.SearchBehavior ?? SearchBehavior.SamePaneNewTab;
             var autoSinglePane = MainVM?.AppSettings?.AutoSwitchToSinglePaneOnSearch ?? false;
 
@@ -493,7 +519,6 @@ namespace ZenithFiler
                 {
                     MainVM.RecordPaneCountBeforeSearch();
                     MainVM.PaneCount = 1;
-                    App.Notification.Notify("1画面モードに切り替えました", "検索結果を表示");
                 }
             }
 
@@ -522,6 +547,7 @@ namespace ZenithFiler
             if (!wasSearching) OnPropertyChanged(nameof(CurrentItemsView));
             OnPropertyChanged(nameof(TabTitle));
 
+            _ = App.Stats.RecordAsync(IsIndexSearchMode ? "Search.Index" : "Search.Normal");
             await PerformSearchAsync(text);
 
             var trimmed = text.Trim();
@@ -659,7 +685,7 @@ namespace ZenithFiler
                 }
                 // 検索中でなくても ICollectionView リフレッシュ
                 SearchResultsView?.Refresh();
-                OnPropertyChanged(nameof(FilteredSearchResultCount));
+                UpdateFilteredSearchResultCount();
             });
         }
 
@@ -930,6 +956,7 @@ namespace ZenithFiler
                 // 直接プロパティをリセットして即座に GlowBar を消す
                 if (glowBarStarted && MainVM != null)
                 {
+                    MainVM.FileOperationStatusText = string.Empty;
                     MainVM.IsFileOperationActive = false;
                     MainVM.FileOperationProgress = 0;
                     MainVM.FileOperationStatusText = string.Empty;
@@ -995,7 +1022,7 @@ namespace ZenithFiler
                     batch.Clear();
                     await Application.Current.Dispatcher.InvokeAsync(() =>
                     {
-                        foreach (var i in toAdd) SearchResults.Add(i);
+                        SearchResults.AddRange(toAdd);
                     }, DispatcherPriority.Background);
                 }
             }
@@ -1004,7 +1031,7 @@ namespace ZenithFiler
             {
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    foreach (var i in batch) SearchResults.Add(i);
+                    SearchResults.AddRange(batch);
                 }, DispatcherPriority.Background);
             }
 
@@ -1072,7 +1099,7 @@ namespace ZenithFiler
             SearchResults.CollectionChanged += (_, _) =>
             {
                 OnPropertyChanged(nameof(ShowEmptySearchResult));
-                OnPropertyChanged(nameof(FilteredSearchResultCount));
+                UpdateFilteredSearchResultCount();
             };
 
             App.Database.SearchHistoryChanged += OnSearchHistoryChanged;
@@ -1159,6 +1186,8 @@ namespace ZenithFiler
             
             string normalizedPath = PathHelper.GetPhysicalPath(path);
 
+            if (saveToHistory)
+                _ = App.Stats.RecordAsync("Nav.OpenFolder");
             if (saveToHistory && !string.IsNullOrEmpty(CurrentPath))
             {
                 _history.Push(CurrentPath);
@@ -1230,6 +1259,7 @@ namespace ZenithFiler
                     {
                         IgnoreInaccessible = true,
                         AttributesToSkip = FileAttributes.System | FileAttributes.Temporary
+                            | (WindowSettings.ShowHiddenFilesEnabled ? 0 : FileAttributes.Hidden)
                     };
 
                     foreach (string dir in Directory.EnumerateDirectories(path, "*", options))
@@ -1477,7 +1507,7 @@ namespace ZenithFiler
                 try
                 {
                     var ft = new FormattedText(seg.Name, System.Globalization.CultureInfo.CurrentUICulture,
-                        System.Windows.FlowDirection.LeftToRight, new Typeface("Segoe UI"), 12, Brushes.Black, 1.0);
+                        System.Windows.FlowDirection.LeftToRight, _breadcrumbTypeface, 12, Brushes.Black, 1.0);
                     return ft.Width + itemPadding + separatorWidth;
                 }
                 catch { return seg.Name.Length * 8 + itemPadding + separatorWidth; }
@@ -1801,6 +1831,7 @@ namespace ZenithFiler
             string? inputText = RenameDialog.ShowDialog("名前の変更", item.Name, parentDir, selectNameWithoutExtension: selectNameOnly);
             if (inputText != null)
             {
+                _ = App.Stats.RecordAsync("File.Rename");
                 string trimmedInput = inputText.Trim();
                 string newName = selectNameOnly
                     ? trimmedInput + Path.GetExtension(item.Name)
@@ -2325,6 +2356,36 @@ namespace ZenithFiler
             ApplySort();
         }
 
+        /// <summary>現在のパスが Downloads フォルダかどうかを判定し、ソート順を自動切替する。</summary>
+        private void ApplyDownloadsSortIfNeeded()
+        {
+            if (!WindowSettings.DownloadsSortByDateValue)
+            {
+                // 設定オフ → 適用中フラグのみリセット
+                _isDownloadsSortApplied = false;
+                return;
+            }
+
+            var downloadsPath = PathHelper.GetDownloadsPath();
+            bool isDownloads = !string.IsNullOrEmpty(CurrentPath)
+                && string.Equals(
+                    CurrentPath.TrimEnd(Path.DirectorySeparatorChar),
+                    downloadsPath.TrimEnd(Path.DirectorySeparatorChar),
+                    StringComparison.OrdinalIgnoreCase);
+            if (isDownloads)
+            {
+                SortProperty = "LastModified";
+                SortDirection = ListSortDirection.Descending;
+                _isDownloadsSortApplied = true;
+            }
+            else if (_isDownloadsSortApplied)
+            {
+                SortProperty = WindowSettings.DefaultSortPropertyValue;
+                SortDirection = WindowSettings.DefaultSortDirectionValue;
+                _isDownloadsSortApplied = false;
+            }
+        }
+
         private void ApplySort()
         {
             // SortDescriptions の代わりに ListCollectionView.CustomSort を使用することで、
@@ -2423,6 +2484,7 @@ namespace ZenithFiler
         {
             if (Application.Current.MainWindow?.DataContext is not MainViewModel vm)
                 return;
+            _ = App.Stats.RecordAsync("Favorites.Add");
 
             // パスが空の場合
             if (string.IsNullOrWhiteSpace(CurrentPath))
@@ -2625,6 +2687,9 @@ namespace ZenithFiler
         {
             await _loadDirectorySemaphore.WaitAsync();
             _isRefreshInProgress = true;
+
+            // Downloads フォルダ自動ソート（PathHelper のキャッシュ済みパスを使用）
+            ApplyDownloadsSortIfNeeded();
             if (MainVM != null)
             {
                 MainVM.IsLoading = true;
@@ -2861,7 +2926,8 @@ namespace ZenithFiler
                 {
                     IgnoreInaccessible = true,
                     RecurseSubdirectories = false,
-                    AttributesToSkip = FileAttributes.System | FileAttributes.Temporary,
+                    AttributesToSkip = FileAttributes.System | FileAttributes.Temporary
+                        | (WindowSettings.ShowHiddenFilesEnabled ? 0 : FileAttributes.Hidden),
                     ReturnSpecialDirectories = false
                 };
 
@@ -2974,6 +3040,7 @@ namespace ZenithFiler
         }
 
         private const int ThumbnailUiBatchSize = 10;
+        private static readonly Typeface _breadcrumbTypeface = new("Segoe UI");
 
         /// <summary>クラウド／オフライン等でサムネイル取得をスキップすべきか。</summary>
         private static bool ShouldSkipThumbnail(FileItem item) =>
@@ -3004,8 +3071,7 @@ namespace ZenithFiler
                             b.Item.Icon = b.Icon;
                             b.Item.TypeName = b.TypeName;
                         }
-                    }, DispatcherPriority.Normal);
-                    await Task.Delay(30, token);
+                    }, DispatcherPriority.Background);
                 }
             }
 
@@ -3018,7 +3084,7 @@ namespace ZenithFiler
                         b.Item.Icon = b.Icon;
                         b.Item.TypeName = b.TypeName;
                     }
-                }, DispatcherPriority.Normal);
+                }, DispatcherPriority.Background);
             }
 
             // 第2パス: 画像のみ GetThumbnailAsync で非ブロック取得し、10件ずつ完了次第 UI に反映
@@ -3051,7 +3117,7 @@ namespace ZenithFiler
                         if (u.Thumbnail != null)
                             u.Item.Thumbnail = u.Thumbnail;
                     }
-                }, DispatcherPriority.Normal);
+                }, DispatcherPriority.Background);
             }
         }
 
@@ -3110,6 +3176,7 @@ namespace ZenithFiler
         private void CopyItems(IList? items)
         {
             if (items == null || items.Count == 0) return;
+            _ = App.Stats.RecordAsync("File.Copy");
             var paths = new System.Collections.Specialized.StringCollection();
             foreach (FileItem item in items) paths.Add(item.FullPath);
             Clipboard.SetFileDropList(paths);
@@ -3120,6 +3187,7 @@ namespace ZenithFiler
         private async Task DeleteItems(IList? items)
         {
             if (items == null || items.Count == 0) return;
+            _ = App.Stats.RecordAsync("File.Delete");
 
             // ローディングインジケータを表示
             using var busyToken = MainVM?.BeginBusy();
@@ -3142,6 +3210,14 @@ namespace ZenithFiler
 
             bool operationCompleted = false;
 
+            // HWND を UI スレッドで事前取得（Task.Run 内の Dispatcher.Invoke を排除）
+            IntPtr ownerHwnd = IntPtr.Zero;
+            if (Application.Current.MainWindow != null)
+            {
+                var helper = new System.Windows.Interop.WindowInteropHelper(Application.Current.MainWindow);
+                ownerHwnd = helper.Handle;
+            }
+
             await Task.Run(() =>
             {
                 var shellItems = new List<ShellItem>();
@@ -3154,14 +3230,8 @@ namespace ZenithFiler
                         op.Options |= ShellFileOperations.OperationFlags.NoConfirmation;
 
                     // 親ウィンドウの設定（確認ダイアログをモーダルにするため）
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        if (Application.Current.MainWindow != null)
-                        {
-                            var helper = new System.Windows.Interop.WindowInteropHelper(Application.Current.MainWindow);
-                            op.OwnerWindow = helper.Handle;
-                        }
-                    });
+                    if (ownerHwnd != IntPtr.Zero)
+                        op.OwnerWindow = ownerHwnd;
 
                     // 削除操作をキューに追加（Windows標準の確認ダイアログが表示され、ごみ箱に送られます）
                     foreach (var item in itemsToDelete)
@@ -3248,8 +3318,11 @@ namespace ZenithFiler
         }
 
         [RelayCommand]
-        private async Task DropFiles((string[]? files, bool isMove, string? targetDirectory) args) =>
+        private async Task DropFiles((string[]? files, bool isMove, string? targetDirectory) args)
+        {
+            _ = App.Stats.RecordAsync("DragDrop.Drop");
             await DropFilesInternal(args.files, args.isMove, args.targetDirectory);
+        }
 
         /// <summary>
         /// ブラウザなどからドロップされた URL をショートカットとして保存する。
@@ -3300,6 +3373,7 @@ namespace ZenithFiler
         private async Task DropFilesInternal(string[]? files, bool isMove = false, string? targetDirectory = null)
         {
             if (files == null || string.IsNullOrEmpty(CurrentPath)) return;
+            _ = App.Stats.RecordAsync(isMove ? "File.Move" : "File.Copy");
             string baseTarget = string.IsNullOrWhiteSpace(targetDirectory) ? CurrentPath : targetDirectory;
             string resolvedTargetDirectory = PathHelper.GetPhysicalPath(baseTarget);
             if (string.IsNullOrEmpty(resolvedTargetDirectory) || !Directory.Exists(resolvedTargetDirectory)) return;
@@ -3699,6 +3773,7 @@ namespace ZenithFiler
                         RecurseSubdirectories = true,
                         IgnoreInaccessible = true,
                         AttributesToSkip = FileAttributes.System
+                            | (WindowSettings.ShowHiddenFilesEnabled ? 0 : FileAttributes.Hidden)
                     }))
                 {
                     try
@@ -3757,6 +3832,7 @@ namespace ZenithFiler
         public async Task ExportSubtreeToCsvAsync(string folderPath)
         {
             if (string.IsNullOrEmpty(folderPath)) return;
+            _ = App.Stats.RecordAsync("Export.Csv");
 
             var folderName = Path.GetFileName(
                 folderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
@@ -3856,6 +3932,7 @@ namespace ZenithFiler
         public async Task ExportSubtreeToExcelAsync(string folderPath)
         {
             if (string.IsNullOrEmpty(folderPath)) return;
+            _ = App.Stats.RecordAsync("Export.Excel");
 
             var folderName = Path.GetFileName(
                 folderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));

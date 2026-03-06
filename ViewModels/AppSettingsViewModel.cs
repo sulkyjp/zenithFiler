@@ -50,6 +50,7 @@ namespace ZenithFiler
         Display,
         Shortcut,
         License,
+        Statistics,
         About
     }
 
@@ -549,6 +550,7 @@ namespace ZenithFiler
         [RelayCommand]
         private async Task BackupNowAsync()
         {
+            _ = App.Stats.RecordAsync("Backup.Manual");
             await Services.SettingsBackupService.CreateBackupAsync("手動バックアップ");
             App.Notification.Notify("設定をバックアップしました", "[Settings] Backup: 手動");
             await LoadBackupEntriesAsync();
@@ -739,6 +741,16 @@ namespace ZenithFiler
             WindowSettings.SaveShowHiddenFilesOnly(value);
         }
 
+        /// <summary>ダウンロードフォルダに移動した際、更新日時降順で自動ソートするか。</summary>
+        [ObservableProperty]
+        private bool _downloadsSortByDate = false;
+
+        partial void OnDownloadsSortByDateChanged(bool value)
+        {
+            WindowSettings.SetDownloadsSortByDateRuntime(value);
+            WindowSettings.SaveDownloadsSortByDateOnly(value);
+        }
+
         /// <summary>タスクトレイ常駐モード。</summary>
         [ObservableProperty]
         private bool _residentMode = false;
@@ -887,6 +899,7 @@ namespace ZenithFiler
             _showPathInTitleBar = s.ShowPathInTitleBar;
             _showFileExtensions = s.ShowFileExtensions;
             _showHiddenFiles = s.ShowHiddenFiles;
+            _downloadsSortByDate = s.DownloadsSortByDate;
             _residentMode = s.ResidentMode;
             _enableAutoUpdate = s.AutoUpdate;
 #pragma warning restore MVVMTK0034
@@ -903,6 +916,7 @@ namespace ZenithFiler
             OnPropertyChanged(nameof(ShowPathInTitleBar));
             OnPropertyChanged(nameof(ShowFileExtensions));
             OnPropertyChanged(nameof(ShowHiddenFiles));
+            OnPropertyChanged(nameof(DownloadsSortByDate));
             OnPropertyChanged(nameof(ResidentMode));
             OnPropertyChanged(nameof(EnableAutoUpdate));
         }
@@ -1039,6 +1053,7 @@ namespace ZenithFiler
         {
             if (_suppressThemeChange) return;
             if (value == null) return;
+            _ = App.Stats.RecordAsync("Theme.Change");
 
             // カテゴリランダム選択モード: テーマのカテゴリを選択（テーマ適用しない）
             if (ActiveThemeMode == ThemeApplyMode.Random && ThemeRandomizeMode == ThemeRandomizeMode.CurrentCategory)
@@ -1279,6 +1294,107 @@ namespace ZenithFiler
                 LoadKeyBindings();
             else if (value == SettingsCategory.Backup)
                 LoadBackupEntriesAsync().FireAndForget("LoadBackupEntriesAsync");
+            else if (value == SettingsCategory.Statistics)
+                LoadStatisticsAsync().FireAndForget("LoadStatisticsAsync");
+        }
+
+        // ── 利用統計 ──────────────────────────────────────────
+        public ObservableCollection<ActionStat> StatItems { get; } = new();
+
+        [ObservableProperty]
+        private bool _isStatsLoading;
+
+        /// <summary>UsageStatisticsService.ActionRecorded を購読して StatItems を即時更新します。</summary>
+        public void SubscribeStatEvents()
+        {
+            App.Stats.ActionRecorded += OnActionRecorded;
+        }
+
+        private void OnActionRecorded(string actionKey)
+        {
+            Application.Current?.Dispatcher.BeginInvoke(() =>
+            {
+                var item = StatItems.FirstOrDefault(x => x.ActionKey == actionKey);
+                if (item != null)
+                    item.Count++;
+            });
+        }
+
+        public async Task LoadStatisticsAsync()
+        {
+            IsStatsLoading = true;
+            try
+            {
+                var dbItems = await App.Stats.GetAllAsync();
+                var dict = dbItems.ToDictionary(x => x.ActionKey, x => x);
+                StatItems.Clear();
+                foreach (var key in Services.UsageStatisticsService.AllActionKeys)
+                {
+                    if (dict.TryGetValue(key, out var item))
+                        StatItems.Add(item);
+                    else
+                        StatItems.Add(new ActionStat { ActionKey = key, Count = 0 });
+                }
+            }
+            catch (Exception ex)
+            {
+                _ = App.FileLogger.LogAsync($"[AppSettingsVM] LoadStatisticsAsync failed: {ex.Message}");
+            }
+            finally
+            {
+                IsStatsLoading = false;
+            }
+            await LoadTopFoldersAsync();
+        }
+
+        public ObservableCollection<HistoryRecord> TopFolders { get; } = new();
+
+        private async Task LoadTopFoldersAsync()
+        {
+            try
+            {
+                var items = await App.Database.GetTopFoldersAsync(50);
+                TopFolders.Clear();
+                foreach (var item in items)
+                    TopFolders.Add(item);
+            }
+            catch (Exception ex)
+            {
+                _ = App.FileLogger.LogAsync($"[AppSettingsVM] LoadTopFoldersAsync failed: {ex.Message}");
+            }
+        }
+
+        [RelayCommand]
+        private void OpenFolderInExplorer(HistoryRecord? record)
+        {
+            if (record == null || string.IsNullOrEmpty(record.Path)) return;
+            if (Directory.Exists(record.Path))
+                Process.Start("explorer.exe", record.Path);
+            else
+                App.Notification.Notify("フォルダが見つかりません", record.Path);
+        }
+
+        [RelayCommand]
+        private void AddFolderToFavorites(HistoryRecord? record)
+        {
+            if (record == null || string.IsNullOrEmpty(record.Path)) return;
+            if (_main.Favorites.ContainsPath(record.Path))
+            {
+                App.Notification.Notify("既にお気に入りに登録されています", System.IO.Path.GetFileName(record.Path));
+                return;
+            }
+            _main.Favorites.AddPath(record.Path);
+            App.Notification.Notify("お気に入りに追加しました", System.IO.Path.GetFileName(record.Path));
+            _ = App.Stats.RecordAsync("Favorites.Add");
+        }
+
+        public async Task ResetStatisticsAsync()
+        {
+            await App.Stats.ResetAsync();
+            StatItems.Clear();
+            foreach (var key in Services.UsageStatisticsService.AllActionKeys)
+                StatItems.Add(new ActionStat { ActionKey = key, Count = 0 });
+            App.Notification.Notify("利用統計をリセットしました", "[Stats] Reset");
         }
 
         /// <summary>ライセンス状態と各機能の使用状況を読み込みます。</summary>

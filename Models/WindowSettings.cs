@@ -367,6 +367,9 @@ namespace ZenithFiler
         /// <summary>隠しファイル・フォルダを表示するか。</summary>
         public bool ShowHiddenFiles { get; set; } = false;
 
+        /// <summary>ダウンロードフォルダに移動した際、更新日時の新しい順に自動ソートするか。</summary>
+        public bool DownloadsSortByDate { get; set; } = false;
+
         /// <summary>ウィンドウを閉じた際にタスクトレイに常駐するか。</summary>
         public bool ResidentMode { get; set; } = false;
 
@@ -447,6 +450,9 @@ namespace ZenithFiler
         private static bool _showHiddenFiles = false;
         public static bool ShowHiddenFilesEnabled => _showHiddenFiles;
 
+        private static bool _downloadsSortByDate = false;
+        public static bool DownloadsSortByDateValue => _downloadsSortByDate;
+
         private static bool _residentMode = false;
         public static bool ResidentModeEnabled => _residentMode;
 
@@ -468,6 +474,7 @@ namespace ZenithFiler
             _showPathInTitleBar = ShowPathInTitleBar;
             _showFileExtensions = ShowFileExtensions;
             _showHiddenFiles = ShowHiddenFiles;
+            _downloadsSortByDate = DownloadsSortByDate;
             _residentMode = ResidentMode;
             _autoUpdate = AutoUpdate;
         }
@@ -485,6 +492,7 @@ namespace ZenithFiler
         internal static void SetShowPathInTitleBarRuntime(bool v) => _showPathInTitleBar = v;
         internal static void SetShowFileExtensionsRuntime(bool v) => _showFileExtensions = v;
         internal static void SetShowHiddenFilesRuntime(bool v) => _showHiddenFiles = v;
+        internal static void SetDownloadsSortByDateRuntime(bool v) => _downloadsSortByDate = v;
         internal static void SetResidentModeRuntime(bool v) => _residentMode = v;
         internal static void SetAutoUpdateRuntime(bool v) => _autoUpdate = v;
 
@@ -907,6 +915,12 @@ namespace ZenithFiler
         public static void SaveShowHiddenFilesOnly(bool value)
         {
             DebouncedSettingsSaver.ScheduleSave(s => s.ShowHiddenFiles = value);
+        }
+
+        /// <summary>ダウンロードフォルダ更新日時ソート設定のみを保存する。</summary>
+        public static void SaveDownloadsSortByDateOnly(bool value)
+        {
+            DebouncedSettingsSaver.ScheduleSave(s => s.DownloadsSortByDate = value);
         }
 
         /// <summary>常駐モード設定のみを保存する。</summary>

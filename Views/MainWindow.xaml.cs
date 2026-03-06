@@ -155,10 +155,11 @@ namespace ZenithFiler
             UpdateShortcutTooltips();
             App.KeyBindings.BindingsChanged += (_, _) =>
             {
-                Dispatcher.Invoke(() =>
+                _ = Dispatcher.InvokeAsync(() =>
                 {
                     RebuildInputBindings();
                     UpdateShortcutTooltips();
+                    RegisterGlobalHotKey();
                 });
             };
         }
@@ -642,6 +643,7 @@ namespace ZenithFiler
                 vm.IsNavWidthLocked = settings.IsNavWidthLocked;
                 vm.IsTreeViewLocked = settings.IsTreeViewLocked;
                 vm.IndexSearchSettings.LoadPaths(settings.IndexSearchTargetPaths ?? new());
+                vm.IndexSearchSettings.LoadItemSettings(settings.IndexItemSettings);
                 // settings.json からロック状態を復元
                 foreach (var lockedPath in settings.IndexSearchLockedPaths ?? new())
                 {
@@ -684,7 +686,7 @@ namespace ZenithFiler
                 vm.SearchFilter.LoadFromSettings(settings);
                 vm.SearchPresets.LoadFromSettings(settings);
 
-                App.IndexService.ConfigureIndexUpdate(settings.IndexSettings, () => vm.IndexSearchSettings.GetPathsForSave() ?? new System.Collections.Generic.List<string>());
+                App.IndexService.ConfigureIndexUpdate(settings.IndexSettings, () => vm.IndexSearchSettings.GetPathsForSave() ?? new System.Collections.Generic.List<string>(), settings.IndexItemSettings);
 
                 if (settings.IndexSettings?.UpdateMode != IndexUpdateMode.Manual)
                 {
@@ -834,19 +836,47 @@ namespace ZenithFiler
         {
             base.OnSourceInitialized(e);
 
-            // グローバルホットキーの登録 (Ctrl + Shift + E)
+            // グローバルホットキーの登録（KeyBindingService の設定に従う）
+            RegisterGlobalHotKey();
+
+            var helper = new WindowInteropHelper(this);
+            var source = HwndSource.FromHwnd(helper.Handle);
+            source?.AddHook(HwndHook);
+        }
+
+        /// <summary>KeyBindingService の Global.FocusActivePane 設定に基づいてグローバルホットキーを登録する。</summary>
+        private void RegisterGlobalHotKey()
+        {
             var helper = new WindowInteropHelper(this);
             var hwnd = helper.Handle;
-            
-            // MOD_CONTROL (0x0002) | MOD_SHIFT (0x0004) = 0x0006
-            // Key E = 0x45
-            if (!RegisterHotKey(hwnd, HOTKEY_ID, HotKeyModifiers.MOD_CONTROL | HotKeyModifiers.MOD_SHIFT, 0x45))
-            {
-                // 登録失敗（既に使われている等）
-            }
+            if (hwnd == IntPtr.Zero) return;
 
-            var source = HwndSource.FromHwnd(hwnd);
-            source?.AddHook(HwndHook);
+            // 既存のホットキーを解除
+            UnregisterHotKey(hwnd, HOTKEY_ID);
+
+            // KeyBindingService から現在のキー設定を取得
+            var def = App.KeyBindings.Get("Global.FocusActivePane");
+            if (def == null) return;
+
+            var (vk, mods) = ConvertToWin32HotKey(def.ActiveKey, def.ActiveModifiers);
+            if (vk == 0) return;
+
+            if (!RegisterHotKey(hwnd, HOTKEY_ID, mods, (uint)vk))
+            {
+                System.Diagnostics.Debug.WriteLine($"[GlobalHotKey] RegisterHotKey failed: vk=0x{vk:X}, mods={mods}");
+            }
+        }
+
+        /// <summary>WPF の Key/ModifierKeys を Win32 の仮想キーコード/HotKeyModifiers に変換する。</summary>
+        private static (int vk, HotKeyModifiers mods) ConvertToWin32HotKey(Key key, ModifierKeys modifiers)
+        {
+            int vk = KeyInterop.VirtualKeyFromKey(key);
+            HotKeyModifiers mods = 0;
+            if (modifiers.HasFlag(ModifierKeys.Control)) mods |= HotKeyModifiers.MOD_CONTROL;
+            if (modifiers.HasFlag(ModifierKeys.Shift))   mods |= HotKeyModifiers.MOD_SHIFT;
+            if (modifiers.HasFlag(ModifierKeys.Alt))      mods |= HotKeyModifiers.MOD_ALT;
+            if (modifiers.HasFlag(ModifierKeys.Windows))  mods |= HotKeyModifiers.MOD_WIN;
+            return (vk, mods);
         }
 
         private IntPtr HwndHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -945,6 +975,12 @@ namespace ZenithFiler
 
         private void ActivateApp()
         {
+            // Hide() でトレイに格納された場合、Show() で再表示する
+            if (!this.IsVisible)
+            {
+                this.Show();
+            }
+
             if (this.WindowState == WindowState.Minimized)
             {
                 this.WindowState = WindowState.Normal;
@@ -1062,7 +1098,13 @@ namespace ZenithFiler
 
         // IndexSearchTargetList は ListBox に移行済み。GridView カラム幅調整は不要。
 
-        private static readonly SolidColorBrush _dropHighlightBrush = new(Color.FromArgb(0x30, 0x54, 0x5B, 0x64));
+        private static SolidColorBrush CreateDropHighlightBrush()
+        {
+            if (Application.Current.Resources["OnePointDarkColor"] is Color c)
+                return new SolidColorBrush(Color.FromArgb(0x30, c.R, c.G, c.B));
+            return new SolidColorBrush(Color.FromArgb(0x30, 0x54, 0x5B, 0x64));
+        }
+        private static readonly SolidColorBrush _dropHighlightBrush = CreateDropHighlightBrush();
 
         private void IndexDropZone_DragEnter(object sender, DragEventArgs e)
         {
@@ -1320,6 +1362,7 @@ namespace ZenithFiler
             {
                 if (!(inLeft || inRight)) return;
                 if (RightPaneControl.Visibility != Visibility.Visible) return;
+                _ = App.Stats.RecordAsync("Nav.SwitchPane");
 
                 // ActivePane に応じて反対側のペインへ切り替え（確実に往復する）
                 if (vm.ActivePane == vm.LeftPane)
@@ -2054,6 +2097,15 @@ namespace ZenithFiler
 
         private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
         {
+            // 常駐モード: トレイに隠して閉じない（Ctrl 押下時は即終了）
+            if (App.TrayService?.ShouldCancelClose == true
+                && (Keyboard.Modifiers & ModifierKeys.Control) == 0)
+            {
+                e.Cancel = true;
+                App.TrayService.HideToTray();
+                return;
+            }
+
             // Quick Preview cleanup
             CleanupTempPreviewPdf();
             if (_isWebView2Initialized)
@@ -2133,6 +2185,11 @@ namespace ZenithFiler
                 ConfirmDelete = vm?.AppSettings?.ConfirmDelete ?? true,
                 RestoreTabsOnStartup = vm?.AppSettings?.RestoreTabsOnStartup ?? true,
                 NotificationDurationMs = vm?.AppSettings?.NotificationDurationMs ?? 3000,
+                ShowPathInTitleBar = vm?.AppSettings?.ShowPathInTitleBar ?? true,
+                ShowFileExtensions = vm?.AppSettings?.ShowFileExtensions ?? true,
+                ShowHiddenFiles = vm?.AppSettings?.ShowHiddenFiles ?? false,
+                DownloadsSortByDate = vm?.AppSettings?.DownloadsSortByDate ?? false,
+                ResidentMode = vm?.AppSettings?.ResidentMode ?? false,
                 // Search デフォルト
                 DefaultGroupFoldersFirst = vm?.AppSettings?.DefaultGroupFoldersFirst ?? true,
                 DefaultSortProperty = vm?.AppSettings?.DefaultSortProperty ?? "Name",
@@ -2169,10 +2226,21 @@ namespace ZenithFiler
                 },
                 WorkingSets = vm?.ProjectSets.Items.ToList() ?? new(),
                 SearchPresets = vm?.SearchPresets.Presets.ToList() ?? new(),
+                IndexItemSettings = vm?.IndexSearchSettings.GetItemSettingsForSave(),
             };
 
+            // EULA 同意状態・自動更新・ライセンス等のグローバル設定を既存値から引き継ぐ
+            var existing = WindowSettings.Load();
+            settings.EulaAcceptedVersion = existing.EulaAcceptedVersion;
+            settings.AutoUpdate = existing.AutoUpdate;
+            settings.LastUpdateCheck = existing.LastUpdateCheck;
+            settings.SkippedVersion = existing.SkippedVersion;
+            settings.CustomKeyBindings = existing.CustomKeyBindings;
+
             // インデックス更新モード・定例スケジュールを反映（保存前に適用）
-            App.IndexService.ConfigureIndexUpdate(settings.IndexSettings, () => vm?.IndexSearchSettings.GetPathsForSave() ?? new System.Collections.Generic.List<string>());
+            App.IndexService.ConfigureIndexUpdate(settings.IndexSettings,
+                () => vm?.IndexSearchSettings.GetPathsForSave() ?? new System.Collections.Generic.List<string>(),
+                settings.IndexItemSettings);
 
             try
             {
@@ -2340,6 +2408,7 @@ namespace ZenithFiler
 
         private async void ShowQuickPreview(FileItem file)
         {
+            _ = App.Stats.RecordAsync("Preview.QuickLook");
             _isQuickPreviewOpen = true;
 
             // サイズ設定 (80%)
@@ -2660,8 +2729,8 @@ namespace ZenithFiler
                 PreviewPdfImagePanel.Children.Add(new TextBlock
                 {
                     Text = $"(先頭 {PdfMaxPreviewPages} / {totalPages} ページのみ表示)",
-                    Foreground = new System.Windows.Media.SolidColorBrush(
-                        System.Windows.Media.Color.FromRgb(0x77, 0x77, 0x77)),
+                    Foreground = Application.Current.Resources["SubTextBrush"] as Brush
+                                ?? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x77, 0x77, 0x77)),
                     FontSize = 11,
                     HorizontalAlignment = HorizontalAlignment.Center,
                     Margin = new Thickness(0, 8, 0, 8),
