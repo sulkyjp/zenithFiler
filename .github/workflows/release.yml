@@ -24,11 +24,8 @@ jobs:
         shell: bash
         run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
-      - name: Restore
-        run: dotnet restore ZenithFiler.csproj
-
       - name: Publish
-        run: dotnet publish ZenithFiler.csproj -c Release -r win-x64 --self-contained -o publish --no-restore
+        run: dotnet publish ZenithFiler.csproj -c Release -r win-x64 --self-contained -o publish
 
       - name: Create ZIP
         shell: pwsh
