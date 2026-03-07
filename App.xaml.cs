@@ -211,22 +211,6 @@ namespace ZenithFiler
                 ShutdownMode = ShutdownMode.OnLastWindowClose;
             }
 
-            // EULA 同意チェック（既存ユーザーで未同意の場合のみ表示 — 初回起動時は WelcomeWindow 内で処理）
-            if (!_isFirstLaunch && string.IsNullOrEmpty(preloadedSettings.EulaAcceptedVersion))
-            {
-                var currentVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.0.0";
-                ShutdownMode = ShutdownMode.OnExplicitShutdown;
-                var eulaDialog = new Views.EulaDialog();
-                if (eulaDialog.ShowDialog() != true)
-                {
-                    Shutdown();
-                    return;
-                }
-                WindowSettings.SaveEulaAcceptedOnly(currentVersion);
-                WindowSettings.FlushPendingSaves();
-                ShutdownMode = ShutdownMode.OnLastWindowClose;
-            }
-
             // 行高リソースを起動時設定から初期化（ListViewItem の MinHeight に DynamicResource で使用）
             Current.Resources["ListRowHeight"] = (double)preloadedSettings.ListRowHeight;
             // 一覧アニメーション時間リソースを初期化（ホバーフェード・スケール）
