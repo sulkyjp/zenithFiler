@@ -1547,6 +1547,10 @@
                                                TextWrapping="Wrap" Margin="0,0,0,10"
                                                Text="ファイル一覧の各行の高さを調整します。コンパクトにすると一度に多くのファイルを表示でき、ゆったりにするとクリックしやすくなります。"/>
                                     <RadioButton GroupName="ListRowHeightDeck" Style="{StaticResource OptionRadioButton}" Margin="0,0,0,6"
+                                                IsChecked="{Binding AppSettings.ListRowHeight, Mode=TwoWay, Converter={StaticResource IntEqualityToBool}, ConverterParameter=20}">
+                                        <TextBlock Text="超コンパクト (20 px)" FontSize="12"/>
+                                    </RadioButton>
+                                    <RadioButton GroupName="ListRowHeightDeck" Style="{StaticResource OptionRadioButton}" Margin="0,0,0,6"
                                                 IsChecked="{Binding AppSettings.ListRowHeight, Mode=TwoWay, Converter={StaticResource IntEqualityToBool}, ConverterParameter=24}">
                                         <TextBlock Text="コンパクト (24 px)" FontSize="12"/>
                                     </RadioButton>

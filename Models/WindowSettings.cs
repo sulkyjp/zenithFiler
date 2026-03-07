@@ -327,7 +327,7 @@ namespace ZenithFiler
         public bool EnableMicroAnimations { get; set; } = true;
 
         // ─── Display ───
-        /// <summary>ファイル一覧の行高（px）。24=コンパクト, 32=標準, 40=ゆったり。</summary>
+        /// <summary>ファイル一覧の行高（px）。20=超コンパクト, 24=コンパクト, 32=標準, 40=ゆったり。</summary>
         public int ListRowHeight { get; set; } = 32;
 
         /// <summary>ファイル一覧ビューのホバーアニメーション（フェード・スケール等）を有効にするか。</summary>

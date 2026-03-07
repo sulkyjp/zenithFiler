@@ -9,7 +9,7 @@
     <ApplicationIcon>assets\app_icon2_1.ico</ApplicationIcon>
     <ApplicationTitle>ZenithFiler</ApplicationTitle>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>0.26.2</Version>
+    <Version>0.26.3</Version>
     <PublishDir>bin\$(Configuration)\$(TargetFramework)\$(RuntimeIdentifier)\ZenithFiler_v$(Version)\</PublishDir>
   </PropertyGroup>
 
