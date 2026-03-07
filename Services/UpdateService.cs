@@ -231,7 +231,21 @@ namespace ZenithFiler.Services
         public void ApplyAndRestart()
         {
             if (!IsReadyToRestart) return;
+            LaunchUpdateBatch();
+            // アプリを終了
+            Application.Current.Dispatcher.Invoke(() => Application.Current.Shutdown());
+        }
 
+        /// <summary>アプリ終了時にダウンロード済み更新を適用する。Shutdown は呼ばない。</summary>
+        public void ApplyOnExit()
+        {
+            if (!IsReadyToRestart) return;
+            LaunchUpdateBatch();
+        }
+
+        /// <summary>上書き更新＋再起動バッチを起動する共通処理。</summary>
+        private void LaunchUpdateBatch()
+        {
             var appDir = AppDomain.CurrentDomain.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar);
             var extractedDir = Path.Combine(TempUpdateDir, "extracted");
             var batchPath = Path.Combine(Path.GetTempPath(), "ZenithFiler_update.bat");
@@ -255,9 +269,6 @@ namespace ZenithFiler.Services
                 CreateNoWindow = true
             };
             Process.Start(psi);
-
-            // アプリを終了
-            Application.Current.Dispatcher.Invoke(() => Application.Current.Shutdown());
         }
 
         /// <summary>アップデート適用後の一時ファイルをクリーンアップする。</summary>

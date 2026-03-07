@@ -295,6 +295,9 @@ namespace ZenithFiler
 
         private void App_Exit(object sender, ExitEventArgs e)
         {
+            // 0. ダウンロード済み更新があれば終了後に適用バッチを起動
+            UpdateService?.ApplyOnExit();
+
             // 1. UI 系サービス（トレイアイコン除去）
             TrayService?.Dispose();
             CpuIdleService?.Dispose();
