@@ -443,8 +443,40 @@
                     </ScrollViewer>
                 </DockPanel>
 
-                <!-- Page 8: 準備完了 -->
-                <StackPanel x:Name="Page8" Visibility="Collapsed"
+                <!-- Page 8: EULA 同意 -->
+                <DockPanel x:Name="Page8" Visibility="Collapsed">
+                    <TextBlock DockPanel.Dock="Top"
+                               Text="ソフトウェア使用許諾契約"
+                               FontSize="14" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextBrush}"
+                               Margin="0,0,0,14"/>
+
+                    <CheckBox x:Name="EulaAgreeCheckBox"
+                              DockPanel.Dock="Bottom"
+                              Content="上記の使用許諾契約に同意します"
+                              Foreground="{DynamicResource TextBrush}"
+                              Margin="0,14,0,0"
+                              VerticalContentAlignment="Center"
+                              Checked="EulaAgreeCheckBox_Changed"
+                              Unchecked="EulaAgreeCheckBox_Changed"/>
+
+                    <Border BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="4"
+                            Background="{DynamicResource InputBackgroundBrush}">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                      Padding="16,12">
+                            <TextBlock x:Name="EulaTextBlock"
+                                       TextWrapping="Wrap"
+                                       Foreground="{DynamicResource TextBrush}"
+                                       FontSize="12"
+                                       LineHeight="20"/>
+                        </ScrollViewer>
+                    </Border>
+                </DockPanel>
+
+                <!-- Page 9: 準備完了 -->
+                <StackPanel x:Name="Page9" Visibility="Collapsed"
                             VerticalAlignment="Center" HorizontalAlignment="Center">
                     <icon:PackIconLucide Kind="Check" Width="48" Height="48"
                                          Foreground="{DynamicResource AccentBrush}"
@@ -494,7 +526,9 @@
                              Fill="{DynamicResource SubTextBrush}"/>
                     <Ellipse x:Name="Dot7" Width="8" Height="8" Margin="0,0,6,0"
                              Fill="{DynamicResource SubTextBrush}"/>
-                    <Ellipse x:Name="Dot8" Width="8" Height="8"
+                    <Ellipse x:Name="Dot8" Width="8" Height="8" Margin="0,0,6,0"
+                             Fill="{DynamicResource SubTextBrush}"/>
+                    <Ellipse x:Name="Dot9" Width="8" Height="8"
                              Fill="{DynamicResource SubTextBrush}"/>
                 </StackPanel>
 
@@ -538,7 +572,7 @@
                         </Button.Template>
                     </Button>
 
-                    <!-- Next button (pages 0–7) -->
+                    <!-- Next button (pages 0–8) -->
                     <Button x:Name="NextButton" Click="NextButton_Click"
                             MinWidth="100" MinHeight="32"
                             Padding="14,4" Cursor="Hand"
@@ -573,7 +607,7 @@
                         </Button.Template>
                     </Button>
 
-                    <!-- Launch button (page 8 — 次へ と同じ位置に表示) -->
+                    <!-- Launch button (page 9 — 次へ と同じ位置に表示) -->
                     <Button x:Name="LaunchButton" Click="LaunchButton_Click"
                             Visibility="Collapsed"
                             MinWidth="100" MinHeight="32"

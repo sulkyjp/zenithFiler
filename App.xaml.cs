@@ -69,7 +69,7 @@ namespace ZenithFiler
         private const int LohCompactionDelaySeconds = 300;
 
         // --- Main() からの引き継ぎ（WPF 初期化前に開始した処理の結果） ---
-        private SplashScreen? _firstLaunchSplash;
+        internal static bool IsFirstLaunch { get; private set; }
         private bool _isFirstLaunch;
         private Task<WindowSettings>? _settingsTask;
 
@@ -96,17 +96,10 @@ namespace ZenithFiler
             System.Runtime.ProfileOptimization.SetProfileRoot(AppDomain.CurrentDomain.BaseDirectory);
             System.Runtime.ProfileOptimization.StartProfile("startup.jitprofile");
 
-            // 最速でスプラッシュ表示（WPF フレームワーク初期化前、ネイティブ Win32 で描画）
+            // 初回起動判定（WPF フレームワーク初期化前に実行）
             var baseDir = AppDomain.CurrentDomain.BaseDirectory;
             var settingsPath = Path.Combine(baseDir, "settings.json");
             bool isFirstLaunch = !File.Exists(settingsPath);
-
-            SplashScreen? splash = null;
-            if (isFirstLaunch)
-            {
-                splash = new SplashScreen("assets/splash.png");
-                splash.Show(false);
-            }
 
             // 設定の並列読み込みも WPF 初期化前に開始（App コンストラクタ + InitializeComponent と並列実行）
             var settingsTask = Task.Run(() =>
@@ -117,7 +110,7 @@ namespace ZenithFiler
 
             // WPF Application の初期化（App コンストラクタ → InitializeComponent → Run → OnStartup）
             var app = new App();
-            app._firstLaunchSplash = splash;
+            IsFirstLaunch = isFirstLaunch;
             app._isFirstLaunch = isFirstLaunch;
             app._settingsTask = settingsTask;
             app.InitializeComponent();
@@ -131,7 +124,6 @@ namespace ZenithFiler
             if (!createdNew)
             {
                 _mutexOwned = false;
-                _firstLaunchSplash?.Close(TimeSpan.Zero);
                 ActivateExistingInstance();
                 Shutdown();
                 return;
@@ -210,12 +202,7 @@ namespace ZenithFiler
 
             Exit += App_Exit;
 
-            if (_firstLaunchSplash != null)
-            {
-                _firstLaunchSplash.Close(TimeSpan.FromSeconds(0.5));
-            }
-
-            // 初回起動時: ウェルカムウィンドウで テーマ選択 → settings.json 作成
+            // 初回起動時: ウェルカムウィンドウで テーマ選択 + EULA 同意 → settings.json 作成
             if (_isFirstLaunch)
             {
                 // WelcomeWindow が唯一のウィンドウなので、Close 時にアプリが終了しないよう一時変更
@@ -224,8 +211,8 @@ namespace ZenithFiler
                 ShutdownMode = ShutdownMode.OnLastWindowClose;
             }
 
-            // EULA 同意チェック（初回起動時のみ表示）
-            if (string.IsNullOrEmpty(preloadedSettings.EulaAcceptedVersion))
+            // EULA 同意チェック（既存ユーザーで未同意の場合のみ表示 — 初回起動時は WelcomeWindow 内で処理）
+            if (!_isFirstLaunch && string.IsNullOrEmpty(preloadedSettings.EulaAcceptedVersion))
             {
                 var currentVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.0.0";
                 ShutdownMode = ShutdownMode.OnExplicitShutdown;
@@ -236,7 +223,6 @@ namespace ZenithFiler
                     return;
                 }
                 WindowSettings.SaveEulaAcceptedOnly(currentVersion);
-                // DebouncedSaver のフラッシュを待つ（即座に settings.json に書き込む）
                 WindowSettings.FlushPendingSaves();
                 ShutdownMode = ShutdownMode.OnLastWindowClose;
             }
@@ -245,39 +231,37 @@ namespace ZenithFiler
             Current.Resources["ListRowHeight"] = (double)preloadedSettings.ListRowHeight;
             // 一覧アニメーション時間リソースを初期化（ホバーフェード・スケール）
             Current.Resources["ListItemHoverDuration"] = new System.Windows.Duration(
-                preloadedSettings.EnableListAnimations ? TimeSpan.FromSeconds(0.15) : TimeSpan.Zero);
+                preloadedSettings.ShowListEffects ? TimeSpan.FromSeconds(0.15) : TimeSpan.Zero);
             // カスタムキーバインドを起動時に適用
             KeyBindings.ApplyCustomBindings(preloadedSettings.CustomKeyBindings);
 
             var mainWindow = new MainWindow(preloadedSettings);
 
-            // タスクトレイサービスの初期化
-            TrayService = new Services.TrayIconService(mainWindow);
-            TrayService.Initialize();
-
-            // CPU アイドル監視サービスの初期化
-            CpuIdleService = new Services.CpuIdleService();
-
-            // 自動更新サービスの初期化
-            UpdateService = new Services.UpdateService();
-            UpdateService.Initialize();
-
-            // --updated 引数処理（アップデート適用後の再起動時）
-            if (Environment.GetCommandLineArgs().Contains("--updated"))
-            {
-                var ver = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3);
-                Dispatcher.CurrentDispatcher.BeginInvoke(() =>
-                    Notification.Notify($"バージョン {ver} に更新しました"),
-                    DispatcherPriority.Loaded);
-                _ = Task.Run(() => UpdateService.CleanupTempFiles());
-            }
-
-            // レンダリング準備が整った段階で Visible に切り替え、完成済みの画面を一発表示
-            Dispatcher.CurrentDispatcher.BeginInvoke(new Action(() =>
+            // Opacity=0 の状態で Visible にしてレンダリングパイプラインを起動
+            // ContentRendered で Opacity=1 にして描画済みコンテンツを一発表示
+            _ = Dispatcher.CurrentDispatcher.BeginInvoke(new Action(() =>
             {
                 mainWindow.Visibility = Visibility.Visible;
-                mainWindow.Activate();
             }), DispatcherPriority.Render);
+
+            // サービスはレンダリング完了後に遅延初期化（起動の体感速度を向上）
+            _ = Dispatcher.CurrentDispatcher.BeginInvoke(new Action(() =>
+            {
+                TrayService = new Services.TrayIconService(mainWindow);
+                TrayService.Initialize();
+
+                CpuIdleService = new Services.CpuIdleService();
+
+                UpdateService = new Services.UpdateService();
+                UpdateService.Initialize();
+
+                if (Environment.GetCommandLineArgs().Contains("--updated"))
+                {
+                    var ver = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3);
+                    Notification.Notify($"バージョン {ver} に更新しました");
+                    _ = Task.Run(() => UpdateService.CleanupTempFiles());
+                }
+            }), DispatcherPriority.Background);
 
             // 7. 重い初期化処理をバックグラウンドで実行（Window_Loaded 側で適宜 await）
             StartupInitTask = Task.Run(async () =>

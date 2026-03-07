@@ -50,10 +50,7 @@
         <local:TreeLineVisibilityConverter x:Key="TreeLineVis"/>
     </ui:FluentWindow.Resources>
 
-    <Grid x:Name="RootContent" Background="{DynamicResource BackgroundBrush}" Opacity="0">
-        <Grid.RenderTransform>
-            <TranslateTransform x:Name="RootContentTranslate" Y="20"/>
-        </Grid.RenderTransform>
+    <Grid x:Name="RootContent" Background="{DynamicResource BackgroundBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/> <!-- TitleBar -->
             <RowDefinition Height="*"/>    <!-- Main Content -->
@@ -1840,16 +1837,20 @@
                         <Style TargetType="Grid">
                             <Setter Property="Opacity" Value="0"/>
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsLoading}" Value="True">
-                                    <DataTrigger.EnterActions>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding IsLoading}" Value="True"/>
+                                        <Condition Binding="{Binding AppSettings.ShowScanBar}" Value="True"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <MultiDataTrigger.EnterActions>
                                         <BeginStoryboard x:Name="ScanBarFadeIn">
                                             <Storyboard>
                                                 <DoubleAnimation Storyboard.TargetProperty="Opacity"
                                                                  To="1" Duration="0:0:0.2"/>
                                             </Storyboard>
                                         </BeginStoryboard>
-                                    </DataTrigger.EnterActions>
-                                    <DataTrigger.ExitActions>
+                                    </MultiDataTrigger.EnterActions>
+                                    <MultiDataTrigger.ExitActions>
                                         <StopStoryboard BeginStoryboardName="ScanBarFadeIn"/>
                                         <BeginStoryboard>
                                             <Storyboard>
@@ -1857,8 +1858,8 @@
                                                                  To="0" Duration="0:0:0.3"/>
                                             </Storyboard>
                                         </BeginStoryboard>
-                                    </DataTrigger.ExitActions>
-                                </DataTrigger>
+                                    </MultiDataTrigger.ExitActions>
+                                </MultiDataTrigger>
                             </Style.Triggers>
                         </Style>
                     </Grid.Style>

@@ -11,7 +11,7 @@
     <!-- ファイル一覧の行高（px）。設定から DynamicResource で書き換え可能。-->
     <sys:Double x:Key="ListRowHeight">32</sys:Double>
 
-    <!-- 一覧アニメーション時間。EnableListAnimations=false 時は TimeSpan.Zero に書き換えられる。-->
+    <!-- 一覧アニメーション時間。ShowListEffects=false 時は TimeSpan.Zero に書き換えられる。-->
     <Duration x:Key="ListItemHoverDuration">0:0:0.15</Duration>
 
     <!-- コンテキストメニュー内の区切り線: 細く薄い線、コンパクトなマージン -->

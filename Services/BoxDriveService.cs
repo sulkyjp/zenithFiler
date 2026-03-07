@@ -716,6 +716,8 @@ namespace ZenithFiler
         /// <summary>GlowBar を停止し、100% まで追従＋最低表示時間を保証してからフェードアウトする。</summary>
         private static async void StopGlowBar()
         {
+            try
+            {
             var timer = _progressTimer;
             _progressTimer = null;
 
@@ -751,6 +753,8 @@ namespace ZenithFiler
             var token = _busyToken;
             _busyToken = null;
             token?.Dispose();
+            }
+            catch (Exception ex) { _ = App.FileLogger.LogAsync($"[ERR] StopGlowBar: {ex.Message}"); }
         }
 
         /// <summary>監視を完全に停止し、リソースを解放する。</summary>

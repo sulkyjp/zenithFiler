@@ -145,6 +145,7 @@ namespace ZenithFiler
 
         private static void ShowDragAdorner(TreeView treeView)
         {
+            if (!WindowSettings.ShowDragEffectsEnabled) return;
             var layer = AdornerLayer.GetAdornerLayer(treeView);
             if (layer != null)
             {
@@ -399,13 +400,13 @@ namespace ZenithFiler
                             {
                                 var destPhysical = PathHelper.GetPhysicalPath(destDir);
                                 var pathsCopy = (string[])paths.Clone();
-                                _ = System.Threading.Tasks.Task.Run(() =>
+                                _ = System.Threading.Tasks.Task.Run(async () =>
                                 {
                                     try
                                     {
                                         if (string.IsNullOrEmpty(destPhysical) || !Directory.Exists(destPhysical)) return;
                                         IntPtr ownerHandle = IntPtr.Zero;
-                                        Application.Current.Dispatcher.Invoke(() =>
+                                        await Application.Current.Dispatcher.InvokeAsync(() =>
                                         {
                                             if (Application.Current.MainWindow != null)
                                                 ownerHandle = new System.Windows.Interop.WindowInteropHelper(Application.Current.MainWindow).Handle;
@@ -520,14 +521,14 @@ namespace ZenithFiler
                                 var srcPhysical = PathHelper.GetPhysicalPath(draggedDir.FullPath);
                                 var destPhysical = PathHelper.GetPhysicalPath(destPath);
                                 var draggedName = Path.GetFileName(draggedDir.FullPath);
-                                _ = System.Threading.Tasks.Task.Run(() =>
+                                _ = System.Threading.Tasks.Task.Run(async () =>
                                 {
                                     try
                                     {
                                         if (string.IsNullOrEmpty(srcPhysical) || !Directory.Exists(srcPhysical) || string.IsNullOrEmpty(destPhysical) || srcPhysical.Equals(destPhysical, StringComparison.OrdinalIgnoreCase))
                                             return;
                                         IntPtr ownerHandle = IntPtr.Zero;
-                                        Application.Current.Dispatcher.Invoke(() =>
+                                        await Application.Current.Dispatcher.InvokeAsync(() =>
                                         {
                                             if (Application.Current.MainWindow != null)
                                                 ownerHandle = new System.Windows.Interop.WindowInteropHelper(Application.Current.MainWindow).Handle;

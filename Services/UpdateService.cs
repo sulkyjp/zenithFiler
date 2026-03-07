@@ -233,7 +233,7 @@ namespace ZenithFiler.Services
             if (!IsReadyToRestart) return;
             LaunchUpdateBatch();
             // アプリを終了
-            Application.Current.Dispatcher.Invoke(() => Application.Current.Shutdown());
+            Application.Current.Dispatcher.BeginInvoke(() => Application.Current.Shutdown());
         }
 
         /// <summary>アプリ終了時にダウンロード済み更新を適用する。Shutdown は呼ばない。</summary>

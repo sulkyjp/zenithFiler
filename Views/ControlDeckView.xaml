@@ -71,6 +71,15 @@
                         </StackPanel>
                     </RadioButton>
                     <RadioButton GroupName="ControlDeckNav" Style="{StaticResource ControlDeckNavButton}"
+                                 IsChecked="{Binding AppSettings.ActiveCategory, Mode=TwoWay, Converter={StaticResource EnumEqualityToBool}, ConverterParameter={x:Static local:SettingsCategory.Effects}}">
+                        <StackPanel Orientation="Horizontal">
+                            <icon:PackIconLucide Kind="Sparkles" Width="14" Height="14"
+                                                 VerticalAlignment="Center" Margin="0,0,10,0"
+                                                 Foreground="{DynamicResource SubTextBrush}"/>
+                            <TextBlock Text="演出" FontSize="13" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </RadioButton>
+                    <RadioButton GroupName="ControlDeckNav" Style="{StaticResource ControlDeckNavButton}"
                                  IsChecked="{Binding AppSettings.ActiveCategory, Mode=TwoWay, Converter={StaticResource EnumEqualityToBool}, ConverterParameter={x:Static local:SettingsCategory.Theme}}">
                         <StackPanel Orientation="Horizontal">
                             <icon:PackIconLucide Kind="Palette" Width="14" Height="14"
@@ -186,6 +195,9 @@
                                         </DataTrigger>
                                         <DataTrigger Binding="{Binding AppSettings.ActiveCategory}" Value="{x:Static local:SettingsCategory.Display}">
                                             <Setter Property="Text" Value="表示"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding AppSettings.ActiveCategory}" Value="{x:Static local:SettingsCategory.Effects}">
+                                            <Setter Property="Text" Value="演出"/>
                                         </DataTrigger>
                                         <DataTrigger Binding="{Binding AppSettings.ActiveCategory}" Value="{x:Static local:SettingsCategory.Shortcut}">
                                             <Setter Property="Text" Value="ショートカットキー"/>
@@ -1549,65 +1561,6 @@
                                 </StackPanel>
                             </Border>
 
-                            <!-- マイクロアニメーション -->
-                            <Border Width="400" Margin="0,0,20,20" Padding="16,14" CornerRadius="6"
-                                    Background="{DynamicResource InputBackgroundBrush}"
-                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
-                                <StackPanel>
-                                    <TextBlock Text="マイクロアニメーション" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                                    <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}"
-                                               TextWrapping="Wrap" Margin="0,0,0,10"
-                                               Text="タブ操作・パネル切り替えなど UI ナビゲーション時のトランジション効果を制御します。"/>
-                                    <CheckBox IsChecked="{Binding AppSettings.EnableMicroAnimations, Mode=TwoWay}"
-                                              Margin="0,0,0,10" FontSize="12">
-                                        <TextBlock Text="マイクロアニメーションを有効にする" TextWrapping="Wrap"/>
-                                    </CheckBox>
-                                    <TextBlock Text="対象のアニメーション:" FontSize="11" FontWeight="SemiBold"
-                                               Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,4"/>
-                                    <StackPanel Margin="8,0,0,0">
-                                        <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,2" TextWrapping="Wrap"
-                                                   Text="・ タブ切り替え — コンテンツのフェードイン"/>
-                                        <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,2" TextWrapping="Wrap"
-                                                   Text="・ タブインジケーター — アクティブタブ下線のスライド移動"/>
-                                        <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,2" TextWrapping="Wrap"
-                                                   Text="・ クイックプレビュー — 開閉時のフェード・スライド"/>
-                                        <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,2" TextWrapping="Wrap"
-                                                   Text="・ タブ D&amp;D — ドラッグ中の挿入マーカーのフェードイン"/>
-                                        <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,0" TextWrapping="Wrap"
-                                                   Text="・ インデックスポップアップ — ステータスバーのポップアップのフェード"/>
-                                    </StackPanel>
-                                    <TextBlock Text="無効にすると動作が軽くなる場合があります"
-                                               FontSize="11" Foreground="{DynamicResource SubTextBrush}"
-                                               TextWrapping="Wrap" Margin="0,8,0,0"/>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- 一覧表示アニメーション -->
-                            <Border Width="400" Margin="0,0,20,20" Padding="16,14" CornerRadius="6"
-                                    Background="{DynamicResource InputBackgroundBrush}"
-                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
-                                <StackPanel>
-                                    <TextBlock Text="一覧表示アニメーション" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                                    <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}"
-                                               TextWrapping="Wrap" Margin="0,0,0,10"
-                                               Text="ファイル一覧上でのホバーエフェクト（フェード・スケール）を制御します。無効にすると即時切り替えになり、低スペック環境での動作を改善できます。"/>
-                                    <CheckBox IsChecked="{Binding AppSettings.EnableListAnimations, Mode=TwoWay}"
-                                              Margin="0,0,0,10" FontSize="12">
-                                        <TextBlock Text="一覧のホバーアニメーションを有効にする" TextWrapping="Wrap"/>
-                                    </CheckBox>
-                                    <TextBlock Text="対象のアニメーション:" FontSize="11" FontWeight="SemiBold"
-                                               Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,4"/>
-                                    <StackPanel Margin="8,0,0,0">
-                                        <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,2" TextWrapping="Wrap"
-                                                   Text="・ アイコンビュー — ホバー時の情報オーバーレイのフェードイン"/>
-                                        <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,2" TextWrapping="Wrap"
-                                                   Text="・ お気に入りボタン — ホバー時の円形背景のフェードイン"/>
-                                        <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,0" TextWrapping="Wrap"
-                                                   Text="・ 検索アイコン — インデックスモード時のホバースケール拡大"/>
-                                    </StackPanel>
-                                </StackPanel>
-                            </Border>
-
                             <!-- 通知 -->
                             <Border Width="400" Margin="0,0,20,20" Padding="16,14" CornerRadius="6"
                                     Background="{DynamicResource InputBackgroundBrush}"
@@ -1685,6 +1638,213 @@
                                                     IsChecked="{Binding AppSettings.DefaultSortDirection, Mode=TwoWay, Converter={StaticResource EnumEqualityToBool}, ConverterParameter={x:Static ComponentModel:ListSortDirection.Descending}}">
                                             <TextBlock Text="降順" FontSize="12"/>
                                         </RadioButton>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                        </WrapPanel>
+                    </ScrollViewer>
+
+                    <!-- ══ Effects（演出）══ -->
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                  Padding="0"
+                                  Visibility="{Binding AppSettings.ActiveCategory, Converter={StaticResource EnumEqualityToVis}, ConverterParameter={x:Static local:SettingsCategory.Effects}}">
+                        <WrapPanel Margin="24,20" Orientation="Horizontal">
+
+                            <!-- A. 起動・全体 -->
+                            <Border Width="400" Margin="0,0,20,20" Padding="16,14" CornerRadius="6"
+                                    Background="{DynamicResource InputBackgroundBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="A. 起動・全体" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,10"
+                                               Text="起動時のウェルカムアニメーションとローディングオーバーレイを制御します"/>
+                                    <CheckBox IsChecked="{Binding AppSettings.ShowStartupEffects, Mode=TwoWay}"
+                                              Margin="0,0,0,8" FontSize="12">
+                                        <TextBlock Text="起動時の演出効果を有効にする" TextWrapping="Wrap"/>
+                                    </CheckBox>
+                                    <StackPanel Margin="8,0,0,0">
+                                        <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,2" TextWrapping="Wrap"
+                                                   Text="・ ウェルカムアニメーション"/>
+                                        <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,0" TextWrapping="Wrap"
+                                                   Text="・ ローディングオーバーレイ"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- B. GlowBar -->
+                            <Border Width="400" Margin="0,0,20,20" Padding="16,14" CornerRadius="6"
+                                    Background="{DynamicResource InputBackgroundBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="B. GlowBar" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,10"
+                                               Text="コピー/移動時のGlowBar進捗バー表示を制御します"/>
+                                    <CheckBox IsChecked="{Binding AppSettings.ShowGlowBar, Mode=TwoWay}"
+                                              Margin="0,0,0,8" FontSize="12">
+                                        <TextBlock Text="GlowBar 進捗バーを表示する" TextWrapping="Wrap"/>
+                                    </CheckBox>
+                                    <StackPanel Margin="8,0,0,0">
+                                        <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,0" TextWrapping="Wrap"
+                                                   Text="・ 進捗バーのフェード・補間・グロー"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- C. スキャンバー -->
+                            <Border Width="400" Margin="0,0,20,20" Padding="16,14" CornerRadius="6"
+                                    Background="{DynamicResource InputBackgroundBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="C. スキャンバー" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,10"
+                                               Text="フォルダの読み込み中・検索中にステータスバー付近に流れるプログレスバーを制御します"/>
+                                    <CheckBox IsChecked="{Binding AppSettings.ShowScanBar, Mode=TwoWay}"
+                                              Margin="0,0,0,8" FontSize="12">
+                                        <TextBlock Text="フォルダ読み込み時のスキャンバーを表示する" TextWrapping="Wrap"/>
+                                    </CheckBox>
+                                    <StackPanel Margin="8,0,0,0">
+                                        <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,0" TextWrapping="Wrap"
+                                                   Text="・ フォルダ読み込み中のスキャンバー"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- D. タブ操作 -->
+                            <Border Width="400" Margin="0,0,20,20" Padding="16,14" CornerRadius="6"
+                                    Background="{DynamicResource InputBackgroundBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="D. タブ操作" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,10"
+                                               Text="タブ切り替え・タブドラッグ時のアニメーション効果を制御します"/>
+                                    <CheckBox IsChecked="{Binding AppSettings.ShowTabEffects, Mode=TwoWay}"
+                                              Margin="0,0,0,8" FontSize="12">
+                                        <TextBlock Text="タブ操作のアニメーションを有効にする" TextWrapping="Wrap"/>
+                                    </CheckBox>
+                                    <StackPanel Margin="8,0,0,0">
+                                        <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,2" TextWrapping="Wrap"
+                                                   Text="・ タブインジケーター — アクティブタブ下線のスライド移動"/>
+                                        <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,2" TextWrapping="Wrap"
+                                                   Text="・ タブコンテンツ — 切り替え時のフェードイン"/>
+                                        <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,0" TextWrapping="Wrap"
+                                                   Text="・ タブ D&amp;D — ドラッグ中の挿入マーカーフェード"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- E. ペイン・トランジション -->
+                            <Border Width="400" Margin="0,0,20,20" Padding="16,14" CornerRadius="6"
+                                    Background="{DynamicResource InputBackgroundBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="E. ペイン・トランジション" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,10"
+                                               Text="ペイン切り替え・Control Deck の展開/閉じ・サイドバー幅変更時のアニメーションを制御します"/>
+                                    <CheckBox IsChecked="{Binding AppSettings.ShowPaneTransitions, Mode=TwoWay}"
+                                              Margin="0,0,0,8" FontSize="12">
+                                        <TextBlock Text="ペイントランジションを有効にする" TextWrapping="Wrap"/>
+                                    </CheckBox>
+                                    <StackPanel Margin="8,0,0,0">
+                                        <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,2" TextWrapping="Wrap"
+                                                   Text="・ ペインフェードイン/アウト"/>
+                                        <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,2" TextWrapping="Wrap"
+                                                   Text="・ Control Deck 展開/閉じ"/>
+                                        <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,0" TextWrapping="Wrap"
+                                                   Text="・ サイドバー幅アニメーション"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- F. テーマ -->
+                            <Border Width="400" Margin="0,0,20,20" Padding="16,14" CornerRadius="6"
+                                    Background="{DynamicResource InputBackgroundBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="F. テーマ" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,10"
+                                               Text="テーマ切替時のオーバーレイ効果とテーマトースト通知のアニメーションを制御します"/>
+                                    <CheckBox IsChecked="{Binding AppSettings.ShowThemeEffects, Mode=TwoWay}"
+                                              Margin="0,0,0,8" FontSize="12">
+                                        <TextBlock Text="テーマ切替の演出を有効にする" TextWrapping="Wrap"/>
+                                    </CheckBox>
+                                    <StackPanel Margin="8,0,0,0">
+                                        <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,2" TextWrapping="Wrap"
+                                                   Text="・ テーマ切替オーバーレイ"/>
+                                        <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,0" TextWrapping="Wrap"
+                                                   Text="・ テーマトースト通知"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- H. クイックプレビュー -->
+                            <Border Width="400" Margin="0,0,20,20" Padding="16,14" CornerRadius="6"
+                                    Background="{DynamicResource InputBackgroundBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="H. クイックプレビュー" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,10"
+                                               Text="クイックプレビューの開閉時のフェード・スライドアニメーションを制御します"/>
+                                    <CheckBox IsChecked="{Binding AppSettings.ShowPreviewEffects, Mode=TwoWay}"
+                                              Margin="0,0,0,8" FontSize="12">
+                                        <TextBlock Text="プレビューの演出を有効にする" TextWrapping="Wrap"/>
+                                    </CheckBox>
+                                    <StackPanel Margin="8,0,0,0">
+                                        <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,0" TextWrapping="Wrap"
+                                                   Text="・ プレビューの開閉アニメーション"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- I. ファイル一覧 -->
+                            <Border Width="400" Margin="0,0,20,20" Padding="16,14" CornerRadius="6"
+                                    Background="{DynamicResource InputBackgroundBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="I. ファイル一覧" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,10"
+                                               Text="ファイル一覧上でのホバーエフェクトやコンテキストメニューのアニメーションを制御します"/>
+                                    <CheckBox IsChecked="{Binding AppSettings.ShowListEffects, Mode=TwoWay}"
+                                              Margin="0,0,0,8" FontSize="12">
+                                        <TextBlock Text="ファイル一覧の演出を有効にする" TextWrapping="Wrap"/>
+                                    </CheckBox>
+                                    <StackPanel Margin="8,0,0,0">
+                                        <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,2" TextWrapping="Wrap"
+                                                   Text="・ アイコンビュー情報オーバーレイのフェード"/>
+                                        <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,2" TextWrapping="Wrap"
+                                                   Text="・ お気に入りボタンのホバーフェード"/>
+                                        <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,2" TextWrapping="Wrap"
+                                                   Text="・ 検索アイコンのホバースケール"/>
+                                        <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,0" TextWrapping="Wrap"
+                                                   Text="・ コンテキストメニューのフェード"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- L. ドラッグ＆ドロップ -->
+                            <Border Width="400" Margin="0,0,20,20" Padding="16,14" CornerRadius="6"
+                                    Background="{DynamicResource InputBackgroundBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="L. ドラッグ＆ドロップ" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,10"
+                                               Text="ドラッグ中のファイル名ラベル（カーソル追従アドーナー）の表示を制御します"/>
+                                    <CheckBox IsChecked="{Binding AppSettings.ShowDragEffects, Mode=TwoWay}"
+                                              Margin="0,0,0,8" FontSize="12">
+                                        <TextBlock Text="ドラッグアドーナーを表示する" TextWrapping="Wrap"/>
+                                    </CheckBox>
+                                    <StackPanel Margin="8,0,0,0">
+                                        <TextBlock FontSize="11" Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,0" TextWrapping="Wrap"
+                                                   Text="・ ドラッグ中のファイル名ラベル表示"/>
                                     </StackPanel>
                                 </StackPanel>
                             </Border>

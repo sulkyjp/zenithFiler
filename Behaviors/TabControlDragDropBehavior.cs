@@ -138,6 +138,7 @@ namespace ZenithFiler
 
         private static void ShowDragAdorner(TabControl tabControl, string text)
         {
+            if (!WindowSettings.ShowDragEffectsEnabled) return;
             var layer = AdornerLayer.GetAdornerLayer(tabControl);
             if (layer != null)
             {
@@ -460,7 +461,7 @@ namespace ZenithFiler
         /// <summary>表示時に短いフェードインアニメーションを実行する。</summary>
         public void FadeIn()
         {
-            if (!WindowSettings.MicroAnimationsEnabled)
+            if (!WindowSettings.ShowTabEffectsEnabled)
             {
                 Opacity = 1;
                 return;

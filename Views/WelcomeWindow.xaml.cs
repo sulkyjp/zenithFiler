@@ -10,12 +10,13 @@ namespace ZenithFiler.Views;
 
 public partial class WelcomeWindow : Window
 {
-    private const int TotalPages = 9;
+    private const int TotalPages = 10;
     private int _currentPage;
     private UIElement[] _pages = null!;
     private Ellipse[] _dots = null!;
     private string _selectedThemeName = "standard";
     private bool _themesLoaded;
+    private bool _eulaLoaded;
 
     public WelcomeWindow()
     {
@@ -25,8 +26,8 @@ public partial class WelcomeWindow : Window
 
     private void WelcomeWindow_Loaded(object sender, RoutedEventArgs e)
     {
-        _pages = new UIElement[] { Page0, Page1, Page2, Page3, Page4, Page5, Page6, Page7, Page8 };
-        _dots = new[] { Dot0, Dot1, Dot2, Dot3, Dot4, Dot5, Dot6, Dot7, Dot8 };
+        _pages = new UIElement[] { Page0, Page1, Page2, Page3, Page4, Page5, Page6, Page7, Page8, Page9 };
+        _dots = new[] { Dot0, Dot1, Dot2, Dot3, Dot4, Dot5, Dot6, Dot7, Dot8, Dot9 };
         UpdatePageVisibility();
     }
 
@@ -45,7 +46,18 @@ public partial class WelcomeWindow : Window
         NextButton.IsDefault = !isLastPage;
         LaunchButton.IsDefault = isLastPage;
 
-        // Update page 8 selected theme text
+        // EULA ページでは同意チェックなしで「次へ」を無効化
+        bool isEulaPage = _currentPage == 8;
+        NextButton.IsEnabled = !isEulaPage || (EulaAgreeCheckBox.IsChecked == true);
+
+        // EULA テキスト読み込み（初回のみ）
+        if (isEulaPage && !_eulaLoaded)
+        {
+            _eulaLoaded = true;
+            LoadEulaText();
+        }
+
+        // Update page 9 selected theme text
         if (_currentPage == TotalPages - 1)
             SelectedThemeText.Text = $"テーマ: {_selectedThemeName}";
 
@@ -89,6 +101,12 @@ public partial class WelcomeWindow : Window
         var settings = WindowSettings.CreateDefault();
         settings.ThemeName = _selectedThemeName;
         settings.Save();
+
+        // EULA 同意バージョンを保存
+        var currentVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.0.0";
+        WindowSettings.SaveEulaAcceptedOnly(currentVersion);
+        WindowSettings.FlushPendingSaves();
+
         Close();
     }
 
@@ -130,6 +148,21 @@ public partial class WelcomeWindow : Window
             _selectedThemeName = theme.Name;
             App.ThemeService.ApplyThemeLive(theme.Name, Application.Current.Resources);
         }
+    }
+
+    private void LoadEulaText()
+    {
+        var eulaPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "apps", "EULA.md");
+        if (System.IO.File.Exists(eulaPath))
+            EulaTextBlock.Text = System.IO.File.ReadAllText(eulaPath);
+        else
+            EulaTextBlock.Text = "使用許諾契約書の読み込みに失敗しました。";
+    }
+
+    private void EulaAgreeCheckBox_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_currentPage == 8)
+            NextButton.IsEnabled = EulaAgreeCheckBox.IsChecked == true;
     }
 
     private void ManualButton_Click(object sender, RoutedEventArgs e)

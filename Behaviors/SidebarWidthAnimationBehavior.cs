@@ -85,6 +85,13 @@ namespace ZenithFiler
                     StopAnimation();
                 }
 
+                if (!WindowSettings.ShowPaneTransitionsEnabled)
+                {
+                    // アニメーションなし: 即座に目標幅を設定
+                    vm.SidebarWidth = new GridLength(to);
+                    return;
+                }
+
                 StartAnimation(grid, from, to, vm);
             };
 

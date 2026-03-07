@@ -83,7 +83,7 @@ namespace ZenithFiler
                 return;
             }
 
-            if (!WindowSettings.MicroAnimationsEnabled)
+            if (!WindowSettings.ShowTabEffectsEnabled)
             {
                 content.BeginAnimation(UIElement.OpacityProperty, null);
                 content.Opacity = 1;

@@ -51,8 +51,12 @@ namespace ZenithFiler.Views
 
         private async void CheckUpdateBtn_Click(object sender, RoutedEventArgs e)
         {
-            if (DataContext is MainViewModel vm)
-                await vm.AppSettings.CheckForUpdateAsync();
+            try
+            {
+                if (DataContext is MainViewModel vm)
+                    await vm.AppSettings.CheckForUpdateAsync();
+            }
+            catch (Exception ex) { _ = App.FileLogger.LogAsync($"[ERR] CheckUpdateBtn_Click: {ex.Message}"); }
         }
 
         private void ApplyUpdateBtn_Click(object sender, RoutedEventArgs e)
@@ -62,8 +66,12 @@ namespace ZenithFiler.Views
 
         private async void ResetStatsBtn_Click(object sender, RoutedEventArgs e)
         {
-            if (DataContext is MainViewModel vm)
-                await vm.AppSettings.ResetStatisticsAsync();
+            try
+            {
+                if (DataContext is MainViewModel vm)
+                    await vm.AppSettings.ResetStatisticsAsync();
+            }
+            catch (Exception ex) { _ = App.FileLogger.LogAsync($"[ERR] ResetStatsBtn_Click: {ex.Message}"); }
         }
     }
 }

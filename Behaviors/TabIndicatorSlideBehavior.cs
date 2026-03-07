@@ -139,7 +139,7 @@ namespace ZenithFiler
             if (isFirstPosition)
                 _initialPositionSet.Add(tabControl);
 
-            if (animate && !isFirstPosition && WindowSettings.MicroAnimationsEnabled)
+            if (animate && !isFirstPosition && WindowSettings.ShowTabEffectsEnabled)
             {
                 var currentMargin = indicator.Margin;
                 var targetMargin = new Thickness(left, 0, 0, 0);

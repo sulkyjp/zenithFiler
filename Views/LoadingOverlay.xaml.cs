@@ -1,3 +1,4 @@
+using System.Windows;
 using System.Windows.Controls;
 
 namespace ZenithFiler
@@ -7,6 +8,11 @@ namespace ZenithFiler
         public LoadingOverlay()
         {
             InitializeComponent();
+            Loaded += (_, _) =>
+            {
+                if (!WindowSettings.ShowStartupEffectsEnabled)
+                    Visibility = Visibility.Collapsed;
+            };
         }
     }
 }

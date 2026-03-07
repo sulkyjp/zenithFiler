@@ -877,10 +877,12 @@ namespace ZenithFiler.Services
                 return;
             }
 
+            bool semaphoreAcquired = false;
             try
             {
                 MarkAsPending(path);
                 await _indexingSemaphore.WaitAsync(effectiveToken).ConfigureAwait(false);
+                semaphoreAcquired = true;
 
                 try
                 {
@@ -1091,13 +1093,12 @@ namespace ZenithFiler.Services
                 }
                 finally
                 {
-                    _indexingSemaphore.Release();
+                    // Release は外側 finally で実行（WaitAsync キャンセル時の漏れを防止）
                 }
             }
             catch (OperationCanceledException)
             {
-                // トークンがキャンセル済みの状態で Task.Run が呼ばれた場合、
-                // ラムダが実行されないまま例外が発生する。
+                // WaitAsync のキャンセル or Task.Run 内でキャンセル
                 lock (_lockObj)
                 {
                     _pendingRoots.Remove(path);
@@ -1105,6 +1106,8 @@ namespace ZenithFiler.Services
             }
             finally
             {
+                if (semaphoreAcquired)
+                    _indexingSemaphore.Release();
                 linkedCts?.Dispose();
             }
         }
