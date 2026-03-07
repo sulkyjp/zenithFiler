@@ -253,13 +253,14 @@ namespace ZenithFiler.Services
 
             var batchContent = $"""
                 @echo off
+                chcp 65001 >nul
                 timeout /t 2 /nobreak >nul
                 xcopy /s /y /q "{extractedDir}\*" "{appDir}\"
                 start "" "{exePath}" --updated
                 del "%~f0"
                 """;
 
-            File.WriteAllText(batchPath, batchContent, System.Text.Encoding.GetEncoding(932)); // Shift_JIS for cmd.exe
+            File.WriteAllText(batchPath, batchContent, new System.Text.UTF8Encoding(true));
 
             var psi = new ProcessStartInfo
             {

@@ -3,6 +3,11 @@
 
 # Zenith Filer - Version History
 
+## [0.25.2] - 2026-03-07
+
+### Fixed
+- 自動アップデート適用時に Encoding 932 (Shift_JIS) が未登録で `NotSupportedException` が発生する問題を修正（UTF-8 BOM + `chcp 65001` に変更）
+
 ## [0.25.1] - 2026-03-07
 
 ### Changed
