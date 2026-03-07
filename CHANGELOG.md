@@ -3,6 +3,12 @@
 
 # Zenith Filer - Version History
 
+## [0.26.0] - 2026-03-07
+
+### Changed
+- **差分アップデート対応**: 自動アップデートでパッチ ZIP（アプリ固有ファイルのみ、~1-3MB）を優先ダウンロードするように変更。パッチ ZIP がない場合はフル ZIP にフォールバック
+- **配布形態変更**: PublishSingleFile を無効化し DLL 分離構成に移行。SelfContained（ポータブル）は維持。フル ZIP ~100MB、パッチ ZIP ~1-3MB
+
 ## [0.25.2] - 2026-03-07
 
 ### Fixed

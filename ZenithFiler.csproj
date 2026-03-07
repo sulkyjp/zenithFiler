@@ -9,7 +9,7 @@
     <ApplicationIcon>assets\app_icon2_1.ico</ApplicationIcon>
     <ApplicationTitle>ZenithFiler</ApplicationTitle>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>0.25.2</Version>
+    <Version>0.26.0</Version>
     <PublishDir>bin\$(Configuration)\$(TargetFramework)\$(RuntimeIdentifier)\ZenithFiler_v$(Version)\</PublishDir>
   </PropertyGroup>
 
@@ -23,9 +23,8 @@
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <RuntimeFrameworkVersion>8.0.23</RuntimeFrameworkVersion>
-    <PublishSingleFile>true</PublishSingleFile>
+    <PublishSingleFile>false</PublishSingleFile>
     <SelfContained>true</SelfContained>
-    <PublishReadyToRun>true</PublishReadyToRun>
     <TieredCompilation>true</TieredCompilation>
     <TieredCompilationQuickJit>true</TieredCompilationQuickJit>
   </PropertyGroup>
@@ -150,8 +149,12 @@
       <_DocViewerProj>$(MSBuildProjectDirectory)\ZenithDocViewer\ZenithDocViewer.csproj</_DocViewerProj>
       <_DocViewerPublishDir>$(MSBuildProjectDirectory)\ZenithDocViewer\bin\$(Configuration)\net8.0-windows\$(RuntimeIdentifier)\publish\</_DocViewerPublishDir>
     </PropertyGroup>
-    <MSBuild Projects="$(_DocViewerProj)" Targets="Publish" Properties="Configuration=$(Configuration);RuntimeIdentifier=$(RuntimeIdentifier);PublishDir=$(_DocViewerPublishDir);SelfContained=true;PublishSingleFile=true" />
-    <Copy SourceFiles="$(_DocViewerPublishDir)ZenithDocViewer.exe" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" Condition="Exists('$(_DocViewerPublishDir)ZenithDocViewer.exe')" />
+    <MSBuild Projects="$(_DocViewerProj)" Targets="Publish" Properties="Configuration=$(Configuration);RuntimeIdentifier=$(RuntimeIdentifier);PublishDir=$(_DocViewerPublishDir);SelfContained=true;PublishSingleFile=false" />
+    <ItemGroup>
+      <_DocViewerPublishFiles Include="$(_DocViewerPublishDir)ZenithDocViewer.exe" Condition="Exists('$(_DocViewerPublishDir)ZenithDocViewer.exe')" />
+      <_DocViewerPublishFiles Include="$(_DocViewerPublishDir)ZenithDocViewer.dll" Condition="Exists('$(_DocViewerPublishDir)ZenithDocViewer.dll')" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_DocViewerPublishFiles)" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" />
   </Target>
 
   <!-- Publish 後、EXE と同階層でなくてよいドキュメント類を apps に集約 -->

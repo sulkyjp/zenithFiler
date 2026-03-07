@@ -32,8 +32,11 @@ namespace ZenithFiler.Services
         /// <summary>利用可能な新バージョン（なければ null）。</summary>
         public string? AvailableVersion { get; private set; }
 
-        /// <summary>ZIP ダウンロード URL。</summary>
+        /// <summary>フル ZIP ダウンロード URL。</summary>
         public string? DownloadUrl { get; private set; }
+
+        /// <summary>パッチ ZIP ダウンロード URL（アプリ固有ファイルのみ）。</summary>
+        public string? PatchDownloadUrl { get; private set; }
 
         /// <summary>ダウンロード＆展開が完了し、再起動可能な状態。</summary>
         public bool IsReadyToRestart { get; private set; }
@@ -101,11 +104,15 @@ namespace ZenithFiler.Services
             }
         }
 
-        /// <summary>ZIP をダウンロードして展開する。GlowBar で進捗表示。</summary>
+        /// <summary>ZIP をダウンロードして展開する。パッチ ZIP があれば優先。GlowBar で進捗表示。</summary>
         public async Task<bool> DownloadAndExtractAsync(MainViewModel? mainVm)
         {
             if (string.IsNullOrEmpty(DownloadUrl) || string.IsNullOrEmpty(AvailableVersion))
                 return false;
+
+            // パッチ ZIP があれば優先、なければフル ZIP にフォールバック
+            var effectiveUrl = !string.IsNullOrEmpty(PatchDownloadUrl) ? PatchDownloadUrl : DownloadUrl;
+            var isPatch = !string.IsNullOrEmpty(PatchDownloadUrl);
 
             IsDownloading = true;
             RaiseStateChanged();
@@ -141,12 +148,13 @@ namespace ZenithFiler.Services
                         Directory.Delete(TempUpdateDir, true);
                     Directory.CreateDirectory(TempUpdateDir);
 
-                    var zipPath = Path.Combine(TempUpdateDir, $"ZenithFiler_v{AvailableVersion}.zip");
+                    var zipSuffix = isPatch ? "_patch" : "";
+                    var zipPath = Path.Combine(TempUpdateDir, $"ZenithFiler_v{AvailableVersion}{zipSuffix}.zip");
                     Volatile.Write(ref progressTarget, 5.0);
-                    statusText = "アップデートをダウンロード中... (0%)";
+                    statusText = isPatch ? "パッチをダウンロード中... (0%)" : "アップデートをダウンロード中... (0%)";
 
                     // ダウンロード（ストリーム）
-                    using (var response = await _client.GetAsync(DownloadUrl, HttpCompletionOption.ResponseHeadersRead))
+                    using (var response = await _client.GetAsync(effectiveUrl, HttpCompletionOption.ResponseHeadersRead))
                     {
                         response.EnsureSuccessStatusCode();
                         var totalBytes = response.Content.Headers.ContentLength ?? -1;
@@ -170,7 +178,9 @@ namespace ZenithFiler.Services
                                 {
                                     lastPct = pct;
                                     Volatile.Write(ref progressTarget, 10.0 + pct * 0.8); // 10-74%
-                                    statusText = $"アップデートをダウンロード中... ({pct}%)";
+                                    statusText = isPatch
+                                        ? $"パッチをダウンロード中... ({pct}%)"
+                                        : $"アップデートをダウンロード中... ({pct}%)";
                                 }
                             }
                         }
@@ -346,19 +356,23 @@ namespace ZenithFiler.Services
             if (settings.SkippedVersion == versionStr)
                 return (false, null);
 
-            // assets から ZIP を探す
+            // assets から ZIP を探す（フル ZIP とパッチ ZIP）
             string? downloadUrl = null;
+            string? patchDownloadUrl = null;
             if (root.TryGetProperty("assets", out var assets))
             {
                 foreach (var asset in assets.EnumerateArray())
                 {
                     var name = asset.GetProperty("name").GetString() ?? "";
-                    if (name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)
-                        && name.Contains("ZenithFiler", StringComparison.OrdinalIgnoreCase))
-                    {
-                        downloadUrl = asset.GetProperty("browser_download_url").GetString();
-                        break;
-                    }
+                    if (!name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)
+                        || !name.Contains("ZenithFiler", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    var url = asset.GetProperty("browser_download_url").GetString();
+                    if (name.Contains("_patch", StringComparison.OrdinalIgnoreCase))
+                        patchDownloadUrl = url;
+                    else
+                        downloadUrl = url;
                 }
             }
 
@@ -367,6 +381,7 @@ namespace ZenithFiler.Services
 
             AvailableVersion = versionStr;
             DownloadUrl = downloadUrl;
+            PatchDownloadUrl = patchDownloadUrl;
             RaiseStateChanged();
 
             return (true, versionStr);

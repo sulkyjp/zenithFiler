@@ -32,12 +32,23 @@ jobs:
       - name: Publish
         run: dotnet publish ZenithFiler.csproj -c Release -r win-x64 --self-contained -o publish
 
-      - name: Create ZIP
+      - name: Create full ZIP
         shell: pwsh
         run: Compress-Archive -Path "publish\*" -DestinationPath "ZenithFiler_v${{ steps.version.outputs.VERSION }}.zip"
+
+      - name: Create patch ZIP
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path patch, patch/apps -Force
+          Copy-Item publish/ZenithFiler.exe, publish/ZenithFiler.dll -Destination patch/
+          Copy-Item publish/ZenithDocViewer.exe, publish/ZenithDocViewer.dll -Destination patch/ -ErrorAction SilentlyContinue
+          Copy-Item publish/apps/CHANGELOG.md, publish/apps/MANUAL.md, publish/apps/EULA.md -Destination patch/apps/ -ErrorAction SilentlyContinue
+          Compress-Archive -Path "patch/*" -DestinationPath "ZenithFiler_v${{ steps.version.outputs.VERSION }}_patch.zip"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: ZenithFiler_v${{ steps.version.outputs.VERSION }}.zip
+          files: |
+            ZenithFiler_v${{ steps.version.outputs.VERSION }}.zip
+            ZenithFiler_v${{ steps.version.outputs.VERSION }}_patch.zip
           generate_release_notes: true
