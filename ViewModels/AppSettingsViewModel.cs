@@ -803,7 +803,8 @@ namespace ZenithFiler
             if (hasUpdate && version != null)
             {
                 IsUpdateAvailable = true;
-                UpdateStatus = $"バージョン {version} が利用可能です";
+                UpdateStatus = $"バージョン {version} が利用可能です — ダウンロード中...";
+                DownloadAndApplyAsync();
             }
             else
             {
@@ -840,7 +841,8 @@ namespace ZenithFiler
                 if (svc.AvailableVersion != null && !IsUpdateAvailable)
                 {
                     IsUpdateAvailable = true;
-                    UpdateStatus = $"バージョン {svc.AvailableVersion} が利用可能です";
+                    UpdateStatus = $"バージョン {svc.AvailableVersion} が利用可能です — ダウンロード中...";
+                    DownloadAndApplyAsync();
                 }
                 if (svc.IsReadyToRestart && !IsUpdateReadyToRestart)
                 {
