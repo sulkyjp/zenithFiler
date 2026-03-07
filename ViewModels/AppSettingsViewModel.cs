@@ -48,6 +48,7 @@ namespace ZenithFiler
         Backup,
         Theme,
         Display,
+        Effects,
         Shortcut,
         License,
         Statistics,
@@ -632,16 +633,6 @@ namespace ZenithFiler
 
         // ─── Display ───
 
-        /// <summary>マイクロアニメーション ON/OFF。</summary>
-        [ObservableProperty]
-        private bool _enableMicroAnimations = true;
-
-        partial void OnEnableMicroAnimationsChanged(bool value)
-        {
-            WindowSettings.SetMicroAnimationsRuntime(value);
-            WindowSettings.SaveDisplaySettingsOnly(value, ListRowHeight);
-        }
-
         /// <summary>ファイル一覧の行高（px）。24=コンパクト, 32=標準, 40=ゆったり。</summary>
         [ObservableProperty]
         private int _listRowHeight = 32;
@@ -650,19 +641,7 @@ namespace ZenithFiler
         {
             WindowSettings.SetListRowHeightRuntime(value);
             Application.Current.Resources["ListRowHeight"] = (double)value;
-            WindowSettings.SaveDisplaySettingsOnly(EnableMicroAnimations, value);
-        }
-
-        /// <summary>一覧表示のホバーアニメーション（フェード・スケール等）ON/OFF。</summary>
-        [ObservableProperty]
-        private bool _enableListAnimations = true;
-
-        partial void OnEnableListAnimationsChanged(bool value)
-        {
-            WindowSettings.SetListAnimationsRuntime(value);
-            Application.Current.Resources["ListItemHoverDuration"] = new System.Windows.Duration(
-                value ? TimeSpan.FromSeconds(0.15) : TimeSpan.Zero);
-            WindowSettings.SaveListAnimationsOnly(value);
+            WindowSettings.SaveDisplaySettingsOnly(value);
         }
 
         // ─── General 追加 ───
@@ -762,6 +741,73 @@ namespace ZenithFiler
             WindowSettings.SaveResidentModeOnly(value);
         }
 
+        // ─── Effects カテゴリ別 ON/OFF (v0.25.0) ───
+
+        private static void ApplyEffectCategory(string propertyName, bool value)
+        {
+            WindowSettings.SetEffectCategoryRuntime(propertyName, value);
+            WindowSettings.SaveEffectCategoryOnly(propertyName, value);
+        }
+
+        /// <summary>A. 起動・全体。</summary>
+        [ObservableProperty]
+        private bool _showStartupEffects = true;
+
+        partial void OnShowStartupEffectsChanged(bool value) => ApplyEffectCategory(nameof(WindowSettings.ShowStartupEffects), value);
+
+        /// <summary>B. GlowBar。</summary>
+        [ObservableProperty]
+        private bool _showGlowBar = true;
+
+        partial void OnShowGlowBarChanged(bool value) => ApplyEffectCategory(nameof(WindowSettings.ShowGlowBar), value);
+
+        /// <summary>C. スキャンバー。</summary>
+        [ObservableProperty]
+        private bool _showScanBar = true;
+
+        partial void OnShowScanBarChanged(bool value) => ApplyEffectCategory(nameof(WindowSettings.ShowScanBar), value);
+
+        /// <summary>D. タブ操作。</summary>
+        [ObservableProperty]
+        private bool _showTabEffects = true;
+
+        partial void OnShowTabEffectsChanged(bool value) => ApplyEffectCategory(nameof(WindowSettings.ShowTabEffects), value);
+
+        /// <summary>E. ペイン・トランジション。</summary>
+        [ObservableProperty]
+        private bool _showPaneTransitions = true;
+
+        partial void OnShowPaneTransitionsChanged(bool value) => ApplyEffectCategory(nameof(WindowSettings.ShowPaneTransitions), value);
+
+        /// <summary>F. テーマ。</summary>
+        [ObservableProperty]
+        private bool _showThemeEffects = true;
+
+        partial void OnShowThemeEffectsChanged(bool value) => ApplyEffectCategory(nameof(WindowSettings.ShowThemeEffects), value);
+
+        /// <summary>H. クイックプレビュー。</summary>
+        [ObservableProperty]
+        private bool _showPreviewEffects = true;
+
+        partial void OnShowPreviewEffectsChanged(bool value) => ApplyEffectCategory(nameof(WindowSettings.ShowPreviewEffects), value);
+
+        /// <summary>I. ファイル一覧。</summary>
+        [ObservableProperty]
+        private bool _showListEffects = true;
+
+        partial void OnShowListEffectsChanged(bool value)
+        {
+            ApplyEffectCategory(nameof(WindowSettings.ShowListEffects), value);
+            Application.Current.Resources["ListItemHoverDuration"] = new System.Windows.Duration(
+                value ? TimeSpan.FromSeconds(0.15) : TimeSpan.Zero);
+        }
+
+        /// <summary>L. ドラッグ＆ドロップ。</summary>
+        [ObservableProperty]
+        private bool _showDragEffects = true;
+
+        partial void OnShowDragEffectsChanged(bool value) => ApplyEffectCategory(nameof(WindowSettings.ShowDragEffects), value);
+
         // ─── Auto Update ───
 
         /// <summary>自動更新を有効にするか。</summary>
@@ -818,16 +864,24 @@ namespace ZenithFiler
         {
             if (App.UpdateService == null) return;
 
-            UpdateStatus = "ダウンロード中...";
-            var success = await App.UpdateService.DownloadAndExtractAsync(_main);
-            if (success)
+            try
             {
-                UpdateStatus = "ダウンロード完了 — 再起動して適用できます";
-                IsUpdateReadyToRestart = true;
+                UpdateStatus = "ダウンロード中...";
+                var success = await App.UpdateService.DownloadAndExtractAsync(_main);
+                if (success)
+                {
+                    UpdateStatus = "ダウンロード完了 — 再起動して適用できます";
+                    IsUpdateReadyToRestart = true;
+                }
+                else
+                {
+                    UpdateStatus = "ダウンロードに失敗しました";
+                }
             }
-            else
+            catch (Exception ex)
             {
                 UpdateStatus = "ダウンロードに失敗しました";
+                _ = App.FileLogger.LogAsync($"[Update] DownloadAndApplyAsync failed: {ex.Message}");
             }
         }
 
@@ -884,11 +938,10 @@ namespace ZenithFiler
             WindowSettings.SaveSearchDefaultsOnly(DefaultGroupFoldersFirst, DefaultSortProperty, value);
         }
 
-        /// <summary>設定読み込み時に Display / General追加 / Search デフォルト 設定を反映する（保存トリガーなし）。</summary>
+        /// <summary>設定読み込み時に Display / General追加 / Search デフォルト / Effects カテゴリ 設定を反映する（保存トリガーなし）。</summary>
         public void LoadDisplayAndGeneralAndSearchSettings(WindowSettings s)
         {
 #pragma warning disable MVVMTK0034
-            _enableMicroAnimations = s.EnableMicroAnimations;
             _listRowHeight = s.ListRowHeight;
             _singleClickOpenFolder = s.SingleClickOpenFolder;
             _confirmDelete = s.ConfirmDelete;
@@ -897,15 +950,17 @@ namespace ZenithFiler
             _defaultGroupFoldersFirst = s.DefaultGroupFoldersFirst;
             _defaultSortProperty = s.DefaultSortProperty;
             _defaultSortDirection = s.DefaultSortDirection;
-            _enableListAnimations = s.EnableListAnimations;
             _showPathInTitleBar = s.ShowPathInTitleBar;
             _showFileExtensions = s.ShowFileExtensions;
             _showHiddenFiles = s.ShowHiddenFiles;
             _downloadsSortByDate = s.DownloadsSortByDate;
             _residentMode = s.ResidentMode;
             _enableAutoUpdate = s.AutoUpdate;
+            // Effects カテゴリ別 (v0.25.0)
+            (_showStartupEffects, _showGlowBar, _showScanBar) = (s.ShowStartupEffects, s.ShowGlowBar, s.ShowScanBar);
+            (_showTabEffects, _showPaneTransitions, _showThemeEffects) = (s.ShowTabEffects, s.ShowPaneTransitions, s.ShowThemeEffects);
+            (_showPreviewEffects, _showListEffects, _showDragEffects) = (s.ShowPreviewEffects, s.ShowListEffects, s.ShowDragEffects);
 #pragma warning restore MVVMTK0034
-            OnPropertyChanged(nameof(EnableMicroAnimations));
             OnPropertyChanged(nameof(ListRowHeight));
             OnPropertyChanged(nameof(SingleClickOpenFolder));
             OnPropertyChanged(nameof(ConfirmDelete));
@@ -914,13 +969,22 @@ namespace ZenithFiler
             OnPropertyChanged(nameof(DefaultGroupFoldersFirst));
             OnPropertyChanged(nameof(DefaultSortProperty));
             OnPropertyChanged(nameof(DefaultSortDirection));
-            OnPropertyChanged(nameof(EnableListAnimations));
             OnPropertyChanged(nameof(ShowPathInTitleBar));
             OnPropertyChanged(nameof(ShowFileExtensions));
             OnPropertyChanged(nameof(ShowHiddenFiles));
             OnPropertyChanged(nameof(DownloadsSortByDate));
             OnPropertyChanged(nameof(ResidentMode));
             OnPropertyChanged(nameof(EnableAutoUpdate));
+            // Effects カテゴリ別
+            OnPropertyChanged(nameof(ShowStartupEffects));
+            OnPropertyChanged(nameof(ShowGlowBar));
+            OnPropertyChanged(nameof(ShowScanBar));
+            OnPropertyChanged(nameof(ShowTabEffects));
+            OnPropertyChanged(nameof(ShowPaneTransitions));
+            OnPropertyChanged(nameof(ShowThemeEffects));
+            OnPropertyChanged(nameof(ShowPreviewEffects));
+            OnPropertyChanged(nameof(ShowListEffects));
+            OnPropertyChanged(nameof(ShowDragEffects));
         }
 
         // ── ペイン個別テーマ ──

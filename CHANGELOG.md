@@ -3,14 +3,65 @@
 
 # Zenith Filer - Version History
 
+## [0.25.1] - 2026-03-07
+
+### Changed
+- **Effects ON/OFF リファクタリング**: 演出カテゴリ設定の重複コードを共通化
+  - WindowSettings: 9個の個別 `SetShowXxxRuntime` を `SetEffectCategoryRuntime` に統合、`SaveShowScanBarOnly` を `SaveEffectCategoryOnly` に統合
+  - AppSettingsViewModel: `ApplyEffectCategory` ヘルパーで8個の OnChanged ハンドラを式本体に簡素化、Load メソッドの9フィールド代入をタプル分解で集約
+  - TabContentControl: 4つの Popup アニメーションを `AnimatePopupOpen` ヘルパーに共通化、`ShowDragAdorner` をアーリーリターンに変更
+  - MainWindow: Preview 3メソッドの分岐方向を `if (!enabled)` に統一
+
+## [0.25.0] - 2026-03-07
+
+### Added
+- **演出カテゴリ9セクション化**: 演出効果を9カテゴリに分類し、カテゴリ別にON/OFFトグルで制御可能に
+  - A. 起動・全体（ShowStartupEffects）: ウェルカムアニメーション、ローディングオーバーレイ
+  - B. GlowBar（ShowGlowBar）: 進捗バー全体のフェード・補間・グロー
+  - C. スキャンバー（ShowScanBar）: フォルダ読み込み時のスキャンバー（既存）
+  - D. タブ操作（ShowTabEffects）: タブインジケータースライド、コンテンツフェード、D&Dマーカー
+  - E. ペイン・トランジション（ShowPaneTransitions）: ペインフェード、Control Deck展開/閉じ、サイドバー幅アニメーション
+  - F. テーマ（ShowThemeEffects）: テーマ切替オーバーレイ、テーマトースト通知
+  - H. クイックプレビュー（ShowPreviewEffects）: プレビュー開閉アニメーション
+  - I. ファイル一覧（ShowListEffects）: ホバーエフェクト、コンテキストメニューアニメ
+  - L. ドラッグ＆ドロップ（ShowDragEffects）: ドラッグアドーナー表示
+
+### Changed
+- **旧設定マイグレーション**: EnableMicroAnimations→D/E/H、EnableListAnimations→I、ShowWelcomeAnimation→A に自動変換
+- **旧設定廃止**: EnableMicroAnimations・EnableListAnimations・ShowWelcomeAnimation の static フラグ・ランタイムセッター・SaveOnly を削除（JSON 互換のためインスタンスプロパティは残留）
+
+## [0.24.6] - 2026-03-07
+
+### Added
+- **演出カテゴリ新設**: Control Deck に「演出」カテゴリを新設し、アニメーション・視覚効果関連の設定を統合。ウェルカムアニメーション（General から移動）、マイクロアニメーション・一覧表示アニメーション（Display から移動）、新規のスキャンバー設定の4項目を配置
+- **スキャンバー設定**: フォルダ読み込み・検索中に表示されるスキャンバー（流れるプログレスバー）の表示/非表示を設定可能に（演出カテゴリ）
+
+## [0.24.5] - 2026-03-07
+
+### Added
+- **ウェルカムアニメーション設定**: 起動時のステータスバーウェルカムアニメーションの表示/非表示を設定可能に（General カテゴリ → 表示セクション）。オフにするとステータスバーが即表示される
+
+## [0.24.4] - 2026-03-07
+
+### Changed
+- **起動シーケンス高速化**: スプラッシュスクリーンを廃止し、サービス初期化（TrayIcon / CpuIdle / Update）をレンダリング完了後に遅延実行するよう変更。起動時の白画面ギャップを軽減
+- **Welcome アニメーション短縮**: 通常起動時のステータスバーウェルカムアニメーションを約10秒から約3.5秒に短縮（初回起動時は従来通り）
+- **白画面解消**: ウィンドウ表示を ContentRendered 完了後に遅延させ、コンテンツが描画済みの状態で一発表示するよう変更。起動時の白画面フラッシュを解消
+- **EULA 統合**: 初回起動時の EULA 同意をウェルカムウィンドウ内のページとして統合。別ダイアログでの表示を廃止（既存ユーザーの未同意時は従来のダイアログを継続使用）
+
 ## [0.24.3] - 2026-03-07
 
 ### Added
 - **ダウンロードフォルダ自動ソート**: ダウンロードフォルダに移動した際、更新日時の新しい順に自動ソートする設定を追加（General カテゴリ）。他フォルダに移動するとデフォルトソートに戻る
 
+### Changed
+- **マニュアル最新化**: セクション8「インストール・ビルド構成」を刷新。themes/・scripts/ フォルダ、ZenithDocViewer.exe、自動アップデート、EULA の説明を追加。基本設定の説明に常駐モード・隠しファイル・拡張子表示・ダウンロード自動ソート・ショートカットキー・利用統計・バージョン情報カテゴリの記載を追加
+- **マニュアル技術詳細**: セクション 4-8「技術的なしくみ」を 10 サブセクションに大幅拡充。使用ライブラリ一覧、Lucene フィールド定義、日本語トークナイズ、クエリ構築パイプライン（具体例付き）、インデクシングパイプライン、同時実行制御、SQLite スキーマ、FileSystemWatcher 連携を詳説
+
 ### Fixed
 - **自動アップデート**: 更新検出後にダウンロードが開始されず「再起動して適用」ボタンが表示されない問題を修正。検出と同時に自動ダウンロードを開始するよう変更
 - **自動アップデート**: アプリ終了時にダウンロード済み更新を自動適用する機能を追加。ボタン押下による即時適用と、次回終了時の自動適用の2通りで更新可能に
+- **安定性向上**: IndexService の SemaphoreSlim 解放漏れ修正、TreeViewDragDropBehavior の同期 Dispatcher.Invoke をデッドロック防止のため非同期化、async void イベントハンドラへの try-catch 追加（9箇所）
 
 ## [0.24.2] - 2026-03-07
 

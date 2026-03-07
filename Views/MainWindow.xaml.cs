@@ -33,6 +33,11 @@ namespace ZenithFiler
 
         private WindowSettings _settings;
 
+        // ContentRendered まで画面外に退避するための保存位置
+        private double _savedLeft;
+        private double _savedTop;
+        private WindowState _savedWindowState;
+
         private WindowState _lastWindowState;
         private bool _isTitleBarDragFromMaximized;
         private Rect? _lastNormalBoundsBeforeMaximize;
@@ -118,7 +123,15 @@ namespace ZenithFiler
             _settings = settings;
             ApplySettingsToWindowAndViewModel(_settings);
 
-            _lastWindowState = this.WindowState;
+            // ContentRendered まで画面外に退避（白画面防止）
+            _savedLeft = this.Left;
+            _savedTop = this.Top;
+            _savedWindowState = this.WindowState;
+            this.WindowState = WindowState.Normal;
+            this.Left = -100000;
+            this.Top = -100000;
+
+            _lastWindowState = _savedWindowState;
             this.StateChanged += MainWindow_StateChanged;
 
             if (this.DataContext is MainViewModel vm)
@@ -217,24 +230,11 @@ namespace ZenithFiler
 
         private void MainWindow_ContentRendered(object? sender, EventArgs e)
         {
-            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-            var duration = TimeSpan.FromMilliseconds(400);
-
-            var fadeIn = new DoubleAnimation(0, 1, duration) { EasingFunction = ease };
-            fadeIn.Completed += (_, _) =>
-            {
-                RootContent.BeginAnimation(UIElement.OpacityProperty, null);
-                RootContent.Opacity = 1;
-            };
-            RootContent.BeginAnimation(UIElement.OpacityProperty, fadeIn);
-
-            var slideUp = new DoubleAnimation(20, 0, duration) { EasingFunction = ease };
-            slideUp.Completed += (_, _) =>
-            {
-                RootContentTranslate.BeginAnimation(TranslateTransform.YProperty, null);
-                RootContentTranslate.Y = 0;
-            };
-            RootContentTranslate.BeginAnimation(TranslateTransform.YProperty, slideUp);
+            // コンテンツ描画完了 → 保存位置に戻して一発表示（白画面を防止）
+            this.Left = _savedLeft;
+            this.Top = _savedTop;
+            this.WindowState = _savedWindowState;
+            this.Activate();
         }
 
         // ── ワーキングセット切り替え：ペインコンテナのフェードアウト/フェードイン ──
@@ -242,6 +242,13 @@ namespace ZenithFiler
         /// <summary>PaneContentArea を 150ms で Opacity 0 にフェードアウトし、描画確定まで待つ。</summary>
         private async Task AnimatePaneFadeOutAsync()
         {
+            if (!WindowSettings.ShowPaneTransitionsEnabled)
+            {
+                PaneContentArea.IsHitTestVisible = false;
+                PaneContentArea.Opacity = 0;
+                return;
+            }
+
             var tcs = new TaskCompletionSource();
             PaneContentArea.IsHitTestVisible = false;
             var anim = new DoubleAnimation(0, TimeSpan.FromMilliseconds(150))
@@ -259,6 +266,14 @@ namespace ZenithFiler
         /// <summary>PaneContentArea を 180ms で Opacity 1 にフェードインし、完了を待つ。</summary>
         private Task AnimatePaneFadeInAsync()
         {
+            if (!WindowSettings.ShowPaneTransitionsEnabled)
+            {
+                PaneContentArea.BeginAnimation(UIElement.OpacityProperty, null);
+                PaneContentArea.Opacity = 1;
+                PaneContentArea.IsHitTestVisible = true;
+                return Task.CompletedTask;
+            }
+
             var tcs = new TaskCompletionSource();
             var anim = new DoubleAnimation(1, TimeSpan.FromMilliseconds(180))
             {
@@ -281,6 +296,8 @@ namespace ZenithFiler
         /// <summary>テーマ適用前: オーバーレイを 130ms でフェードイン（カバー）。</summary>
         private async Task AnimateThemeTransitionBeginAsync()
         {
+            if (!WindowSettings.ShowThemeEffectsEnabled) return;
+
             ThemeTransitionOverlay.Visibility = Visibility.Visible;
             ThemeTransitionOverlay.Opacity = 0;
             var tcs = new TaskCompletionSource();
@@ -296,6 +313,14 @@ namespace ZenithFiler
         /// <summary>テーマ適用後: オーバーレイを 250ms でフェードアウト（reveal）。30ms の BeginTime で新テーマ初回描画を待つ。</summary>
         private void AnimateThemeTransitionEnd()
         {
+            if (!WindowSettings.ShowThemeEffectsEnabled)
+            {
+                ThemeTransitionOverlay.BeginAnimation(UIElement.OpacityProperty, null);
+                ThemeTransitionOverlay.Opacity = 0;
+                ThemeTransitionOverlay.Visibility = Visibility.Collapsed;
+                return;
+            }
+
             var anim = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(250))
             {
                 EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
@@ -326,6 +351,16 @@ namespace ZenithFiler
         private void AnimateThemeToastIn()
         {
             ThemeToastBorder.Visibility = Visibility.Visible;
+            if (!WindowSettings.ShowThemeEffectsEnabled)
+            {
+                ThemeToastBorder.Opacity = 1;
+                if (ThemeToastBorder.RenderTransform is TranslateTransform ttOff)
+                {
+                    ttOff.BeginAnimation(TranslateTransform.YProperty, null);
+                    ttOff.Y = 0;
+                }
+                return;
+            }
             ThemeToastBorder.Opacity = 0;
             var ease = new QuadraticEase { EasingMode = EasingMode.EaseOut };
             var fadeIn = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(300)) { EasingFunction = ease };
@@ -336,6 +371,13 @@ namespace ZenithFiler
 
         private void AnimateThemeToastOut()
         {
+            if (!WindowSettings.ShowThemeEffectsEnabled)
+            {
+                ThemeToastBorder.BeginAnimation(UIElement.OpacityProperty, null);
+                ThemeToastBorder.Opacity = 0;
+                ThemeToastBorder.Visibility = Visibility.Collapsed;
+                return;
+            }
             var ease = new QuadraticEase { EasingMode = EasingMode.EaseIn };
             var fadeOut = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(500)) { EasingFunction = ease };
             fadeOut.Completed += (_, _) =>
@@ -358,6 +400,16 @@ namespace ZenithFiler
             if (_isQuickPreviewOpen) HideQuickPreview();
 
             _isControlDeckOpen = true;
+
+            if (!WindowSettings.ShowPaneTransitionsEnabled)
+            {
+                PaneContentArea.IsHitTestVisible = false;
+                PaneContentArea.Opacity = 0.4;
+                ControlDeckOverlay.Visibility = Visibility.Visible;
+                ControlDeckOverlay.Opacity = 1;
+                return;
+            }
+
             var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
             var duration = TimeSpan.FromMilliseconds(200);
 
@@ -391,6 +443,24 @@ namespace ZenithFiler
         /// <summary>Control Deck を閉じるアニメーション。オーバーレイをフェードアウトし、PaneContentArea を復元。</summary>
         private async Task AnimateControlDeckCloseAsync()
         {
+            if (!WindowSettings.ShowPaneTransitionsEnabled)
+            {
+                ControlDeckOverlay.Opacity = 0;
+                ControlDeckOverlay.Visibility = Visibility.Collapsed;
+                PaneContentArea.BeginAnimation(UIElement.OpacityProperty, null);
+                PaneContentArea.Opacity = 1;
+                PaneContentArea.IsHitTestVisible = true;
+                if (PaneContentArea.RenderTransform is ScaleTransform st)
+                {
+                    st.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+                    st.ScaleX = 1;
+                    st.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+                    st.ScaleY = 1;
+                }
+                _isControlDeckOpen = false;
+                return;
+            }
+
             var easeIn = new CubicEase { EasingMode = EasingMode.EaseIn };
             var easeOut = new CubicEase { EasingMode = EasingMode.EaseOut };
 
@@ -442,6 +512,7 @@ namespace ZenithFiler
         {
             if (e.PropertyName != nameof(MainViewModel.FileOperationProgress)) return;
             if (sender is not MainViewModel vm) return;
+            if (!WindowSettings.ShowGlowBarEnabled) return;
 
             // 非UIスレッドからの呼び出しを安全にUIスレッドへ転送する
             if (!Dispatcher.CheckAccess())
@@ -472,6 +543,7 @@ namespace ZenithFiler
         /// </summary>
         private void Vm_CancelRetractionRequested(object? sender, EventArgs e)
         {
+            if (!WindowSettings.ShowGlowBarEnabled) return;
             if (!Dispatcher.CheckAccess())
             {
                 Dispatcher.InvokeAsync(() => Vm_CancelRetractionRequested(sender, e));
@@ -489,16 +561,12 @@ namespace ZenithFiler
         /// <summary>
         /// 起動ウェルカムアニメーションをコードビハインドで一元制御する。
         /// _welcomeStarted フラグで Loaded の二重発火を防止する。
-        /// Storyboard.Completed で WelcomePanel を Collapsed に物理消去し、
-        /// StatusInfoGroup の Opacity を確定値 1 に固定する。
-        /// </summary>
-        /// <summary>
-        /// 起動ウェルカムアニメーションをコードビハインドで一元制御する。
-        /// _welcomeStarted フラグで Loaded の二重発火を防止する。
         /// async/await でステップ実行と待機を行う。
         /// </summary>
         private async void StartWelcomeAnimation()
         {
+            try
+            {
             if (_welcomeStarted) return;
             _welcomeStarted = true;
 
@@ -522,13 +590,21 @@ namespace ZenithFiler
             var easeOut = new CubicEase { EasingMode = EasingMode.EaseOut };
             var easeIn  = new CubicEase { EasingMode = EasingMode.EaseIn };
 
-            // 1. 登場 (1.5s): Opacity 0->1, Y 8->0
+            // 初回起動時は長めのタイミング、通常起動時は短縮
+            bool isFirst = App.IsFirstLaunch;
+            double enterSec   = isFirst ? 1.5 : 0.6;
+            int    enterWait  = isFirst ? 1600 : 500;
+            int    dotWait    = isFirst ? 500 : 250;
+            int    holdWait   = isFirst ? 5000 : 800;
+            double exitSec    = isFirst ? 2.0 : 0.8;
+
+            // 1. 登場: Opacity 0->1, Y 8->0
             var sbEnter = new Storyboard();
-            var fadeIn = new DoubleAnimation(0, 1, TimeSpan.FromSeconds(1.5)) { EasingFunction = easeOut };
+            var fadeIn = new DoubleAnimation(0, 1, TimeSpan.FromSeconds(enterSec)) { EasingFunction = easeOut };
             Storyboard.SetTarget(fadeIn, WelcomePanel);
             Storyboard.SetTargetProperty(fadeIn, new PropertyPath(UIElement.OpacityProperty));
-            
-            var slideUp = new DoubleAnimation(8, 0, TimeSpan.FromSeconds(1.5)) { EasingFunction = easeOut };
+
+            var slideUp = new DoubleAnimation(8, 0, TimeSpan.FromSeconds(enterSec)) { EasingFunction = easeOut };
             Storyboard.SetTarget(slideUp, WelcomeTrans);
             Storyboard.SetTargetProperty(slideUp, new PropertyPath(TranslateTransform.YProperty));
 
@@ -537,24 +613,24 @@ namespace ZenithFiler
             sbEnter.Begin();
 
             // 登場待ち + 最初の "Ready" 表示維持
-            await Task.Delay(1600);
+            await Task.Delay(enterWait);
 
-            // 2. ステップ実行 (各0.5s)
+            // 2. ステップ実行
             WelcomeProgressText.Text = ".";
-            await Task.Delay(500);
+            await Task.Delay(dotWait);
 
             WelcomeProgressText.Text = "..";
-            await Task.Delay(500);
+            await Task.Delay(dotWait);
 
             WelcomeProgressText.Text = "...";
-            await Task.Delay(500);
+            await Task.Delay(dotWait);
 
             WelcomeProgressText.Text = "...Complete";
-            
-            // 3. 維持 (5.0s)
-            await Task.Delay(5000);
 
-            // 4. 退場＆通常表示へのクロスフェード (2.0s)
+            // 3. 維持
+            await Task.Delay(holdWait);
+
+            // 4. 退場＆通常表示へのクロスフェード
             // 通常表示の準備
             CenterNotificationGroup.Visibility = Visibility.Visible;
             StatusInfoGroup.Opacity = 0;
@@ -565,21 +641,21 @@ namespace ZenithFiler
             var sbExit = new Storyboard();
 
             // 起動メッセージ: Opacity 1->0, Y 0->-10
-            var fadeOut = new DoubleAnimation(1, 0, TimeSpan.FromSeconds(2.0)) { EasingFunction = easeIn };
+            var fadeOut = new DoubleAnimation(1, 0, TimeSpan.FromSeconds(exitSec)) { EasingFunction = easeIn };
             Storyboard.SetTarget(fadeOut, WelcomePanel);
             Storyboard.SetTargetProperty(fadeOut, new PropertyPath(UIElement.OpacityProperty));
 
-            var slideOut = new DoubleAnimation(0, -10, TimeSpan.FromSeconds(2.0)) { EasingFunction = easeIn };
+            var slideOut = new DoubleAnimation(0, -10, TimeSpan.FromSeconds(exitSec)) { EasingFunction = easeIn };
             Storyboard.SetTarget(slideOut, WelcomeTrans);
             Storyboard.SetTargetProperty(slideOut, new PropertyPath(TranslateTransform.YProperty));
 
             // 通常ステータス: Opacity 0->1
-            var statusFadeIn = new DoubleAnimation(0, 1, TimeSpan.FromSeconds(2.0)) { EasingFunction = easeOut };
+            var statusFadeIn = new DoubleAnimation(0, 1, TimeSpan.FromSeconds(exitSec)) { EasingFunction = easeOut };
             Storyboard.SetTarget(statusFadeIn, StatusInfoGroup);
             Storyboard.SetTargetProperty(statusFadeIn, new PropertyPath(UIElement.OpacityProperty));
 
             // StatusMessageGrid もフェードイン
-            var msgFadeIn = new DoubleAnimation(0, 1, TimeSpan.FromSeconds(2.0)) { EasingFunction = easeOut };
+            var msgFadeIn = new DoubleAnimation(0, 1, TimeSpan.FromSeconds(exitSec)) { EasingFunction = easeOut };
             Storyboard.SetTarget(msgFadeIn, StatusMessageGrid);
             Storyboard.SetTargetProperty(msgFadeIn, new PropertyPath(UIElement.OpacityProperty));
 
@@ -610,6 +686,20 @@ namespace ZenithFiler
             };
 
             sbExit.Begin();
+            }
+            catch (Exception ex) { _ = App.FileLogger.LogAsync($"[ERR] StartWelcomeAnimation: {ex.Message}"); }
+        }
+
+        /// <summary>ウェルカムアニメーションをスキップし、ステータスバーを即表示する。</summary>
+        private void ShowStatusBarImmediate()
+        {
+            _welcomeStarted = true;
+            WelcomePanel.Visibility = Visibility.Collapsed;
+            StatusInfoGroup.Opacity = 1;
+            StatusInfoGroup.Visibility = Visibility.Visible;
+            StatusMessageGrid.Opacity = 1;
+            StatusMessageGrid.Visibility = Visibility.Visible;
+            CenterNotificationGroup.Visibility = Visibility.Visible;
         }
 
         private void ApplySettingsToWindowAndViewModel(WindowSettings settings)
@@ -1013,7 +1103,10 @@ namespace ZenithFiler
 
                 await Dispatcher.InvokeAsync(() => Vm_FocusRequested(), DispatcherPriority.Loaded);
                 InitializationComplete?.Invoke(this, EventArgs.Empty);
-                StartWelcomeAnimation();
+                if (WindowSettings.ShowStartupEffectsEnabled)
+                    StartWelcomeAnimation();
+                else
+                    ShowStatusBarImmediate();
 
                 // 起動時テーマトースト（ウィンドウ描画完了・GlowBar 消灯後に表示）
                 if (App.StartupAppliedThemeName is string toastTheme && vm.AppSettings.ShowStartupToast)
@@ -1912,6 +2005,7 @@ namespace ZenithFiler
 
         private void ShowHistoryDragAdorner(ListView listView)
         {
+            if (!WindowSettings.ShowDragEffectsEnabled) return;
             var layer = AdornerLayer.GetAdornerLayer(listView);
             if (layer != null)
             {
@@ -2177,9 +2271,17 @@ namespace ZenithFiler
                 BPaneThemeName    = vm?.AppSettings?.BPaneThemeName   ?? string.Empty,
                 ShowStartupToast  = vm?.AppSettings?.ShowStartupToast ?? true,
                 // Display
-                EnableMicroAnimations = vm?.AppSettings?.EnableMicroAnimations ?? true,
                 ListRowHeight = vm?.AppSettings?.ListRowHeight ?? 32,
-                EnableListAnimations = vm?.AppSettings?.EnableListAnimations ?? true,
+                // Effects カテゴリ別 (v0.25.0)
+                ShowStartupEffects = vm?.AppSettings?.ShowStartupEffects ?? true,
+                ShowGlowBar = vm?.AppSettings?.ShowGlowBar ?? true,
+                ShowScanBar = vm?.AppSettings?.ShowScanBar ?? true,
+                ShowTabEffects = vm?.AppSettings?.ShowTabEffects ?? true,
+                ShowPaneTransitions = vm?.AppSettings?.ShowPaneTransitions ?? true,
+                ShowThemeEffects = vm?.AppSettings?.ShowThemeEffects ?? true,
+                ShowPreviewEffects = vm?.AppSettings?.ShowPreviewEffects ?? true,
+                ShowListEffects = vm?.AppSettings?.ShowListEffects ?? true,
+                ShowDragEffects = vm?.AppSettings?.ShowDragEffects ?? true,
                 // General 追加分
                 SingleClickOpenFolder = vm?.AppSettings?.SingleClickOpenFolder ?? false,
                 ConfirmDelete = vm?.AppSettings?.ConfirmDelete ?? true,
@@ -2268,18 +2370,11 @@ namespace ZenithFiler
             IndexTelemetryBorder.Opacity = 0;
             IndexTelemetryPopup.IsOpen = true;
 
-            if (WindowSettings.MicroAnimationsEnabled)
+            var fadeIn = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(100))
             {
-                var fadeIn = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(100))
-                {
-                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-                };
-                IndexTelemetryBorder.BeginAnimation(UIElement.OpacityProperty, fadeIn);
-            }
-            else
-            {
-                IndexTelemetryBorder.Opacity = 1;
-            }
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            };
+            IndexTelemetryBorder.BeginAnimation(UIElement.OpacityProperty, fadeIn);
 
             _telemetryPopupTimer?.Stop();
             _telemetryPopupTimer = new DispatcherTimer(DispatcherPriority.Background, Dispatcher)
@@ -2408,6 +2503,8 @@ namespace ZenithFiler
 
         private async void ShowQuickPreview(FileItem file)
         {
+            try
+            {
             _ = App.Stats.RecordAsync("Preview.QuickLook");
             _isQuickPreviewOpen = true;
 
@@ -2417,18 +2514,20 @@ namespace ZenithFiler
 
             // 表示 + フェードイン
             QuickPreviewOverlay.Visibility = Visibility.Visible;
-            if (WindowSettings.MicroAnimationsEnabled)
+            if (!WindowSettings.ShowPreviewEffectsEnabled)
+            {
+                QuickPreviewOverlay.Opacity = 1;
+            }
+            else
             {
                 var fade = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(100))
                 { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
                 QuickPreviewOverlay.BeginAnimation(OpacityProperty, fade);
             }
-            else
-            {
-                QuickPreviewOverlay.Opacity = 1;
-            }
 
             await UpdateQuickPreviewContent(file, 0);
+            }
+            catch (Exception ex) { _ = App.FileLogger.LogAsync($"[ERR] ShowQuickPreview: {ex.Message}"); }
         }
 
         /// <summary>
@@ -2472,7 +2571,16 @@ namespace ZenithFiler
             CleanupTempPreviewPdf();
 
             // スライド + フェード アニメーション
-            if (direction != 0 && WindowSettings.MicroAnimationsEnabled)
+            if (direction == 0 || !WindowSettings.ShowPreviewEffectsEnabled)
+            {
+                PreviewContentArea.Opacity = 1;
+                if (PreviewContentArea.RenderTransform is TranslateTransform tt)
+                {
+                    tt.BeginAnimation(TranslateTransform.XProperty, null);
+                    tt.X = 0;
+                }
+            }
+            else
             {
                 var transform = PreviewContentArea.RenderTransform as TranslateTransform;
                 if (transform != null)
@@ -2485,15 +2593,6 @@ namespace ZenithFiler
                 var fadeAnim = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(50))
                 { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
                 PreviewContentArea.BeginAnimation(OpacityProperty, fadeAnim);
-            }
-            else
-            {
-                PreviewContentArea.Opacity = 1;
-                if (PreviewContentArea.RenderTransform is TranslateTransform tt)
-                {
-                    tt.BeginAnimation(TranslateTransform.XProperty, null);
-                    tt.X = 0;
-                }
             }
 
             var previewType = GetPreviewType(file.FullPath);
@@ -2529,6 +2628,8 @@ namespace ZenithFiler
         /// </summary>
         private async void NavigateQuickPreview(int direction)
         {
+            try
+            {
             if (DataContext is not MainViewModel vm) return;
 
             var activePaneControl = vm.ActivePane == vm.LeftPane ? LeftPaneControl : RightPaneControl;
@@ -2567,6 +2668,8 @@ namespace ZenithFiler
 
             var nextFile = (FileItem)listControl.Items[nextIndex];
             await UpdateQuickPreviewContent(nextFile, direction);
+            }
+            catch (Exception ex) { _ = App.FileLogger.LogAsync($"[ERR] NavigateQuickPreview: {ex.Message}"); }
         }
 
         /// <summary>
@@ -2981,7 +3084,13 @@ namespace ZenithFiler
                 catch { /* ignore */ }
             }
 
-            if (WindowSettings.MicroAnimationsEnabled)
+            if (!WindowSettings.ShowPreviewEffectsEnabled)
+            {
+                QuickPreviewOverlay.Opacity = 0;
+                QuickPreviewOverlay.Visibility = Visibility.Collapsed;
+                ResetPreviewContent();
+            }
+            else
             {
                 var fade = new DoubleAnimation(QuickPreviewOverlay.Opacity, 0, TimeSpan.FromMilliseconds(80))
                 { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn } };
@@ -2992,12 +3101,6 @@ namespace ZenithFiler
                     ResetPreviewContent();
                 };
                 QuickPreviewOverlay.BeginAnimation(OpacityProperty, fade);
-            }
-            else
-            {
-                QuickPreviewOverlay.Opacity = 0;
-                QuickPreviewOverlay.Visibility = Visibility.Collapsed;
-                ResetPreviewContent();
             }
 
             // ファイルリストにフォーカスを戻す

@@ -2031,6 +2031,8 @@ namespace ZenithFiler
 
         private void ShowDragAdorner(UIElement element)
         {
+            if (!WindowSettings.ShowDragEffectsEnabled) return;
+
             var layer = AdornerLayer.GetAdornerLayer(element);
             if (layer != null)
             {
@@ -2096,6 +2098,8 @@ namespace ZenithFiler
 
         private async void ListView_Drop(object sender, DragEventArgs e)
         {
+            try
+            {
             if (DataContext is not TabItemViewModel vm)
                 return;
 
@@ -2167,6 +2171,8 @@ namespace ZenithFiler
                     vm.CreateUrlShortcutCommand.Execute((url, title, targetDirectory2));
                 }
             }
+            }
+            catch (Exception ex) { _ = App.FileLogger.LogAsync($"[ERR] ListView_Drop: {ex.Message}"); }
         }
 
         private static bool TryGetUrlAndTitle(IDataObject data, out string? url, out string? title)
@@ -2688,6 +2694,8 @@ namespace ZenithFiler
 
         private async void BreadcrumbDropdownButton_Click(object sender, RoutedEventArgs e)
         {
+            try
+            {
             if (sender is not ToggleButton tb || tb.DataContext is not NavigationPathSegment segment || DataContext is not TabItemViewModel vm)
                 return;
 
@@ -2708,6 +2716,8 @@ namespace ZenithFiler
             {
                 BreadcrumbSubfoldersPopup.IsOpen = false;
             }
+            }
+            catch (Exception ex) { _ = App.FileLogger.LogAsync($"[ERR] BreadcrumbDropdownButton_Click: {ex.Message}"); }
         }
 
         private void BreadcrumbSubfoldersPopup_Opened(object sender, EventArgs e)
@@ -2910,6 +2920,8 @@ namespace ZenithFiler
 
         private async void OpenSearchHistory()
         {
+            try
+            {
             if (DataContext is TabItemViewModel vm)
             {
                 // データを強制ロードして待機（これで0件問題を回避）
@@ -2925,6 +2937,8 @@ namespace ZenithFiler
                 SearchHistoryPopup.Width = SearchTextBox.ActualWidth;
                 SearchHistoryPopup.IsOpen = true;
             }
+            }
+            catch (Exception ex) { _ = App.FileLogger.LogAsync($"[ERR] OpenSearchHistory: {ex.Message}"); }
         }
 
         private void SearchHistoryItem_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -3055,6 +3069,31 @@ namespace ZenithFiler
             ScopeFilterPopup.IsOpen = !ScopeFilterPopup.IsOpen;
         }
 
+        /// <summary>Popup の Border にフェードイン + スライドインアニメーションを適用する共通ヘルパー。</summary>
+        private static void AnimatePopupOpen(Border border, Action? afterAction = null)
+        {
+            if (!WindowSettings.ShowListEffectsEnabled)
+            {
+                border.Opacity = 1;
+                border.RenderTransform = new TranslateTransform(0, 0);
+                afterAction?.Invoke();
+                return;
+            }
+
+            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+            var tt = new TranslateTransform(0, -5);
+            border.RenderTransform = tt;
+            border.Opacity = 0;
+
+            var fadeIn = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(120)) { EasingFunction = ease };
+            border.BeginAnimation(UIElement.OpacityProperty, fadeIn);
+
+            var slideIn = new DoubleAnimation(-5, 0, TimeSpan.FromMilliseconds(140)) { EasingFunction = ease };
+            tt.BeginAnimation(TranslateTransform.YProperty, slideIn);
+
+            afterAction?.Invoke();
+        }
+
         private void ScopeFilterPopup_Opened(object sender, EventArgs e)
         {
             // 外側クリック dismiss + ウィンドウ非アクティブ時オートクローズを購読
@@ -3068,24 +3107,7 @@ namespace ZenithFiler
             if (sender is not System.Windows.Controls.Primitives.Popup popup) return;
             if (popup.Child is not Border border) return;
 
-            if (!WindowSettings.MicroAnimationsEnabled)
-            {
-                border.Opacity = 1;
-                border.RenderTransform = new TranslateTransform(0, 0);
-                return;
-            }
-
-            // TabListPopup と同一のアニメーション: Frozen 回避で毎回新しい TranslateTransform
-            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-            var tt = new TranslateTransform(0, -5);
-            border.RenderTransform = tt;
-            border.Opacity = 0;
-
-            var fadeIn = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(120)) { EasingFunction = ease };
-            border.BeginAnimation(UIElement.OpacityProperty, fadeIn);
-
-            var slideIn = new DoubleAnimation(-5, 0, TimeSpan.FromMilliseconds(140)) { EasingFunction = ease };
-            tt.BeginAnimation(TranslateTransform.YProperty, slideIn);
+            AnimatePopupOpen(border);
         }
 
         /// <summary>ウィンドウが非アクティブになったらスコープ Popup を閉じる（スマート・クローズ）</summary>
@@ -3162,26 +3184,7 @@ namespace ZenithFiler
             if (sender is not System.Windows.Controls.Primitives.Popup popup) return;
             if (popup.Child is not Border border) return;
 
-            if (!WindowSettings.MicroAnimationsEnabled)
-            {
-                border.Opacity = 1;
-                border.RenderTransform = new TranslateTransform(0, 0);
-                FocusSizeMinTextBox();
-                return;
-            }
-
-            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-            var tt = new TranslateTransform(0, -5);
-            border.RenderTransform = tt;
-            border.Opacity = 0;
-
-            var fadeIn = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(120)) { EasingFunction = ease };
-            border.BeginAnimation(UIElement.OpacityProperty, fadeIn);
-
-            var slideIn = new DoubleAnimation(-5, 0, TimeSpan.FromMilliseconds(140)) { EasingFunction = ease };
-            tt.BeginAnimation(TranslateTransform.YProperty, slideIn);
-
-            FocusSizeMinTextBox();
+            AnimatePopupOpen(border, FocusSizeMinTextBox);
         }
 
         private void FocusSizeMinTextBox()
@@ -3280,28 +3283,7 @@ namespace ZenithFiler
             if (sender is not System.Windows.Controls.Primitives.Popup popup) return;
             if (popup.Child is not Border border) return;
 
-            if (!WindowSettings.MicroAnimationsEnabled)
-            {
-                border.Opacity = 1;
-                border.RenderTransform = new TranslateTransform(0, 0);
-                FocusDateStartTextBox();
-                SyncCalendarFromText();
-                return;
-            }
-
-            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-            var tt = new TranslateTransform(0, -5);
-            border.RenderTransform = tt;
-            border.Opacity = 0;
-
-            var fadeIn = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(120)) { EasingFunction = ease };
-            border.BeginAnimation(UIElement.OpacityProperty, fadeIn);
-
-            var slideIn = new DoubleAnimation(-5, 0, TimeSpan.FromMilliseconds(140)) { EasingFunction = ease };
-            tt.BeginAnimation(TranslateTransform.YProperty, slideIn);
-
-            FocusDateStartTextBox();
-            SyncCalendarFromText();
+            AnimatePopupOpen(border, () => { FocusDateStartTextBox(); SyncCalendarFromText(); });
         }
 
         private void FocusDateStartTextBox()
@@ -3524,23 +3506,7 @@ namespace ZenithFiler
             if (sender is not System.Windows.Controls.Primitives.Popup popup) return;
             if (popup.Child is not Border border) return;
 
-            if (!WindowSettings.MicroAnimationsEnabled)
-            {
-                border.Opacity = 1;
-                border.RenderTransform = new TranslateTransform(0, 0);
-                return;
-            }
-
-            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-            var tt = new TranslateTransform(0, -5);
-            border.RenderTransform = tt;
-            border.Opacity = 0;
-
-            var fadeIn = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(120)) { EasingFunction = ease };
-            border.BeginAnimation(UIElement.OpacityProperty, fadeIn);
-
-            var slideIn = new DoubleAnimation(-5, 0, TimeSpan.FromMilliseconds(140)) { EasingFunction = ease };
-            tt.BeginAnimation(TranslateTransform.YProperty, slideIn);
+            AnimatePopupOpen(border);
         }
 
         private void PresetPopup_WindowDeactivated(object? sender, EventArgs e)

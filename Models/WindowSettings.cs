@@ -373,6 +373,38 @@ namespace ZenithFiler
         /// <summary>ウィンドウを閉じた際にタスクトレイに常駐するか。</summary>
         public bool ResidentMode { get; set; } = false;
 
+        /// <summary>起動時にステータスバーのウェルカムアニメーションを表示するか。</summary>
+        public bool ShowWelcomeAnimation { get; set; } = true;
+
+        /// <summary>フォルダ読み込み時のスキャンバー（流れるプログレスバー）を表示するか。</summary>
+        public bool ShowScanBar { get; set; } = true;
+
+        // ─── Effects カテゴリ別 ON/OFF (v0.25.0) ───
+
+        /// <summary>A. 起動・全体: ウェルカムアニメーション、ローディングオーバーレイ。</summary>
+        public bool ShowStartupEffects { get; set; } = true;
+
+        /// <summary>B. GlowBar: 進捗バー全体（フェード・補間・グロー）。</summary>
+        public bool ShowGlowBar { get; set; } = true;
+
+        /// <summary>D. タブ操作: タブインジケータースライド、タブコンテンツフェード、タブD&amp;Dマーカー。</summary>
+        public bool ShowTabEffects { get; set; } = true;
+
+        /// <summary>E. ペイン・トランジション: ペインフェード、Control Deck展開/閉じ、サイドバー幅アニメーション。</summary>
+        public bool ShowPaneTransitions { get; set; } = true;
+
+        /// <summary>F. テーマ: テーマ切替オーバーレイ、テーマトースト通知。</summary>
+        public bool ShowThemeEffects { get; set; } = true;
+
+        /// <summary>H. クイックプレビュー: プレビュー開く/閉じるアニメーション。</summary>
+        public bool ShowPreviewEffects { get; set; } = true;
+
+        /// <summary>I. ファイル一覧: アイコンビュー情報オーバーレイ、お気に入りボタンホバー、検索アイコンスケール、コンテキストメニューアニメ。</summary>
+        public bool ShowListEffects { get; set; } = true;
+
+        /// <summary>L. ドラッグ＆ドロップ: ドラッグアドーナー（D&amp;D中のカーソル追従ラベル）。</summary>
+        public bool ShowDragEffects { get; set; } = true;
+
         // ─── Auto Update ───
         /// <summary>GitHub Releases からの自動更新を有効にするか。</summary>
         public bool AutoUpdate { get; set; } = true;
@@ -413,10 +445,6 @@ namespace ZenithFiler
         /// <summary>Bペインに適用するテーマ名。</summary>
         public string BPaneThemeName { get; set; } = string.Empty;
 
-        /// <summary>マイクロアニメーションの有効状態を static に参照するアクセサ。Behavior や code-behind から使用。</summary>
-        private static bool _microAnimationsEnabled = true;
-        public static bool MicroAnimationsEnabled => _microAnimationsEnabled;
-
         private static int _listRowHeight = 32;
         public static int ListRowHeightValue => _listRowHeight;
 
@@ -438,9 +466,6 @@ namespace ZenithFiler
         private static ListSortDirection _defaultSortDirection = ListSortDirection.Ascending;
         public static ListSortDirection DefaultSortDirectionValue => _defaultSortDirection;
 
-        private static bool _listAnimationsEnabled = true;
-        public static bool ListAnimationsEnabled => _listAnimationsEnabled;
-
         private static bool _showPathInTitleBar = true;
         public static bool ShowPathInTitleBarEnabled => _showPathInTitleBar;
 
@@ -456,13 +481,50 @@ namespace ZenithFiler
         private static bool _residentMode = false;
         public static bool ResidentModeEnabled => _residentMode;
 
+        private static bool _showScanBar = true;
+        public static bool ShowScanBarEnabled => _showScanBar;
+
+        // ─── Effects カテゴリ別 static フラグ (v0.25.0) ───
+        private static bool _showStartupEffects = true;
+        public static bool ShowStartupEffectsEnabled => _showStartupEffects;
+
+        private static bool _showGlowBar = true;
+        public static bool ShowGlowBarEnabled => _showGlowBar;
+
+        private static bool _showTabEffects = true;
+        public static bool ShowTabEffectsEnabled => _showTabEffects;
+
+        private static bool _showPaneTransitions = true;
+        public static bool ShowPaneTransitionsEnabled => _showPaneTransitions;
+
+        private static bool _showThemeEffects = true;
+        public static bool ShowThemeEffectsEnabled => _showThemeEffects;
+
+        private static bool _showPreviewEffects = true;
+        public static bool ShowPreviewEffectsEnabled => _showPreviewEffects;
+
+        private static bool _showListEffects = true;
+        public static bool ShowListEffectsEnabled => _showListEffects;
+
+        private static bool _showDragEffects = true;
+        public static bool ShowDragEffectsEnabled => _showDragEffects;
+
         private static bool _autoUpdate = true;
         public static bool AutoUpdateEnabled => _autoUpdate;
 
         /// <summary>インスタンスプロパティの値を static フラグへ反映する。Load() 完了後に呼び出す。</summary>
         internal void ApplyStaticFlags()
         {
-            _microAnimationsEnabled = EnableMicroAnimations;
+            // ── マイグレーション: 旧設定が false で新設定がデフォルト(true)のままなら伝播 ──
+            if (!EnableMicroAnimations)
+            {
+                if (ShowTabEffects) ShowTabEffects = false;
+                if (ShowPaneTransitions) ShowPaneTransitions = false;
+                if (ShowPreviewEffects) ShowPreviewEffects = false;
+            }
+            if (!EnableListAnimations && ShowListEffects) ShowListEffects = false;
+            if (!ShowWelcomeAnimation && ShowStartupEffects) ShowStartupEffects = false;
+
             _listRowHeight = ListRowHeight;
             _singleClickOpenFolder = SingleClickOpenFolder;
             _confirmDelete = ConfirmDelete;
@@ -470,22 +532,30 @@ namespace ZenithFiler
             _defaultGroupFoldersFirst = DefaultGroupFoldersFirst;
             _defaultSortProperty = DefaultSortProperty;
             _defaultSortDirection = DefaultSortDirection;
-            _listAnimationsEnabled = EnableListAnimations;
             _showPathInTitleBar = ShowPathInTitleBar;
             _showFileExtensions = ShowFileExtensions;
             _showHiddenFiles = ShowHiddenFiles;
             _downloadsSortByDate = DownloadsSortByDate;
             _residentMode = ResidentMode;
+            _showScanBar = ShowScanBar;
             _autoUpdate = AutoUpdate;
+
+            // Effects カテゴリ別 static フラグ (v0.25.0)
+            _showStartupEffects = ShowStartupEffects;
+            _showGlowBar = ShowGlowBar;
+            _showTabEffects = ShowTabEffects;
+            _showPaneTransitions = ShowPaneTransitions;
+            _showThemeEffects = ShowThemeEffects;
+            _showPreviewEffects = ShowPreviewEffects;
+            _showListEffects = ShowListEffects;
+            _showDragEffects = ShowDragEffects;
         }
 
         // ─── Runtime setter メソッド（ViewModel から呼び出し）───
-        internal static void SetMicroAnimationsRuntime(bool v) => _microAnimationsEnabled = v;
         internal static void SetListRowHeightRuntime(int v) => _listRowHeight = v;
         internal static void SetSingleClickOpenFolderRuntime(bool v) => _singleClickOpenFolder = v;
         internal static void SetConfirmDeleteRuntime(bool v) => _confirmDelete = v;
         internal static void SetNotificationDurationRuntime(int v) => _notificationDurationMs = v;
-        internal static void SetListAnimationsRuntime(bool v) => _listAnimationsEnabled = v;
         internal static void SetDefaultGroupFoldersFirstRuntime(bool v) => _defaultGroupFoldersFirst = v;
         internal static void SetDefaultSortPropertyRuntime(string v) => _defaultSortProperty = v;
         internal static void SetDefaultSortDirectionRuntime(ListSortDirection v) => _defaultSortDirection = v;
@@ -495,6 +565,23 @@ namespace ZenithFiler
         internal static void SetDownloadsSortByDateRuntime(bool v) => _downloadsSortByDate = v;
         internal static void SetResidentModeRuntime(bool v) => _residentMode = v;
         internal static void SetAutoUpdateRuntime(bool v) => _autoUpdate = v;
+
+        // Effects カテゴリ別 Runtime setter (v0.25.0)
+        internal static void SetEffectCategoryRuntime(string propertyName, bool v)
+        {
+            switch (propertyName)
+            {
+                case nameof(ShowStartupEffects): _showStartupEffects = v; break;
+                case nameof(ShowGlowBar): _showGlowBar = v; break;
+                case nameof(ShowScanBar): _showScanBar = v; break;
+                case nameof(ShowTabEffects): _showTabEffects = v; break;
+                case nameof(ShowPaneTransitions): _showPaneTransitions = v; break;
+                case nameof(ShowThemeEffects): _showThemeEffects = v; break;
+                case nameof(ShowPreviewEffects): _showPreviewEffects = v; break;
+                case nameof(ShowListEffects): _showListEffects = v; break;
+                case nameof(ShowDragEffects): _showDragEffects = v; break;
+            }
+        }
 
         /// <summary>インデックスのアイテム別スケジュール（旧形式）。マイグレーション用。新規保存には IndexItemSettings を使用。</summary>
         public List<IndexScheduleDto>? IndexSchedules { get; set; }
@@ -843,20 +930,13 @@ namespace ZenithFiler
             DebouncedSettingsSaver.ScheduleSave(s => s.ShowStartupToast = show);
         }
 
-        /// <summary>Display 設定（マイクロアニメーション・行高）を保存する。</summary>
-        public static void SaveDisplaySettingsOnly(bool microAnim, int rowHeight)
+        /// <summary>Display 設定（行高）を保存する。</summary>
+        public static void SaveDisplaySettingsOnly(int rowHeight)
         {
             DebouncedSettingsSaver.ScheduleSave(s =>
             {
-                s.EnableMicroAnimations = microAnim;
                 s.ListRowHeight = rowHeight;
             });
-        }
-
-        /// <summary>一覧アニメーション設定のみを保存する。</summary>
-        public static void SaveListAnimationsOnly(bool enable)
-        {
-            DebouncedSettingsSaver.ScheduleSave(s => s.EnableListAnimations = enable);
         }
 
         /// <summary>General 追加設定（シングルクリック・削除確認・タブ復元・通知時間）を保存する。</summary>
@@ -927,6 +1007,26 @@ namespace ZenithFiler
         public static void SaveResidentModeOnly(bool value)
         {
             DebouncedSettingsSaver.ScheduleSave(s => s.ResidentMode = value);
+        }
+
+        /// <summary>演出カテゴリ設定のみを保存する（A〜L カテゴリ別 ON/OFF）。</summary>
+        public static void SaveEffectCategoryOnly(string propertyName, bool value)
+        {
+            DebouncedSettingsSaver.ScheduleSave(s =>
+            {
+                switch (propertyName)
+                {
+                    case nameof(ShowStartupEffects): s.ShowStartupEffects = value; break;
+                    case nameof(ShowGlowBar): s.ShowGlowBar = value; break;
+                    case nameof(ShowScanBar): s.ShowScanBar = value; break;
+                    case nameof(ShowTabEffects): s.ShowTabEffects = value; break;
+                    case nameof(ShowPaneTransitions): s.ShowPaneTransitions = value; break;
+                    case nameof(ShowThemeEffects): s.ShowThemeEffects = value; break;
+                    case nameof(ShowPreviewEffects): s.ShowPreviewEffects = value; break;
+                    case nameof(ShowListEffects): s.ShowListEffects = value; break;
+                    case nameof(ShowDragEffects): s.ShowDragEffects = value; break;
+                }
+            });
         }
 
         /// <summary>自動更新設定のみを保存する。</summary>
