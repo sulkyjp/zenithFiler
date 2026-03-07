@@ -231,6 +231,9 @@ namespace ZenithFiler
         /// <summary>検索結果フィルターバーの有効状態（FileTypeFilter の順）。次回検索時に復元。</summary>
         private List<bool> _searchResultFileTypeFilterEnabled = new();
 
+        /// <summary>現在バージョンの CHANGELOG エントリ（About ページ表示用）。</summary>
+        public string ReleaseNotes { get; } = ParseReleaseNotes();
+
         public AppSettingsViewModel(MainViewModel main)
         {
             _main = main ?? throw new ArgumentNullException(nameof(main));
@@ -240,6 +243,61 @@ namespace ZenithFiler
             ThemesView.SortDescriptions.Add(new SortDescription(nameof(ThemeInfo.StandardFirstSortKey), ListSortDirection.Ascending));
             ThemesView.SortDescriptions.Add(new SortDescription(nameof(ThemeInfo.Name), ListSortDirection.Ascending));
             SubscribeUpdateService();
+        }
+
+        private static string ParseReleaseNotes()
+        {
+            try
+            {
+                var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "";
+                var changelogPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "apps", "CHANGELOG.md");
+                if (!File.Exists(changelogPath)) return string.Empty;
+
+                var lines = File.ReadAllLines(changelogPath);
+                var header = $"## [{version}]";
+                int start = -1;
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    if (lines[i].StartsWith(header, StringComparison.OrdinalIgnoreCase))
+                    {
+                        start = i + 1;
+                        break;
+                    }
+                }
+                if (start < 0) return string.Empty;
+
+                var sb = new System.Text.StringBuilder();
+                for (int i = start; i < lines.Length; i++)
+                {
+                    var line = lines[i];
+                    if (line.StartsWith("## [")) break;
+
+                    if (line.StartsWith("### "))
+                    {
+                        if (sb.Length > 0) sb.AppendLine();
+                        var category = line.Substring(4).Trim();
+                        sb.AppendLine($"[{category}]");
+                    }
+                    else if (line.StartsWith("- "))
+                    {
+                        var text = line.Substring(2).Trim();
+                        // **太字**: 以降の部分からマークダウン書式を除去
+                        text = System.Text.RegularExpressions.Regex.Replace(text, @"\*\*(.+?)\*\*", "$1");
+                        sb.AppendLine($"  ・{text}");
+                    }
+                    else if (line.StartsWith("  - "))
+                    {
+                        var text = line.Substring(4).Trim();
+                        text = System.Text.RegularExpressions.Regex.Replace(text, @"\*\*(.+?)\*\*", "$1");
+                        sb.AppendLine($"    - {text}");
+                    }
+                }
+                return sb.ToString().TrimEnd();
+            }
+            catch
+            {
+                return string.Empty;
+            }
         }
 
         /// <summary>設定読み込み時にホームパスを反映する。</summary>

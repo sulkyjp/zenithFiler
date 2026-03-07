@@ -2240,10 +2240,26 @@
                                        Foreground="{DynamicResource TextBrush}"
                                        Margin="0,0,0,4"/>
                             <!-- バージョン -->
-                            <TextBlock Text="{Binding MainVM.AppVersion, StringFormat=Version {0}}" FontSize="13"
+                            <TextBlock Text="{Binding AppVersion, StringFormat=Version {0}}" FontSize="13"
                                        HorizontalAlignment="Center"
                                        Foreground="{DynamicResource SubTextBrush}"
                                        Margin="0,0,0,24"/>
+                            <!-- このバージョンの更新内容 -->
+                            <Border Background="{DynamicResource PanelBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                    CornerRadius="8" Padding="24,20" Margin="0,0,0,20"
+                                    Visibility="{Binding AppSettings.ReleaseNotes, Converter={StaticResource NonEmptyStringToVis}}">
+                                <StackPanel>
+                                    <TextBlock FontSize="13" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextBrush}"
+                                               Margin="0,0,0,10"
+                                               Text="このバージョンの更新内容"/>
+                                    <TextBlock FontSize="12" LineHeight="20"
+                                               Foreground="{DynamicResource SubTextBrush}"
+                                               TextWrapping="Wrap"
+                                               Text="{Binding AppSettings.ReleaseNotes}"/>
+                                </StackPanel>
+                            </Border>
                             <!-- キャッチコピー -->
                             <Border Background="{DynamicResource PanelBrush}"
                                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
